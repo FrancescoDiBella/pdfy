@@ -1,15 +1,70 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap');
+
+/* ═══════════════════════════════════════════════
+   PDFy Studio — Design Tokens (CSS Custom Properties)
+   ═══════════════════════════════════════════════ */
+:root {
+  /* Backgrounds */
+  --pdfy-canvas-base: #0B0F19;
+  --pdfy-app-workspace: #111827;
+  --pdfy-surface-glass: rgba(22, 30, 49, 0.65);
+  --pdfy-surface-accent: rgba(255, 255, 255, 0.03);
+
+  /* Accents */
+  --pdfy-primary-start: #6366F1;
+  --pdfy-primary-end: #A855F7;
+  --pdfy-secondary: #06B6D4;
+  --pdfy-success: #10B981;
+  --pdfy-error: #EF4444;
+
+  /* Text */
+  --pdfy-text-high: #F9FAFB;
+  --pdfy-text-medium: #9CA3AF;
+  --pdfy-text-low: #4B5563;
+
+  /* Borders */
+  --pdfy-border: rgba(255, 255, 255, 0.08);
+
+  /* Radii */
+  --pdfy-radius-container: 16px;
+  --pdfy-radius-inner: 12px;
+  --pdfy-radius-control: 8px;
+  --pdfy-radius-pill: 9999px;
+
+  /* Shadows */
+  --pdfy-shadow-low: 0 4px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --pdfy-shadow-high: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.3);
+
+  /* Glass */
+  --pdfy-glass-blur: blur(16px) saturate(180%);
+}
+
+/* ═══════════════════════════════════════════════
+   Reset & Base
+   ═══════════════════════════════════════════════ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent body scroll, handled by MUI Box */
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--pdfy-canvas-base);
+  color: var(--pdfy-text-high);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar for webkit */
+/* ═══════════════════════════════════════════════
+   Scrollbar (Webkit)
+   ═══════════════════════════════════════════════ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -17,17 +72,29 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--pdfy-radius-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.22);
 }
 
+/* ═══════════════════════════════════════════════
+   react-pdf grid layout helper (Splitter view)
+   ═══════════════════════════════════════════════ */
 .pdf-grid-document .react-pdf__Document {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════
+   Coordinate/numeric mono text
+   ═══════════════════════════════════════════════ */
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0;
 }

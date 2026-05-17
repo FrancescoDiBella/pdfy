@@ -10,14 +10,16 @@ import {
   ListItemButton,
   ListItemIcon, 
   ListItemText,
-  Button
+  Button,
+  Chip
 } from '@mui/material';
 import { 
   Description as DocumentIcon,
   MergeType as MergeIcon,
   CallSplit as SplitIcon,
   Edit as EditIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Lock as LockIcon
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import PDFMerger from './components/PDFMerger';
@@ -28,100 +30,131 @@ const drawerWidth = 260;
 
 type ViewMode = 'view' | 'merge' | 'split' | 'edit';
 
+const navItems: { mode: ViewMode; label: string; icon: React.ReactNode }[] = [
+  { mode: 'view', label: 'View PDF', icon: <DocumentIcon /> },
+  { mode: 'merge', label: 'Merge PDFs', icon: <MergeIcon /> },
+  { mode: 'split', label: 'Split PDF', icon: <SplitIcon /> },
+  { mode: 'edit', label: 'Advanced Editor', icon: <EditIcon /> },
+];
+
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('view');
 
+  // Advanced Editor is a full-screen experience with its own layout
+  if (viewMode === 'edit') {
+    return <AdvancedEditor onBack={() => setViewMode('view')} />;
+  }
+
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* ─── Top Bar ─── */}
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+        <Toolbar sx={{ gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
             <Box sx={{ 
-              width: 40, height: 40, borderRadius: 2, 
-              background: 'linear-gradient(45deg, #FF3366, #00C6FF)',
+              width: 36, height: 36, borderRadius: '10px', 
+              background: 'linear-gradient(135deg, #6366F1, #A855F7)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(255, 51, 102, 0.4)'
+              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+              flexShrink: 0,
             }}>
-              <DocumentIcon sx={{ color: '#fff' }} />
+              <DocumentIcon sx={{ color: '#fff', fontSize: 20 }} />
             </Box>
-            <Typography variant="h5" component="div" sx={{ fontWeight: 700, letterSpacing: '1px' }}>
-              PDFy <span style={{ color: '#FF3366', fontWeight: 300 }}>Studio</span>
+            <Typography variant="h1" component="div" sx={{ fontSize: 20 }}>
+              PDFy <span style={{ color: '#A855F7', fontWeight: 300 }}>Studio</span>
             </Typography>
           </Box>
+
+          <Chip
+            icon={<LockIcon sx={{ fontSize: '14px !important' }} />}
+            label="100% Local"
+            size="small"
+            sx={{
+              bgcolor: 'rgba(16, 185, 129, 0.12)',
+              color: '#10B981',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+              fontWeight: 600,
+              fontSize: 11,
+              height: 28,
+              '& .MuiChip-icon': { color: '#10B981' },
+            }}
+          />
         </Toolbar>
       </AppBar>
+
+      {/* ─── Sidebar ─── */}
       <Drawer
         variant="permanent"
         sx={{
           width: drawerWidth,
           flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box', borderRight: '1px solid rgba(255,255,255,0.05)' },
+          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
         }}
       >
         <Toolbar />
-        <Box sx={{ overflow: 'auto', p: 2 }}>
+        <Box sx={{ overflow: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Button 
             variant="contained" 
             fullWidth 
             startIcon={<AddIcon />} 
-            sx={{ mb: 3, py: 1.5 }}
+            sx={{ py: 1.5 }}
             onClick={() => setViewMode('edit')}
           >
             Create Blank PDF
           </Button>
 
-          <Typography variant="overline" sx={{ color: 'text.secondary', ml: 2, fontWeight: 600 }}>Tools</Typography>
-          <List>
-            <ListItem disablePadding sx={{ mb: 1 }}>
-              <ListItemButton 
-                selected={viewMode === 'view'} 
-                onClick={() => setViewMode('view')}
-                sx={{ borderRadius: 2 }}
-              >
-                <ListItemIcon><DocumentIcon color={viewMode === 'view' ? 'primary' : 'inherit'} /></ListItemIcon>
-                <ListItemText primary="View PDF" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding sx={{ mb: 1 }}>
-              <ListItemButton 
-                selected={viewMode === 'merge'} 
-                onClick={() => setViewMode('merge')}
-                sx={{ borderRadius: 2 }}
-              >
-                <ListItemIcon><MergeIcon color={viewMode === 'merge' ? 'primary' : 'inherit'} /></ListItemIcon>
-                <ListItemText primary="Merge PDFs" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding sx={{ mb: 1 }}>
-              <ListItemButton 
-                selected={viewMode === 'split'} 
-                onClick={() => setViewMode('split')}
-                sx={{ borderRadius: 2 }}
-              >
-                <ListItemIcon><SplitIcon color={viewMode === 'split' ? 'primary' : 'inherit'} /></ListItemIcon>
-                <ListItemText primary="Split PDF" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding sx={{ mb: 1 }}>
-              <ListItemButton 
-                selected={viewMode === 'edit'} 
-                onClick={() => setViewMode('edit')}
-                sx={{ borderRadius: 2 }}
-              >
-                <ListItemIcon><EditIcon color={viewMode === 'edit' ? 'primary' : 'inherit'} /></ListItemIcon>
-                <ListItemText primary="Advanced Editor" />
-              </ListItemButton>
-            </ListItem>
-          </List>
+          <Box>
+            <Typography 
+              variant="caption" 
+              sx={{ color: 'text.disabled', ml: 1, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}
+            >
+              Tools
+            </Typography>
+            <List disablePadding>
+              {navItems.map(({ mode, label, icon }) => (
+                <ListItem key={mode} disablePadding sx={{ mb: 0.5 }}>
+                  <ListItemButton 
+                    selected={viewMode === mode} 
+                    onClick={() => setViewMode(mode)}
+                    sx={{ 
+                      borderRadius: 2, 
+                      py: 1,
+                      '&.Mui-selected': {
+                        bgcolor: 'rgba(99, 102, 241, 0.12)',
+                        '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.18)' },
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40, color: viewMode === mode ? '#6366F1' : '#9CA3AF' }}>
+                      {icon}
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={label} 
+                      slotProps={{ 
+                        primary: { 
+                          sx: {
+                            fontSize: 13, 
+                            fontWeight: viewMode === mode ? 600 : 400,
+                            color: viewMode === mode ? '#F9FAFB' : '#9CA3AF',
+                          },
+                        },
+                      }} 
+                    />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Box>
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }}>
+
+      {/* ─── Main Content ─── */}
+      <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <Toolbar />
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', p: 3 }}>
           {viewMode === 'view' && <PDFViewer />}
           {viewMode === 'merge' && <PDFMerger />}
           {viewMode === 'split' && <PDFSplitter />}
-          {viewMode === 'edit' && <AdvancedEditor />}
         </Box>
       </Box>
     </Box>
