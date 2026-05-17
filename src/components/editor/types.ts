@@ -1,4 +1,9 @@
-export type ElementType = 'text' | 'image' | 'rect';
+export type ElementType = 'text' | 'image' | 'rect' | 'draw';
+
+export interface StrokePoint {
+  x: number;
+  y: number;
+}
 
 export interface EditorElement {
   id: string;
@@ -15,4 +20,7 @@ export interface EditorElement {
   fillColor?: string;
   strokeWidth?: number;
   opacity?: number;
+  // Freehand drawing
+  points?: StrokePoint[];
+  strokeColor?: string;
 }

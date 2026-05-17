@@ -60,26 +60,30 @@ export default function RightPropertiesPanel({ element, onUpdate }: Props) {
             <Typography variant="caption" sx={{ color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, mb: 1.5, display: 'block' }}>
               Appearance
             </Typography>
-            {element.type === 'rect' && (
+            {(element.type === 'rect' || element.type === 'draw') && (
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>Fill Color</Typography>
+                <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>
+                  {element.type === 'draw' ? 'Stroke Color' : 'Fill Color'}
+                </Typography>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <input
                     type="color"
-                    value={element.fillColor || '#6366F1'}
-                    onChange={e => onUpdate(element.id, { fillColor: e.target.value })}
+                    value={(element.type === 'draw' ? element.strokeColor : element.fillColor) || '#6366F1'}
+                    onChange={e => onUpdate(element.id, element.type === 'draw' ? { strokeColor: e.target.value } : { fillColor: e.target.value })}
                     style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
                   />
-                  <Typography className="mono" sx={{ color: '#9CA3AF' }}>{(element.fillColor || '#6366F1').toUpperCase()}</Typography>
+                  <Typography className="mono" sx={{ color: '#9CA3AF' }}>
+                    {((element.type === 'draw' ? element.strokeColor : element.fillColor) || '#6366F1').toUpperCase()}
+                  </Typography>
                 </Box>
               </Box>
             )}
-            {element.type === 'rect' && (
+            {(element.type === 'rect' || element.type === 'draw') && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>Stroke Width</Typography>
                 <Slider
                   min={0} max={10} step={1}
-                  value={element.strokeWidth ?? 2}
+                  value={element.strokeWidth ?? (element.type === 'draw' ? 3 : 2)}
                   onChange={(_, v) => onUpdate(element.id, { strokeWidth: v as number })}
                   size="small"
                 />

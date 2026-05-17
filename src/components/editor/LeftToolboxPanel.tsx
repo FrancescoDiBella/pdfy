@@ -3,6 +3,7 @@ import {
   TextFields as TextIcon,
   Image as ImageIcon,
   CropSquare as RectIcon,
+  Gesture as DrawIcon,
   Layers as LayersIcon,
   Delete as DeleteIcon,
   Visibility as VisIcon,
@@ -12,18 +13,20 @@ import type { EditorElement, ElementType } from './types';
 interface Props {
   elements: EditorElement[];
   selectedId: string | null;
+  isDrawMode: boolean;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onAdd: (type: ElementType) => void;
+  onToggleDrawMode: () => void;
 }
 
 const typeIcon = (t: ElementType) =>
-  t === 'text' ? <TextIcon sx={{ fontSize: 16 }} /> : t === 'image' ? <ImageIcon sx={{ fontSize: 16 }} /> : <RectIcon sx={{ fontSize: 16 }} />;
+  t === 'text' ? <TextIcon sx={{ fontSize: 16 }} /> : t === 'image' ? <ImageIcon sx={{ fontSize: 16 }} /> : t === 'draw' ? <DrawIcon sx={{ fontSize: 16 }} /> : <RectIcon sx={{ fontSize: 16 }} />;
 
 const typeLabel = (t: ElementType) =>
-  t === 'text' ? 'Text' : t === 'image' ? 'Image' : 'Rectangle';
+  t === 'text' ? 'Text' : t === 'image' ? 'Image' : t === 'draw' ? 'Drawing' : 'Rectangle';
 
-export default function LeftToolboxPanel({ elements, selectedId, onSelect, onDelete, onAdd }: Props) {
+export default function LeftToolboxPanel({ elements, selectedId, isDrawMode, onSelect, onDelete, onAdd, onToggleDrawMode }: Props) {
   return (
     <Box sx={{
       width: 280, flexShrink: 0, height: '100%',
@@ -37,7 +40,7 @@ export default function LeftToolboxPanel({ elements, selectedId, onSelect, onDel
         <Typography variant="caption" sx={{ color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, mb: 1.5, display: 'block' }}>
           Add Element
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {(['text', 'image', 'rect'] as ElementType[]).map(t => (
             <Tooltip key={t} title={`Add ${typeLabel(t)}`}>
               <IconButton
@@ -52,6 +55,20 @@ export default function LeftToolboxPanel({ elements, selectedId, onSelect, onDel
               </IconButton>
             </Tooltip>
           ))}
+          <Tooltip title={isDrawMode ? 'Exit Draw Mode' : 'Free-hand Draw'}>
+            <IconButton
+              onClick={onToggleDrawMode}
+              sx={{
+                flex: 1, borderRadius: '8px', py: 1.5,
+                bgcolor: isDrawMode ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)',
+                border: isDrawMode ? '1px solid #6366F1' : '1px solid rgba(255,255,255,0.08)',
+                color: isDrawMode ? '#6366F1' : '#9CA3AF',
+                '&:hover': { bgcolor: isDrawMode ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.08)', borderColor: '#6366F1' },
+              }}
+            >
+              <DrawIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
 

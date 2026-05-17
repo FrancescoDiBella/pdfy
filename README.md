@@ -61,7 +61,7 @@ The compiled static assets will be output to the `dist` directory, ready to be d
 
 - [ ] Support for multi-page editing in the Advanced Editor.
 - [ ] PWA (Progressive Web App) integration for native-like offline desktop installation.
-- [ ] Free-hand drawing and annotation tools.
+- [x] Free-hand drawing and annotation tools.
 - [ ] Drag-and-drop file reordering in the PDF Merger tool.
 
 ## 📄 License

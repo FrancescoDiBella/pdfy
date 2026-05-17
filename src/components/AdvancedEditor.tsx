@@ -4,10 +4,11 @@ import { CloudUpload as UploadIcon, Add as AddIcon } from '@mui/icons-material';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Rnd } from 'react-rnd';
-import type { EditorElement, ElementType } from './editor/types';
+import type { EditorElement, ElementType, StrokePoint } from './editor/types';
 import TopNavigationBar from './editor/TopNavigationBar';
 import LeftToolboxPanel from './editor/LeftToolboxPanel';
 import RightPropertiesPanel from './editor/RightPropertiesPanel';
+import DrawingCanvas from './editor/DrawingCanvas';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -29,6 +30,10 @@ export default function AdvancedEditor({ onBack }: Props) {
   const [pageDims, setPageDims] = useState({ width: 0, height: 0 });
   const [zoom, setZoom] = useState(1);
   const [docTitle, setDocTitle] = useState('Untitled Document');
+  const [isDrawMode, setIsDrawMode] = useState(false);
+  const [drawColor] = useState('#000000');
+  const [drawWidth] = useState(3);
+  const [drawOpacity] = useState(1);
   const pageRef = useRef<HTMLDivElement>(null);
 
   const selectedElement = elements.find(e => e.id === selectedId) ?? null;
@@ -87,6 +92,44 @@ export default function AdvancedEditor({ onBack }: Props) {
     }
   }, [fileBlob]);
 
+  /* ── Drawing ─────────────────────────────── */
+  const handleStrokeComplete = useCallback((points: StrokePoint[]) => {
+    // Find bounding box of the stroke
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    
+    // Add padding so thick strokes aren't clipped by the bounding box
+    const padding = drawWidth + 2; 
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    // Make points relative to bounding box
+    const relPoints = points.map(p => ({
+      x: p.x - minX,
+      y: p.y - minY,
+    }));
+
+    const el: EditorElement = {
+      id: crypto.randomUUID(),
+      type: 'draw',
+      x: minX, y: minY,
+      width: maxX - minX || 1,
+      height: maxY - minY || 1,
+      points: relPoints,
+      strokeColor: drawColor,
+      strokeWidth: drawWidth,
+      opacity: drawOpacity,
+    };
+    setElements(prev => [...prev, el]);
+  }, [drawColor, drawWidth, drawOpacity]);
+
   const deleteElement = (id: string) => {
     setElements(prev => prev.filter(e => e.id !== id));
     if (selectedId === id) setSelectedId(null);
@@ -138,6 +181,33 @@ export default function AdvancedEditor({ onBack }: Props) {
               : await doc.embedJpg(el.src);
             page.drawImage(img, { x: px, y: py, width: ew, height: eh });
           } catch (err) { console.error('Image embed failed', err); }
+        } else if (el.type === 'draw' && el.points && el.points.length >= 2) {
+          // Convert stroke points to PDF coordinates and draw as a polyline
+          const hex = el.strokeColor || '#000000';
+          const r = parseInt(hex.slice(1, 3), 16) / 255;
+          const g = parseInt(hex.slice(3, 5), 16) / 255;
+          const b = parseInt(hex.slice(5, 7), 16) / 255;
+          const lineW = (el.strokeWidth ?? 3) * Math.min(sx, sy);
+
+          for (let i = 1; i < el.points.length; i++) {
+            const screenX1 = el.x + el.points[i - 1].x;
+            const screenY1 = el.y + el.points[i - 1].y;
+            const x1 = screenX1 * sx;
+            const y1 = ph - (screenY1 * sy);
+
+            const screenX2 = el.x + el.points[i].x;
+            const screenY2 = el.y + el.points[i].y;
+            const x2 = screenX2 * sx;
+            const y2 = ph - (screenY2 * sy);
+            
+            page.drawLine({
+              start: { x: x1, y: y1 },
+              end: { x: x2, y: y2 },
+              thickness: lineW,
+              color: rgb(r, g, b),
+              opacity: el.opacity ?? 1,
+            });
+          }
         }
       }
 
@@ -200,7 +270,9 @@ export default function AdvancedEditor({ onBack }: Props) {
         {/* Left Panel */}
         <LeftToolboxPanel
           elements={elements} selectedId={selectedId}
+          isDrawMode={isDrawMode}
           onSelect={setSelectedId} onDelete={deleteElement} onAdd={addElement}
+          onToggleDrawMode={() => setIsDrawMode(d => !d)}
         />
 
         {/* Canvas Viewport */}
@@ -236,6 +308,19 @@ export default function AdvancedEditor({ onBack }: Props) {
                 renderAnnotationLayer={false}
               />
 
+              {/* Drawing Canvas Overlay */}
+              {pageDims.width > 0 && (
+                <DrawingCanvas
+                  width={canvasWidth}
+                  height={canvasHeight}
+                  isActive={isDrawMode}
+                  strokeColor={drawColor}
+                  strokeWidth={drawWidth}
+                  opacity={drawOpacity}
+                  onStrokeComplete={handleStrokeComplete}
+                />
+              )}
+
               {/* Draggable Elements */}
               {pageDims.width > 0 && elements.map(el => (
                 <Rnd
@@ -251,28 +336,29 @@ export default function AdvancedEditor({ onBack }: Props) {
                   })}
                   onMouseDown={(e) => { e.stopPropagation(); setSelectedId(el.id); }}
                   bounds="parent"
-                  resizeHandleStyles={{
+                  enableResizing={el.type !== 'draw'}
+                  resizeHandleStyles={el.type !== 'draw' ? {
                     topLeft: handleStyle, topRight: handleStyle, bottomLeft: handleStyle, bottomRight: handleStyle,
                     top: edgeH, bottom: edgeH, left: edgeV, right: edgeV,
-                  }}
+                  } : {}}
                   style={{
                     zIndex: selectedId === el.id ? 20 : 10,
-                    border: selectedId === el.id ? '1px solid #6366F1' : '1px solid transparent',
+                    border: (selectedId === el.id && el.type !== 'draw') ? '1px solid #6366F1' : '1px solid transparent',
                     backgroundColor: el.type === 'rect'
                       ? `${el.fillColor || '#6366F1'}${Math.round((el.opacity ?? 0.35) * 255).toString(16).padStart(2, '0')}`
                       : 'transparent',
-                    cursor: 'grab',
+                    cursor: el.type === 'draw' ? 'move' : 'grab',
                     boxSizing: 'border-box' as const,
                     transition: 'box-shadow 0.15s ease-out',
-                    boxShadow: selectedId === el.id ? '0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.3)' : 'none',
+                    boxShadow: (selectedId === el.id && el.type !== 'draw') ? '0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.3)' : 'none',
                   }}
                 >
                   {/* Hover outline */}
                   <Box sx={{
                     position: 'absolute', inset: -1, pointerEvents: 'none',
-                    border: selectedId === el.id ? 'none' : '1px dashed transparent',
+                    border: (selectedId === el.id || el.type === 'draw') ? 'none' : '1px dashed transparent',
                     borderRadius: '2px',
-                    '.react-draggable:hover &, :hover > &': { borderColor: 'rgba(99,102,241,0.5)' },
+                    '.react-draggable:hover &, :hover > &': { borderColor: (el.type !== 'draw') ? 'rgba(99,102,241,0.5)' : 'transparent' },
                     transition: 'border-color 0.15s ease',
                   }} />
 
@@ -294,6 +380,26 @@ export default function AdvancedEditor({ onBack }: Props) {
                   )}
                   {el.type === 'image' && el.src && (
                     <img src={el.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} />
+                  )}
+                  {el.type === 'draw' && el.points && el.points.length > 0 && (
+                    <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}>
+                      <path
+                        d={`M ${el.points[0].x} ${el.points[0].y} ` + 
+                           el.points.slice(1).map((p, i, arr) => {
+                             if (i === 0) return '';
+                             const prev = arr[i - 1];
+                             const midX = (prev.x + p.x) / 2;
+                             const midY = (prev.y + p.y) / 2;
+                             return `Q ${prev.x} ${prev.y} ${midX} ${midY} `;
+                           }).join('') + (el.points.length > 1 ? `L ${el.points[el.points.length-1].x} ${el.points[el.points.length-1].y}` : '')}
+                        fill="none"
+                        stroke={el.strokeColor || '#000000'}
+                        strokeWidth={el.strokeWidth || 3}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        opacity={el.opacity ?? 1}
+                      />
+                    </svg>
                   )}
                 </Rnd>
               ))}
