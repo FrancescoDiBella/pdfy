@@ -58,7 +58,7 @@ export default function PDFSplitter() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (error) {
       console.error("Error splitting PDF", error);
       alert("Failed to split PDF. Please try again.");
