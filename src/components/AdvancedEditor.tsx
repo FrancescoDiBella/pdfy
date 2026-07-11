@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress } from '@mui/material';
 import { CloudUpload as UploadIcon, Add as AddIcon } from '@mui/icons-material';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Rnd } from 'react-rnd';
 import type { EditorElement, ElementType, StrokePoint } from './editor/types';
@@ -18,6 +18,15 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 // A4 at 96 DPI
 const A4_W = 794;
 const A4_H = 1123;
+
+const CUSTOM_FONTS: Record<string, string> = {
+  'Roboto': 'https://raw.githubusercontent.com/google/fonts/main/apache/roboto/Roboto-Regular.ttf',
+  'Open Sans': 'https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans-Regular.ttf',
+  'Lato': 'https://raw.githubusercontent.com/google/fonts/main/ofl/lato/Lato-Regular.ttf',
+  'Montserrat': 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/static/Montserrat-Regular.ttf',
+};
+
+const fontCache: Record<string, ArrayBuffer> = {};
 
 interface Props { onBack: () => void; }
 
@@ -36,6 +45,18 @@ export default function AdvancedEditor({ onBack }: Props) {
   const [drawOpacity] = useState(1);
   const pageRef = useRef<HTMLDivElement>(null);
 
+  // Multi-page states
+  const [numPages, setNumPages] = useState(1);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [pageDimsMap, setPageDimsMap] = useState<Record<number, { width: number; height: number }>>({});
+  const [pdfPageDimsMap, setPdfPageDimsMap] = useState<Record<number, { width: number; height: number }>>({});
+
+  const [isEditTextMode, setIsEditTextMode] = useState(false);
+  const [pageTextItems, setPageTextItems] = useState<any[]>([]);
+  const [pageTextStyles, setPageTextStyles] = useState<Record<string, any>>({});
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [editingInputValue, setEditingInputValue] = useState('');
+
   const selectedElement = elements.find(e => e.id === selectedId) ?? null;
 
   /* ── File I/O ────────────────────────────── */
@@ -46,6 +67,10 @@ export default function AdvancedEditor({ onBack }: Props) {
     setElements([]);
     setSelectedId(null);
     setDocTitle(file.name.replace(/\.pdf$/i, ''));
+    setCurrentPageIndex(0);
+    setNumPages(1);
+    setPageDimsMap({});
+    setPdfPageDimsMap({});
   };
 
   const createBlank = async () => {
@@ -56,6 +81,10 @@ export default function AdvancedEditor({ onBack }: Props) {
     setFileBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
     setElements([]);
     setSelectedId(null);
+    setCurrentPageIndex(0);
+    setNumPages(1);
+    setPageDimsMap({});
+    setPdfPageDimsMap({});
   };
 
   /* ── Element CRUD ────────────────────────── */
@@ -64,6 +93,7 @@ export default function AdvancedEditor({ onBack }: Props) {
     const el: EditorElement = {
       id: crypto.randomUUID(),
       type, x: 80, y: 80,
+      pageIndex: currentPageIndex,
       width: type === 'text' ? 200 : 120,
       height: type === 'text' ? 36 : 120,
       content: type === 'text' ? 'Type here…' : undefined,
@@ -90,7 +120,7 @@ export default function AdvancedEditor({ onBack }: Props) {
       setElements(prev => [...prev, el]);
       setSelectedId(el.id);
     }
-  }, [fileBlob]);
+  }, [fileBlob, currentPageIndex]);
 
   /* ── Drawing ─────────────────────────────── */
   const handleStrokeComplete = useCallback((points: StrokePoint[]) => {
@@ -120,6 +150,7 @@ export default function AdvancedEditor({ onBack }: Props) {
       id: crypto.randomUUID(),
       type: 'draw',
       x: minX, y: minY,
+      pageIndex: currentPageIndex,
       width: maxX - minX || 1,
       height: maxY - minY || 1,
       points: relPoints,
@@ -128,7 +159,7 @@ export default function AdvancedEditor({ onBack }: Props) {
       opacity: drawOpacity,
     };
     setElements(prev => [...prev, el]);
-  }, [drawColor, drawWidth, drawOpacity]);
+  }, [drawColor, drawWidth, drawOpacity, currentPageIndex]);
 
   const deleteElement = (id: string) => {
     setElements(prev => prev.filter(e => e.id !== id));
@@ -139,18 +170,139 @@ export default function AdvancedEditor({ onBack }: Props) {
     setElements(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
   };
 
+  /* ── Page Navigation & Manipulation ──────── */
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(currentPageIndex - 1);
+      setSelectedId(null);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPageIndex < numPages - 1) {
+      setCurrentPageIndex(currentPageIndex + 1);
+      setSelectedId(null);
+    }
+  };
+
+  const addPage = async () => {
+    if (!originalBytes) return;
+    try {
+      const doc = await PDFDocument.load(originalBytes);
+      doc.addPage([A4_W * (72 / 96), A4_H * (72 / 96)]);
+      const bytes = await doc.save();
+      setOriginalBytes(bytes);
+      setFileBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
+      const nextPagesCount = doc.getPageCount();
+      setNumPages(nextPagesCount);
+      setCurrentPageIndex(nextPagesCount - 1);
+      setSelectedId(null);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add page.');
+    }
+  };
+
+  const deletePage = async () => {
+    if (!originalBytes || numPages <= 1) return;
+    if (!window.confirm('Are you sure you want to delete the current page? This will also delete all elements on this page.')) return;
+    try {
+      const doc = await PDFDocument.load(originalBytes);
+      doc.removePage(currentPageIndex);
+      const bytes = await doc.save();
+      setOriginalBytes(bytes);
+      setFileBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
+
+      // Remove all elements associated with the deleted page and shift remaining
+      setElements(prev =>
+        prev
+          .filter(el => (el.pageIndex ?? 0) !== currentPageIndex)
+          .map(el => {
+            const elPageIndex = el.pageIndex ?? 0;
+            if (elPageIndex > currentPageIndex) {
+              return { ...el, pageIndex: elPageIndex - 1 };
+            }
+            return el;
+          })
+      );
+
+      const newNumPages = doc.getPageCount();
+      setNumPages(newNumPages);
+      setCurrentPageIndex(prev => Math.min(prev, newNumPages - 1));
+      setSelectedId(null);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete page.');
+    }
+  };
+
+  useEffect(() => {
+    const fetchTextContent = async () => {
+      if (!originalBytes) {
+        setPageTextItems([]);
+        return;
+      }
+      try {
+        const loadingTask = pdfjs.getDocument({
+          data: originalBytes.slice(),
+          standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+        });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(currentPageIndex + 1);
+        const textContent = await page.getTextContent();
+        setPageTextItems(textContent.items);
+        setPageTextStyles(textContent.styles || {});
+      } catch (err) {
+        console.error('Failed to parse text content:', err);
+        setPageTextItems([]);
+        setPageTextStyles({});
+      }
+    };
+    fetchTextContent();
+  }, [originalBytes, currentPageIndex]);
+
+  // Dynamically load Google Fonts for the UI preview
+  useEffect(() => {
+    const customFonts = elements
+      .map(e => e.fontFamily)
+      .filter((f): f is string => !!f && Object.keys(CUSTOM_FONTS).includes(f));
+    
+    const uniqueFonts = [...new Set(customFonts)];
+    if (uniqueFonts.length > 0) {
+      const familyString = uniqueFonts.map(f => `family=${f.replace(/ /g, '+')}`).join('&');
+      const url = `https://fonts.googleapis.com/css2?${familyString}&display=swap`;
+      let link = document.getElementById('custom-google-fonts') as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.id = 'custom-google-fonts';
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      if (link.href !== url) link.href = url;
+    }
+  }, [elements]);
+
   /* ── Export ───────────────────────────────── */
   const exportPDF = async () => {
     if (!originalBytes) return;
     setIsSaving(true);
     try {
       const doc = await PDFDocument.load(originalBytes);
-      const page = doc.getPages()[0];
-      const { width: pw, height: ph } = page.getSize();
-      const sx = pw / pageDims.width;
-      const sy = ph / pageDims.height;
+      const pages = doc.getPages();
 
       for (const el of elements) {
+        const elPageIndex = el.pageIndex ?? 0;
+        const page = pages[elPageIndex];
+        if (!page) continue;
+        const { width: pw, height: ph } = page.getSize();
+        // The canvas elements are always positioned within A4_W and A4_H coordinate space
+        const sx = pw / A4_W;
+        const sy = ph / A4_H;
+
         const px = el.x * sx;
         const py = ph - ((el.y + el.height) * sy);
         const ew = el.width * sx;
@@ -161,6 +313,80 @@ export default function AdvancedEditor({ onBack }: Props) {
             x: px, y: py + 12,
             size: (el.fontSize ?? 16) * sy,
             color: rgb(0, 0, 0),
+          });
+        } else if (el.type === 'edit-text' && el.originalPdfX !== undefined && el.originalPdfY !== undefined) {
+          // Draw solid masking rectangle over the original text to erase it
+          const hexMask = el.fillColor || '#FFFFFF';
+          const mr = parseInt(hexMask.slice(1, 3), 16) / 255;
+          const mg = parseInt(hexMask.slice(3, 5), 16) / 255;
+          const mb = parseInt(hexMask.slice(5, 7), 16) / 255;
+          
+          // originalPdfY is the baseline. 
+          // Offset y downwards by 25% of height to cover descenders.
+          const maskH = el.originalPdfH || eh;
+          page.drawRectangle({
+            x: el.originalPdfX,
+            y: el.originalPdfY - (maskH * 0.25),
+            width: el.originalPdfW || ew,
+            height: maskH * 1.25,
+            color: rgb(mr, mg, mb),
+          });
+
+          // Draw the new text at its current dragged position
+          const hexText = el.strokeColor || '#000000';
+          const tr = parseInt(hexText.slice(1, 3), 16) / 255;
+          const tg = parseInt(hexText.slice(3, 5), 16) / 255;
+          const tb = parseInt(hexText.slice(5, 7), 16) / 255;
+          
+          // Try custom font first
+          let embedFont;
+          if (el.fontFamily && CUSTOM_FONTS[el.fontFamily]) {
+            try {
+              if (!fontCache[el.fontFamily]) {
+                const res = await fetch(CUSTOM_FONTS[el.fontFamily]);
+                fontCache[el.fontFamily] = await res.arrayBuffer();
+              }
+              // PDFDocument supports standard TTF without fontkit in some cases
+              embedFont = await doc.embedFont(fontCache[el.fontFamily]);
+            } catch (err) {
+              console.warn('Failed to embed custom font, falling back.', err);
+            }
+          }
+          
+          if (!embedFont) {
+            // Map fontFamily to pdf-lib StandardFonts
+            let fontEnum = StandardFonts.Helvetica;
+            const familyLower = (el.fontFamily || '').toLowerCase();
+            const isBold = el.fontWeight === 'bold' || familyLower.includes('bold');
+            const isItalic = el.fontStyle === 'italic' || familyLower.includes('italic') || familyLower.includes('oblique');
+            
+            if (familyLower.includes('times') || familyLower.includes('serif')) {
+              if (isBold && isItalic) fontEnum = StandardFonts.TimesRomanBoldItalic;
+              else if (isBold) fontEnum = StandardFonts.TimesRomanBold;
+              else if (isItalic) fontEnum = StandardFonts.TimesRomanItalic;
+              else fontEnum = StandardFonts.TimesRoman;
+            } else if (familyLower.includes('courier') || familyLower.includes('mono')) {
+              if (isBold && isItalic) fontEnum = StandardFonts.CourierBoldOblique;
+              else if (isBold) fontEnum = StandardFonts.CourierBold;
+              else if (isItalic) fontEnum = StandardFonts.CourierOblique;
+              else fontEnum = StandardFonts.Courier;
+            } else {
+              if (isBold && isItalic) fontEnum = StandardFonts.HelveticaBoldOblique;
+              else if (isBold) fontEnum = StandardFonts.HelveticaBold;
+              else if (isItalic) fontEnum = StandardFonts.HelveticaOblique;
+              else fontEnum = StandardFonts.Helvetica;
+            }
+            embedFont = await doc.embedFont(fontEnum);
+          }
+          
+          // py is the bottom of the bounding box.
+          // The baseline is typically ~20-25% of the height above the bottom of the bounding box.
+          page.drawText(el.content || '', {
+            x: px,
+            y: py + (eh * 0.2), 
+            size: eh,
+            font: embedFont,
+            color: rgb(tr, tg, tb),
           });
         } else if (el.type === 'rect') {
           const hex = el.fillColor || '#6366F1';
@@ -263,16 +489,31 @@ export default function AdvancedEditor({ onBack }: Props) {
         onClear={() => { setElements([]); setSelectedId(null); }}
         onBack={onBack}
         isSaving={isSaving}
+        currentPageIndex={currentPageIndex}
+        numPages={numPages}
+        onPrevPage={handlePrevPage}
+        onNextPage={handleNextPage}
+        onAddPage={addPage}
+        onDeletePage={deletePage}
       />
 
       {/* Main 3-Panel Layout */}
       <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Left Panel */}
         <LeftToolboxPanel
-          elements={elements} selectedId={selectedId}
+          elements={elements.filter(el => (el.pageIndex ?? 0) === currentPageIndex)}
+          selectedId={selectedId}
           isDrawMode={isDrawMode}
+          isEditTextMode={isEditTextMode}
           onSelect={setSelectedId} onDelete={deleteElement} onAdd={addElement}
-          onToggleDrawMode={() => setIsDrawMode(d => !d)}
+          onToggleDrawMode={() => {
+            setIsDrawMode(d => !d);
+            setIsEditTextMode(false);
+          }}
+          onToggleEditTextMode={() => {
+            setIsEditTextMode(m => !m);
+            setIsDrawMode(false);
+          }}
         />
 
         {/* Canvas Viewport */}
@@ -286,7 +527,7 @@ export default function AdvancedEditor({ onBack }: Props) {
         >
           <Document
             file={fileBlob}
-            onLoadSuccess={() => {}}
+            onLoadSuccess={onDocumentLoadSuccess}
             loading={<CircularProgress sx={{ color: '#6366F1' }} />}
           >
             <Box
@@ -301,9 +542,19 @@ export default function AdvancedEditor({ onBack }: Props) {
             >
               {/* PDF Page */}
               <Page
-                pageNumber={1}
+                pageNumber={currentPageIndex + 1}
                 width={canvasWidth}
-                onRenderSuccess={(data: any) => setPageDims({ width: data.width, height: data.height })}
+                onRenderSuccess={(data: any) => {
+                  setPageDims({ width: data.width, height: data.height });
+                  setPageDimsMap(prev => ({
+                    ...prev,
+                    [currentPageIndex]: { width: data.width / zoom, height: data.height / zoom }
+                  }));
+                  setPdfPageDimsMap(prev => ({
+                    ...prev,
+                    [currentPageIndex]: { width: data.originalWidth, height: data.originalHeight }
+                  }));
+                }}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
               />
@@ -321,8 +572,159 @@ export default function AdvancedEditor({ onBack }: Props) {
                 />
               )}
 
+              {/* Interactive PDF Text Overlay (Edit Mode) */}
+              {isEditTextMode && pageDims.width > 0 && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0, left: 0,
+                    width: '100%', height: '100%',
+                    zIndex: 15,
+                    pointerEvents: 'auto',
+                  }}
+                >
+                  {pageTextItems
+                    .filter(item => item.str && item.str.trim())
+                    .map((item, idx) => {
+                      const tx = item.transform[4];
+                      const ty = item.transform[5];
+                      const w = item.width;
+                      const h = item.height || item.transform[3];
+                      const pdfDims = pdfPageDimsMap[currentPageIndex] || { width: A4_W, height: A4_H };
+                      
+                      const scaleX = A4_W / pdfDims.width;
+                      const scaleY = A4_H / pdfDims.height;
+                      
+                      const x = tx * scaleX;
+                      const y = (pdfDims.height - ty - h) * scaleY;
+
+                      const left = x * zoom;
+                      const top = y * zoom;
+                      const width = w * scaleX * zoom;
+                      const height = h * scaleY * zoom;
+
+                      const isEdited = elements.some(
+                        el => el.type === 'edit-text' &&
+                              (el.pageIndex ?? 0) === currentPageIndex &&
+                              Math.abs((el.originalPdfX ?? 0) - tx) < 0.1 &&
+                              Math.abs((el.originalPdfY ?? 0) - ty) < 0.1
+                      );
+
+                      if (isEdited) return null;
+
+                      const uniqueId = `parsed-text-${idx}`;
+                      const style = pageTextStyles[item.fontName] || {};
+                      const fontFamily = style.fontFamily || 'sans-serif';
+                      const familyLower = fontFamily.toLowerCase();
+                      const isBold = familyLower.includes('bold');
+                      const isItalic = familyLower.includes('italic') || familyLower.includes('oblique');
+                      const colorArr = item.color || [0, 0, 0];
+                      const hexColor = '#' + colorArr.map((c: any) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('');
+
+                      return (
+                        <Box
+                          key={uniqueId}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTextId(uniqueId);
+                            setEditingInputValue(item.str);
+                          }}
+                          sx={{
+                            position: 'absolute',
+                            left, top, width: Math.max(width, 20), height: Math.max(height, 12),
+                            border: '1px dashed rgba(168, 85, 247, 0.4)',
+                            bgcolor: 'rgba(168, 85, 247, 0.05)',
+                            cursor: 'text',
+                            display: 'flex',
+                            alignItems: 'center',
+                            userSelect: 'none',
+                            '&:hover': {
+                              border: '1px solid #A855F7',
+                              bgcolor: 'rgba(168, 85, 247, 0.15)',
+                            },
+                          }}
+                        >
+                          {editingTextId === uniqueId ? (
+                            <input
+                              autoFocus
+                              value={editingInputValue}
+                              onChange={e => setEditingInputValue(e.target.value)}
+                              onBlur={() => {
+                                if (editingInputValue !== item.str) {
+                                  const newEl: EditorElement = {
+                                    id: crypto.randomUUID(),
+                                    type: 'edit-text',
+                                    pageIndex: currentPageIndex,
+                                    x, y,
+                                    width: w * scaleX,
+                                    height: h * scaleY,
+                                    content: editingInputValue,
+                                    originalText: item.str,
+                                    originalPdfX: tx,
+                                    originalPdfY: ty,
+                                    originalPdfW: w,
+                                    originalPdfH: h,
+                                    fontSize: h * scaleY,
+                                    fontFamily: fontFamily,
+                                    fontWeight: isBold ? 'bold' : 'normal',
+                                    fontStyle: isItalic ? 'italic' : 'normal',
+                                    fillColor: '#FFFFFF',
+                                    strokeColor: hexColor,
+                                  };
+                                  setElements(prev => [...prev, newEl]);
+                                }
+                                setEditingTextId(null);
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                } else if (e.key === 'Escape') {
+                                  setEditingTextId(null);
+                                }
+                              }}
+                              onClick={e => e.stopPropagation()}
+                              onDoubleClick={e => e.stopPropagation()}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                background: '#1F2937',
+                                color: '#F3F4F6',
+                                border: '1px solid #A855F7',
+                                outline: 'none',
+                                fontSize: `${h * zoom}px`,
+                                fontFamily: fontFamily,
+                                fontWeight: isBold ? 'bold' : 'normal',
+                                fontStyle: isItalic ? 'italic' : 'normal',
+                                padding: '0 2px',
+                              }}
+                            />
+                          ) : (
+                            <Typography
+                              sx={{
+                                fontSize: `${h * zoom}px`,
+                                fontFamily: fontFamily,
+                                fontWeight: isBold ? 'bold' : 'normal',
+                                fontStyle: isItalic ? 'italic' : 'normal',
+                                lineHeight: 1,
+                                color: 'transparent',
+                                whiteSpace: 'nowrap',
+                                width: '100%',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {item.str}
+                            </Typography>
+                          )}
+                        </Box>
+                      );
+                    })}
+                </Box>
+              )}
+
               {/* Draggable Elements */}
-              {pageDims.width > 0 && elements.map(el => (
+              {pageDims.width > 0 && elements
+                .filter(el => (el.pageIndex ?? 0) === currentPageIndex)
+                .map(el => (
                 <Rnd
                   key={el.id}
                   size={{ width: el.width, height: el.height }}
@@ -346,7 +748,9 @@ export default function AdvancedEditor({ onBack }: Props) {
                     border: (selectedId === el.id && el.type !== 'draw') ? '1px solid #6366F1' : '1px solid transparent',
                     backgroundColor: el.type === 'rect'
                       ? `${el.fillColor || '#6366F1'}${Math.round((el.opacity ?? 0.35) * 255).toString(16).padStart(2, '0')}`
-                      : 'transparent',
+                      : el.type === 'edit-text'
+                        ? el.fillColor || '#FFFFFF'
+                        : 'transparent',
                     cursor: el.type === 'draw' ? 'move' : 'grab',
                     boxSizing: 'border-box' as const,
                     transition: 'box-shadow 0.15s ease-out',
@@ -362,19 +766,22 @@ export default function AdvancedEditor({ onBack }: Props) {
                     transition: 'border-color 0.15s ease',
                   }} />
 
-                  {el.type === 'text' && (
+                  {(el.type === 'text' || el.type === 'edit-text') && (
                     <textarea
                       value={el.content}
                       onChange={e => updateElement(el.id, { content: e.target.value })}
                       style={{
                         width: '100%', height: '100%',
                         background: 'transparent', border: 'none',
-                        color: '#000', resize: 'none', outline: 'none',
-                        fontFamily: 'Inter, sans-serif',
+                        color: el.type === 'edit-text' ? (el.strokeColor || '#000000') : '#000000',
+                        resize: 'none', outline: 'none',
+                        fontFamily: el.fontFamily || 'Inter, sans-serif',
                         fontSize: `${el.fontSize ?? 16}px`,
                         fontWeight: el.fontWeight ?? 400,
+                        fontStyle: el.fontStyle ?? 'normal',
                         textAlign: (el.textAlign as any) ?? 'left',
-                        padding: '4px 6px',
+                        padding: el.type === 'edit-text' ? '0px 2px' : '4px 6px',
+                        overflow: 'hidden',
                       }}
                     />
                   )}

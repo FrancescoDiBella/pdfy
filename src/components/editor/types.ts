@@ -1,4 +1,4 @@
-export type ElementType = 'text' | 'image' | 'rect' | 'draw';
+export type ElementType = 'text' | 'image' | 'rect' | 'draw' | 'edit-text';
 
 export interface StrokePoint {
   x: number;
@@ -12,10 +12,13 @@ export interface EditorElement {
   y: number;
   width: number;
   height: number;
+  pageIndex?: number;
   content?: string;
   src?: string;
   fontSize?: number;
-  fontWeight?: number;
+  fontFamily?: string;
+  fontStyle?: string;
+  fontWeight?: number | string;
   textAlign?: 'left' | 'center' | 'right';
   fillColor?: string;
   strokeWidth?: number;
@@ -23,4 +26,10 @@ export interface EditorElement {
   // Freehand drawing
   points?: StrokePoint[];
   strokeColor?: string;
+  // Existing text editing metadata
+  originalText?: string;
+  originalPdfX?: number;
+  originalPdfY?: number;
+  originalPdfW?: number;
+  originalPdfH?: number;
 }

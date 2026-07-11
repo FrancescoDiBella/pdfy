@@ -1,4 +1,4 @@
-import { Box, Typography, TextField, Slider, Divider, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Typography, TextField, Slider, Divider, ToggleButtonGroup, ToggleButton, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { FormatAlignLeft, FormatAlignCenter, FormatAlignRight, FormatBold } from '@mui/icons-material';
 import type { EditorElement } from './types';
 
@@ -60,20 +60,38 @@ export default function RightPropertiesPanel({ element, onUpdate }: Props) {
             <Typography variant="caption" sx={{ color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, mb: 1.5, display: 'block' }}>
               Appearance
             </Typography>
-            {(element.type === 'rect' || element.type === 'draw') && (
+            {(element.type === 'rect' || element.type === 'draw' || element.type === 'edit-text') && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>
-                  {element.type === 'draw' ? 'Stroke Color' : 'Fill Color'}
+                  {element.type === 'draw' ? 'Stroke Color' : 'Fill Color (Mask)'}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <input
                     type="color"
-                    value={(element.type === 'draw' ? element.strokeColor : element.fillColor) || '#6366F1'}
+                    value={(element.type === 'draw' ? element.strokeColor : element.fillColor) || (element.type === 'edit-text' ? '#ffffff' : '#6366F1')}
                     onChange={e => onUpdate(element.id, element.type === 'draw' ? { strokeColor: e.target.value } : { fillColor: e.target.value })}
                     style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
                   />
                   <Typography className="mono" sx={{ color: '#9CA3AF' }}>
-                    {((element.type === 'draw' ? element.strokeColor : element.fillColor) || '#6366F1').toUpperCase()}
+                    {((element.type === 'draw' ? element.strokeColor : element.fillColor) || (element.type === 'edit-text' ? '#ffffff' : '#6366F1')).toUpperCase()}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            {element.type === 'edit-text' && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>
+                  Text Color
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    value={element.strokeColor || '#000000'}
+                    onChange={e => onUpdate(element.id, { strokeColor: e.target.value })}
+                    style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
+                  />
+                  <Typography className="mono" sx={{ color: '#9CA3AF' }}>
+                    {(element.strokeColor || '#000000').toUpperCase()}
                   </Typography>
                 </Box>
               </Box>
@@ -99,16 +117,31 @@ export default function RightPropertiesPanel({ element, onUpdate }: Props) {
               />
             </Box>
           </Box>
-
-          {/* Typography (text only) */}
-          {element.type === 'text' && (
+ 
+          {/* Typography (text and edit-text) */}
+          {(element.type === 'text' || element.type === 'edit-text') && (
             <>
               <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
               <Box sx={{ p: 2.5 }}>
                 <Typography variant="caption" sx={{ color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, mb: 1.5, display: 'block' }}>
                   Typography
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1.5 }}>
+                  <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': { color: '#F3F4F6', fontSize: 13, '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' } }, '& .MuiSvgIcon-root': { color: '#9CA3AF' } }}>
+                    <Select
+                      value={element.fontFamily || 'Helvetica'}
+                      onChange={e => onUpdate(element.id, { fontFamily: e.target.value as string })}
+                      displayEmpty
+                    >
+                      <MenuItem value="Helvetica">Helvetica (Standard)</MenuItem>
+                      <MenuItem value="Times Roman">Times Roman (Standard)</MenuItem>
+                      <MenuItem value="Courier">Courier (Standard)</MenuItem>
+                      <MenuItem value="Roboto">Roboto</MenuItem>
+                      <MenuItem value="Open Sans">Open Sans</MenuItem>
+                      <MenuItem value="Lato">Lato</MenuItem>
+                      <MenuItem value="Montserrat">Montserrat</MenuItem>
+                    </Select>
+                  </FormControl>
                   <NumericField label="Size (px)" value={element.fontSize ?? 16} onChange={v => onUpdate(element.id, { fontSize: v })} />
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
