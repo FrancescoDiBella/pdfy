@@ -1,4 +1,4 @@
-import { Box, Typography, TextField, Slider, Divider, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Typography, TextField, Slider, Divider, ToggleButtonGroup, ToggleButton, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { FormatAlignLeft, FormatAlignCenter, FormatAlignRight, FormatBold } from '@mui/icons-material';
 import type { EditorElement } from './types';
 
@@ -126,7 +126,22 @@ export default function RightPropertiesPanel({ element, onUpdate }: Props) {
                 <Typography variant="caption" sx={{ color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, mb: 1.5, display: 'block' }}>
                   Typography
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1.5 }}>
+                  <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': { color: '#F3F4F6', fontSize: 13, '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' } }, '& .MuiSvgIcon-root': { color: '#9CA3AF' } }}>
+                    <Select
+                      value={element.fontFamily || 'Helvetica'}
+                      onChange={e => onUpdate(element.id, { fontFamily: e.target.value as string })}
+                      displayEmpty
+                    >
+                      <MenuItem value="Helvetica">Helvetica (Standard)</MenuItem>
+                      <MenuItem value="Times Roman">Times Roman (Standard)</MenuItem>
+                      <MenuItem value="Courier">Courier (Standard)</MenuItem>
+                      <MenuItem value="Roboto">Roboto</MenuItem>
+                      <MenuItem value="Open Sans">Open Sans</MenuItem>
+                      <MenuItem value="Lato">Lato</MenuItem>
+                      <MenuItem value="Montserrat">Montserrat</MenuItem>
+                    </Select>
+                  </FormControl>
                   <NumericField label="Size (px)" value={element.fontSize ?? 16} onChange={v => onUpdate(element.id, { fontSize: v })} />
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>

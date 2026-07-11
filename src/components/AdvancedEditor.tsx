@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress } from '@mui/material';
 import { CloudUpload as UploadIcon, Add as AddIcon } from '@mui/icons-material';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Rnd } from 'react-rnd';
 import type { EditorElement, ElementType, StrokePoint } from './editor/types';
@@ -18,6 +18,15 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 // A4 at 96 DPI
 const A4_W = 794;
 const A4_H = 1123;
+
+const CUSTOM_FONTS: Record<string, string> = {
+  'Roboto': 'https://raw.githubusercontent.com/google/fonts/main/apache/roboto/Roboto-Regular.ttf',
+  'Open Sans': 'https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans-Regular.ttf',
+  'Lato': 'https://raw.githubusercontent.com/google/fonts/main/ofl/lato/Lato-Regular.ttf',
+  'Montserrat': 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/static/Montserrat-Regular.ttf',
+};
+
+const fontCache: Record<string, ArrayBuffer> = {};
 
 interface Props { onBack: () => void; }
 
@@ -40,9 +49,11 @@ export default function AdvancedEditor({ onBack }: Props) {
   const [numPages, setNumPages] = useState(1);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [pageDimsMap, setPageDimsMap] = useState<Record<number, { width: number; height: number }>>({});
+  const [pdfPageDimsMap, setPdfPageDimsMap] = useState<Record<number, { width: number; height: number }>>({});
 
   const [isEditTextMode, setIsEditTextMode] = useState(false);
   const [pageTextItems, setPageTextItems] = useState<any[]>([]);
+  const [pageTextStyles, setPageTextStyles] = useState<Record<string, any>>({});
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingInputValue, setEditingInputValue] = useState('');
 
@@ -59,6 +70,7 @@ export default function AdvancedEditor({ onBack }: Props) {
     setCurrentPageIndex(0);
     setNumPages(1);
     setPageDimsMap({});
+    setPdfPageDimsMap({});
   };
 
   const createBlank = async () => {
@@ -72,6 +84,7 @@ export default function AdvancedEditor({ onBack }: Props) {
     setCurrentPageIndex(0);
     setNumPages(1);
     setPageDimsMap({});
+    setPdfPageDimsMap({});
   };
 
   /* ── Element CRUD ────────────────────────── */
@@ -234,18 +247,44 @@ export default function AdvancedEditor({ onBack }: Props) {
         return;
       }
       try {
-        const loadingTask = pdfjs.getDocument({ data: originalBytes.slice() });
+        const loadingTask = pdfjs.getDocument({
+          data: originalBytes.slice(),
+          standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+        });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(currentPageIndex + 1);
         const textContent = await page.getTextContent();
         setPageTextItems(textContent.items);
+        setPageTextStyles(textContent.styles || {});
       } catch (err) {
         console.error('Failed to parse text content:', err);
         setPageTextItems([]);
+        setPageTextStyles({});
       }
     };
     fetchTextContent();
   }, [originalBytes, currentPageIndex]);
+
+  // Dynamically load Google Fonts for the UI preview
+  useEffect(() => {
+    const customFonts = elements
+      .map(e => e.fontFamily)
+      .filter((f): f is string => !!f && Object.keys(CUSTOM_FONTS).includes(f));
+    
+    const uniqueFonts = [...new Set(customFonts)];
+    if (uniqueFonts.length > 0) {
+      const familyString = uniqueFonts.map(f => `family=${f.replace(/ /g, '+')}`).join('&');
+      const url = `https://fonts.googleapis.com/css2?${familyString}&display=swap`;
+      let link = document.getElementById('custom-google-fonts') as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.id = 'custom-google-fonts';
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      if (link.href !== url) link.href = url;
+    }
+  }, [elements]);
 
   /* ── Export ───────────────────────────────── */
   const exportPDF = async () => {
@@ -260,9 +299,9 @@ export default function AdvancedEditor({ onBack }: Props) {
         const page = pages[elPageIndex];
         if (!page) continue;
         const { width: pw, height: ph } = page.getSize();
-        const dims = pageDimsMap[elPageIndex] || pageDimsMap[currentPageIndex] || { width: A4_W, height: A4_H };
-        const sx = pw / dims.width;
-        const sy = ph / dims.height;
+        // The canvas elements are always positioned within A4_W and A4_H coordinate space
+        const sx = pw / A4_W;
+        const sy = ph / A4_H;
 
         const px = el.x * sx;
         const py = ph - ((el.y + el.height) * sy);
@@ -281,11 +320,15 @@ export default function AdvancedEditor({ onBack }: Props) {
           const mr = parseInt(hexMask.slice(1, 3), 16) / 255;
           const mg = parseInt(hexMask.slice(3, 5), 16) / 255;
           const mb = parseInt(hexMask.slice(5, 7), 16) / 255;
+          
+          // originalPdfY is the baseline. 
+          // Offset y downwards by 25% of height to cover descenders.
+          const maskH = el.originalPdfH || eh;
           page.drawRectangle({
             x: el.originalPdfX,
-            y: el.originalPdfY,
+            y: el.originalPdfY - (maskH * 0.25),
             width: el.originalPdfW || ew,
-            height: el.originalPdfH || eh,
+            height: maskH * 1.25,
             color: rgb(mr, mg, mb),
           });
 
@@ -295,10 +338,54 @@ export default function AdvancedEditor({ onBack }: Props) {
           const tg = parseInt(hexText.slice(3, 5), 16) / 255;
           const tb = parseInt(hexText.slice(5, 7), 16) / 255;
           
+          // Try custom font first
+          let embedFont;
+          if (el.fontFamily && CUSTOM_FONTS[el.fontFamily]) {
+            try {
+              if (!fontCache[el.fontFamily]) {
+                const res = await fetch(CUSTOM_FONTS[el.fontFamily]);
+                fontCache[el.fontFamily] = await res.arrayBuffer();
+              }
+              // PDFDocument supports standard TTF without fontkit in some cases
+              embedFont = await doc.embedFont(fontCache[el.fontFamily]);
+            } catch (err) {
+              console.warn('Failed to embed custom font, falling back.', err);
+            }
+          }
+          
+          if (!embedFont) {
+            // Map fontFamily to pdf-lib StandardFonts
+            let fontEnum = StandardFonts.Helvetica;
+            const familyLower = (el.fontFamily || '').toLowerCase();
+            const isBold = el.fontWeight === 'bold' || familyLower.includes('bold');
+            const isItalic = el.fontStyle === 'italic' || familyLower.includes('italic') || familyLower.includes('oblique');
+            
+            if (familyLower.includes('times') || familyLower.includes('serif')) {
+              if (isBold && isItalic) fontEnum = StandardFonts.TimesRomanBoldItalic;
+              else if (isBold) fontEnum = StandardFonts.TimesRomanBold;
+              else if (isItalic) fontEnum = StandardFonts.TimesRomanItalic;
+              else fontEnum = StandardFonts.TimesRoman;
+            } else if (familyLower.includes('courier') || familyLower.includes('mono')) {
+              if (isBold && isItalic) fontEnum = StandardFonts.CourierBoldOblique;
+              else if (isBold) fontEnum = StandardFonts.CourierBold;
+              else if (isItalic) fontEnum = StandardFonts.CourierOblique;
+              else fontEnum = StandardFonts.Courier;
+            } else {
+              if (isBold && isItalic) fontEnum = StandardFonts.HelveticaBoldOblique;
+              else if (isBold) fontEnum = StandardFonts.HelveticaBold;
+              else if (isItalic) fontEnum = StandardFonts.HelveticaOblique;
+              else fontEnum = StandardFonts.Helvetica;
+            }
+            embedFont = await doc.embedFont(fontEnum);
+          }
+          
+          // py is the bottom of the bounding box.
+          // The baseline is typically ~20-25% of the height above the bottom of the bounding box.
           page.drawText(el.content || '', {
             x: px,
-            y: py + 2, // Slight Y offset to align nicely
+            y: py + (eh * 0.2), 
             size: eh,
+            font: embedFont,
             color: rgb(tr, tg, tb),
           });
         } else if (el.type === 'rect') {
@@ -463,6 +550,10 @@ export default function AdvancedEditor({ onBack }: Props) {
                     ...prev,
                     [currentPageIndex]: { width: data.width / zoom, height: data.height / zoom }
                   }));
+                  setPdfPageDimsMap(prev => ({
+                    ...prev,
+                    [currentPageIndex]: { width: data.originalWidth, height: data.originalHeight }
+                  }));
                 }}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
@@ -499,15 +590,18 @@ export default function AdvancedEditor({ onBack }: Props) {
                       const ty = item.transform[5];
                       const w = item.width;
                       const h = item.height || item.transform[3];
-                      const ph = pageDimsMap[currentPageIndex]?.height || A4_H;
+                      const pdfDims = pdfPageDimsMap[currentPageIndex] || { width: A4_W, height: A4_H };
                       
-                      const x = tx;
-                      const y = ph - ty - h;
+                      const scaleX = A4_W / pdfDims.width;
+                      const scaleY = A4_H / pdfDims.height;
+                      
+                      const x = tx * scaleX;
+                      const y = (pdfDims.height - ty - h) * scaleY;
 
                       const left = x * zoom;
                       const top = y * zoom;
-                      const width = w * zoom;
-                      const height = h * zoom;
+                      const width = w * scaleX * zoom;
+                      const height = h * scaleY * zoom;
 
                       const isEdited = elements.some(
                         el => el.type === 'edit-text' &&
@@ -519,6 +613,13 @@ export default function AdvancedEditor({ onBack }: Props) {
                       if (isEdited) return null;
 
                       const uniqueId = `parsed-text-${idx}`;
+                      const style = pageTextStyles[item.fontName] || {};
+                      const fontFamily = style.fontFamily || 'sans-serif';
+                      const familyLower = fontFamily.toLowerCase();
+                      const isBold = familyLower.includes('bold');
+                      const isItalic = familyLower.includes('italic') || familyLower.includes('oblique');
+                      const colorArr = item.color || [0, 0, 0];
+                      const hexColor = '#' + colorArr.map((c: any) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('');
 
                       return (
                         <Box
@@ -555,17 +656,20 @@ export default function AdvancedEditor({ onBack }: Props) {
                                     type: 'edit-text',
                                     pageIndex: currentPageIndex,
                                     x, y,
-                                    width: w,
-                                    height: h,
+                                    width: w * scaleX,
+                                    height: h * scaleY,
                                     content: editingInputValue,
                                     originalText: item.str,
                                     originalPdfX: tx,
                                     originalPdfY: ty,
                                     originalPdfW: w,
                                     originalPdfH: h,
-                                    fontSize: h,
+                                    fontSize: h * scaleY,
+                                    fontFamily: fontFamily,
+                                    fontWeight: isBold ? 'bold' : 'normal',
+                                    fontStyle: isItalic ? 'italic' : 'normal',
                                     fillColor: '#FFFFFF',
-                                    strokeColor: '#000000',
+                                    strokeColor: hexColor,
                                   };
                                   setElements(prev => [...prev, newEl]);
                                 }
@@ -588,7 +692,9 @@ export default function AdvancedEditor({ onBack }: Props) {
                                 border: '1px solid #A855F7',
                                 outline: 'none',
                                 fontSize: `${h * zoom}px`,
-                                fontFamily: 'inherit',
+                                fontFamily: fontFamily,
+                                fontWeight: isBold ? 'bold' : 'normal',
+                                fontStyle: isItalic ? 'italic' : 'normal',
                                 padding: '0 2px',
                               }}
                             />
@@ -596,6 +702,9 @@ export default function AdvancedEditor({ onBack }: Props) {
                             <Typography
                               sx={{
                                 fontSize: `${h * zoom}px`,
+                                fontFamily: fontFamily,
+                                fontWeight: isBold ? 'bold' : 'normal',
+                                fontStyle: isItalic ? 'italic' : 'normal',
                                 lineHeight: 1,
                                 color: 'transparent',
                                 whiteSpace: 'nowrap',
@@ -666,9 +775,10 @@ export default function AdvancedEditor({ onBack }: Props) {
                         background: 'transparent', border: 'none',
                         color: el.type === 'edit-text' ? (el.strokeColor || '#000000') : '#000000',
                         resize: 'none', outline: 'none',
-                        fontFamily: 'Inter, sans-serif',
+                        fontFamily: el.fontFamily || 'Inter, sans-serif',
                         fontSize: `${el.fontSize ?? 16}px`,
                         fontWeight: el.fontWeight ?? 400,
+                        fontStyle: el.fontStyle ?? 'normal',
                         textAlign: (el.textAlign as any) ?? 'left',
                         padding: el.type === 'edit-text' ? '0px 2px' : '4px 6px',
                         overflow: 'hidden',

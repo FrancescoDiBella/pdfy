@@ -16,7 +16,9 @@ export interface EditorElement {
   content?: string;
   src?: string;
   fontSize?: number;
-  fontWeight?: number;
+  fontFamily?: string;
+  fontStyle?: string;
+  fontWeight?: number | string;
   textAlign?: 'left' | 'center' | 'right';
   fillColor?: string;
   strokeWidth?: number;
