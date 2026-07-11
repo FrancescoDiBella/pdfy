@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress } from '@mui/material';
 import { CloudUpload as UploadIcon, Add as AddIcon } from '@mui/icons-material';
 import { PDFDocument, rgb } from 'pdf-lib';
@@ -40,6 +40,11 @@ export default function AdvancedEditor({ onBack }: Props) {
   const [numPages, setNumPages] = useState(1);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [pageDimsMap, setPageDimsMap] = useState<Record<number, { width: number; height: number }>>({});
+
+  const [isEditTextMode, setIsEditTextMode] = useState(false);
+  const [pageTextItems, setPageTextItems] = useState<any[]>([]);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [editingInputValue, setEditingInputValue] = useState('');
 
   const selectedElement = elements.find(e => e.id === selectedId) ?? null;
 
@@ -222,6 +227,26 @@ export default function AdvancedEditor({ onBack }: Props) {
     }
   };
 
+  useEffect(() => {
+    const fetchTextContent = async () => {
+      if (!originalBytes) {
+        setPageTextItems([]);
+        return;
+      }
+      try {
+        const loadingTask = pdfjs.getDocument({ data: originalBytes.slice() });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(currentPageIndex + 1);
+        const textContent = await page.getTextContent();
+        setPageTextItems(textContent.items);
+      } catch (err) {
+        console.error('Failed to parse text content:', err);
+        setPageTextItems([]);
+      }
+    };
+    fetchTextContent();
+  }, [originalBytes, currentPageIndex]);
+
   /* ── Export ───────────────────────────────── */
   const exportPDF = async () => {
     if (!originalBytes) return;
@@ -249,6 +274,32 @@ export default function AdvancedEditor({ onBack }: Props) {
             x: px, y: py + 12,
             size: (el.fontSize ?? 16) * sy,
             color: rgb(0, 0, 0),
+          });
+        } else if (el.type === 'edit-text' && el.originalPdfX !== undefined && el.originalPdfY !== undefined) {
+          // Draw solid masking rectangle over the original text to erase it
+          const hexMask = el.fillColor || '#FFFFFF';
+          const mr = parseInt(hexMask.slice(1, 3), 16) / 255;
+          const mg = parseInt(hexMask.slice(3, 5), 16) / 255;
+          const mb = parseInt(hexMask.slice(5, 7), 16) / 255;
+          page.drawRectangle({
+            x: el.originalPdfX,
+            y: el.originalPdfY,
+            width: el.originalPdfW || ew,
+            height: el.originalPdfH || eh,
+            color: rgb(mr, mg, mb),
+          });
+
+          // Draw the new text at its current dragged position
+          const hexText = el.strokeColor || '#000000';
+          const tr = parseInt(hexText.slice(1, 3), 16) / 255;
+          const tg = parseInt(hexText.slice(3, 5), 16) / 255;
+          const tb = parseInt(hexText.slice(5, 7), 16) / 255;
+          
+          page.drawText(el.content || '', {
+            x: px,
+            y: py + 2, // Slight Y offset to align nicely
+            size: eh,
+            color: rgb(tr, tg, tb),
           });
         } else if (el.type === 'rect') {
           const hex = el.fillColor || '#6366F1';
@@ -366,8 +417,16 @@ export default function AdvancedEditor({ onBack }: Props) {
           elements={elements.filter(el => (el.pageIndex ?? 0) === currentPageIndex)}
           selectedId={selectedId}
           isDrawMode={isDrawMode}
+          isEditTextMode={isEditTextMode}
           onSelect={setSelectedId} onDelete={deleteElement} onAdd={addElement}
-          onToggleDrawMode={() => setIsDrawMode(d => !d)}
+          onToggleDrawMode={() => {
+            setIsDrawMode(d => !d);
+            setIsEditTextMode(false);
+          }}
+          onToggleEditTextMode={() => {
+            setIsEditTextMode(m => !m);
+            setIsDrawMode(false);
+          }}
         />
 
         {/* Canvas Viewport */}
@@ -422,6 +481,137 @@ export default function AdvancedEditor({ onBack }: Props) {
                 />
               )}
 
+              {/* Interactive PDF Text Overlay (Edit Mode) */}
+              {isEditTextMode && pageDims.width > 0 && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0, left: 0,
+                    width: '100%', height: '100%',
+                    zIndex: 15,
+                    pointerEvents: 'auto',
+                  }}
+                >
+                  {pageTextItems
+                    .filter(item => item.str && item.str.trim())
+                    .map((item, idx) => {
+                      const tx = item.transform[4];
+                      const ty = item.transform[5];
+                      const w = item.width;
+                      const h = item.height || item.transform[3];
+                      const ph = pageDimsMap[currentPageIndex]?.height || A4_H;
+                      
+                      const x = tx;
+                      const y = ph - ty - h;
+
+                      const left = x * zoom;
+                      const top = y * zoom;
+                      const width = w * zoom;
+                      const height = h * zoom;
+
+                      const isEdited = elements.some(
+                        el => el.type === 'edit-text' &&
+                              (el.pageIndex ?? 0) === currentPageIndex &&
+                              Math.abs((el.originalPdfX ?? 0) - tx) < 0.1 &&
+                              Math.abs((el.originalPdfY ?? 0) - ty) < 0.1
+                      );
+
+                      if (isEdited) return null;
+
+                      const uniqueId = `parsed-text-${idx}`;
+
+                      return (
+                        <Box
+                          key={uniqueId}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTextId(uniqueId);
+                            setEditingInputValue(item.str);
+                          }}
+                          sx={{
+                            position: 'absolute',
+                            left, top, width: Math.max(width, 20), height: Math.max(height, 12),
+                            border: '1px dashed rgba(168, 85, 247, 0.4)',
+                            bgcolor: 'rgba(168, 85, 247, 0.05)',
+                            cursor: 'text',
+                            display: 'flex',
+                            alignItems: 'center',
+                            userSelect: 'none',
+                            '&:hover': {
+                              border: '1px solid #A855F7',
+                              bgcolor: 'rgba(168, 85, 247, 0.15)',
+                            },
+                          }}
+                        >
+                          {editingTextId === uniqueId ? (
+                            <input
+                              autoFocus
+                              value={editingInputValue}
+                              onChange={e => setEditingInputValue(e.target.value)}
+                              onBlur={() => {
+                                if (editingInputValue !== item.str) {
+                                  const newEl: EditorElement = {
+                                    id: crypto.randomUUID(),
+                                    type: 'edit-text',
+                                    pageIndex: currentPageIndex,
+                                    x, y,
+                                    width: w,
+                                    height: h,
+                                    content: editingInputValue,
+                                    originalText: item.str,
+                                    originalPdfX: tx,
+                                    originalPdfY: ty,
+                                    originalPdfW: w,
+                                    originalPdfH: h,
+                                    fontSize: h,
+                                    fillColor: '#FFFFFF',
+                                    strokeColor: '#000000',
+                                  };
+                                  setElements(prev => [...prev, newEl]);
+                                }
+                                setEditingTextId(null);
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                } else if (e.key === 'Escape') {
+                                  setEditingTextId(null);
+                                }
+                              }}
+                              onClick={e => e.stopPropagation()}
+                              onDoubleClick={e => e.stopPropagation()}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                background: '#1F2937',
+                                color: '#F3F4F6',
+                                border: '1px solid #A855F7',
+                                outline: 'none',
+                                fontSize: `${h * zoom}px`,
+                                fontFamily: 'inherit',
+                                padding: '0 2px',
+                              }}
+                            />
+                          ) : (
+                            <Typography
+                              sx={{
+                                fontSize: `${h * zoom}px`,
+                                lineHeight: 1,
+                                color: 'transparent',
+                                whiteSpace: 'nowrap',
+                                width: '100%',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {item.str}
+                            </Typography>
+                          )}
+                        </Box>
+                      );
+                    })}
+                </Box>
+              )}
+
               {/* Draggable Elements */}
               {pageDims.width > 0 && elements
                 .filter(el => (el.pageIndex ?? 0) === currentPageIndex)
@@ -449,7 +639,9 @@ export default function AdvancedEditor({ onBack }: Props) {
                     border: (selectedId === el.id && el.type !== 'draw') ? '1px solid #6366F1' : '1px solid transparent',
                     backgroundColor: el.type === 'rect'
                       ? `${el.fillColor || '#6366F1'}${Math.round((el.opacity ?? 0.35) * 255).toString(16).padStart(2, '0')}`
-                      : 'transparent',
+                      : el.type === 'edit-text'
+                        ? el.fillColor || '#FFFFFF'
+                        : 'transparent',
                     cursor: el.type === 'draw' ? 'move' : 'grab',
                     boxSizing: 'border-box' as const,
                     transition: 'box-shadow 0.15s ease-out',
@@ -465,19 +657,21 @@ export default function AdvancedEditor({ onBack }: Props) {
                     transition: 'border-color 0.15s ease',
                   }} />
 
-                  {el.type === 'text' && (
+                  {(el.type === 'text' || el.type === 'edit-text') && (
                     <textarea
                       value={el.content}
                       onChange={e => updateElement(el.id, { content: e.target.value })}
                       style={{
                         width: '100%', height: '100%',
                         background: 'transparent', border: 'none',
-                        color: '#000', resize: 'none', outline: 'none',
+                        color: el.type === 'edit-text' ? (el.strokeColor || '#000000') : '#000000',
+                        resize: 'none', outline: 'none',
                         fontFamily: 'Inter, sans-serif',
                         fontSize: `${el.fontSize ?? 16}px`,
                         fontWeight: el.fontWeight ?? 400,
                         textAlign: (el.textAlign as any) ?? 'left',
-                        padding: '4px 6px',
+                        padding: el.type === 'edit-text' ? '0px 2px' : '4px 6px',
+                        overflow: 'hidden',
                       }}
                     />
                   )}

@@ -60,20 +60,38 @@ export default function RightPropertiesPanel({ element, onUpdate }: Props) {
             <Typography variant="caption" sx={{ color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, mb: 1.5, display: 'block' }}>
               Appearance
             </Typography>
-            {(element.type === 'rect' || element.type === 'draw') && (
+            {(element.type === 'rect' || element.type === 'draw' || element.type === 'edit-text') && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>
-                  {element.type === 'draw' ? 'Stroke Color' : 'Fill Color'}
+                  {element.type === 'draw' ? 'Stroke Color' : 'Fill Color (Mask)'}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <input
                     type="color"
-                    value={(element.type === 'draw' ? element.strokeColor : element.fillColor) || '#6366F1'}
+                    value={(element.type === 'draw' ? element.strokeColor : element.fillColor) || (element.type === 'edit-text' ? '#ffffff' : '#6366F1')}
                     onChange={e => onUpdate(element.id, element.type === 'draw' ? { strokeColor: e.target.value } : { fillColor: e.target.value })}
                     style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
                   />
                   <Typography className="mono" sx={{ color: '#9CA3AF' }}>
-                    {((element.type === 'draw' ? element.strokeColor : element.fillColor) || '#6366F1').toUpperCase()}
+                    {((element.type === 'draw' ? element.strokeColor : element.fillColor) || (element.type === 'edit-text' ? '#ffffff' : '#6366F1')).toUpperCase()}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            {element.type === 'edit-text' && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>
+                  Text Color
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    value={element.strokeColor || '#000000'}
+                    onChange={e => onUpdate(element.id, { strokeColor: e.target.value })}
+                    style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
+                  />
+                  <Typography className="mono" sx={{ color: '#9CA3AF' }}>
+                    {(element.strokeColor || '#000000').toUpperCase()}
                   </Typography>
                 </Box>
               </Box>
@@ -99,9 +117,9 @@ export default function RightPropertiesPanel({ element, onUpdate }: Props) {
               />
             </Box>
           </Box>
-
-          {/* Typography (text only) */}
-          {element.type === 'text' && (
+ 
+          {/* Typography (text and edit-text) */}
+          {(element.type === 'text' || element.type === 'edit-text') && (
             <>
               <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
               <Box sx={{ p: 2.5 }}>

@@ -7,6 +7,7 @@ import {
   Layers as LayersIcon,
   Delete as DeleteIcon,
   Visibility as VisIcon,
+  EditNote as EditNoteIcon,
 } from '@mui/icons-material';
 import type { EditorElement, ElementType } from './types';
 
@@ -14,19 +15,41 @@ interface Props {
   elements: EditorElement[];
   selectedId: string | null;
   isDrawMode: boolean;
+  isEditTextMode: boolean;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onAdd: (type: ElementType) => void;
   onToggleDrawMode: () => void;
+  onToggleEditTextMode: () => void;
 }
 
-const typeIcon = (t: ElementType) =>
-  t === 'text' ? <TextIcon sx={{ fontSize: 16 }} /> : t === 'image' ? <ImageIcon sx={{ fontSize: 16 }} /> : t === 'draw' ? <DrawIcon sx={{ fontSize: 16 }} /> : <RectIcon sx={{ fontSize: 16 }} />;
+const typeIcon = (t: ElementType) => {
+  if (t === 'text') return <TextIcon sx={{ fontSize: 16 }} />;
+  if (t === 'image') return <ImageIcon sx={{ fontSize: 16 }} />;
+  if (t === 'draw') return <DrawIcon sx={{ fontSize: 16 }} />;
+  if (t === 'edit-text') return <EditNoteIcon sx={{ fontSize: 16 }} />;
+  return <RectIcon sx={{ fontSize: 16 }} />;
+};
 
-const typeLabel = (t: ElementType) =>
-  t === 'text' ? 'Text' : t === 'image' ? 'Image' : t === 'draw' ? 'Drawing' : 'Rectangle';
+const typeLabel = (t: ElementType) => {
+  if (t === 'text') return 'Text';
+  if (t === 'image') return 'Image';
+  if (t === 'draw') return 'Drawing';
+  if (t === 'edit-text') return 'Edited PDF Text';
+  return 'Rectangle';
+};
 
-export default function LeftToolboxPanel({ elements, selectedId, isDrawMode, onSelect, onDelete, onAdd, onToggleDrawMode }: Props) {
+export default function LeftToolboxPanel({
+  elements,
+  selectedId,
+  isDrawMode,
+  isEditTextMode,
+  onSelect,
+  onDelete,
+  onAdd,
+  onToggleDrawMode,
+  onToggleEditTextMode,
+}: Props) {
   return (
     <Box sx={{
       width: 280, flexShrink: 0, height: '100%',
@@ -38,37 +61,58 @@ export default function LeftToolboxPanel({ elements, selectedId, isDrawMode, onS
       {/* Asset Library */}
       <Box sx={{ p: 2.5 }}>
         <Typography variant="caption" sx={{ color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, mb: 1.5, display: 'block' }}>
-          Add Element
+          Add Element / Edit Mode
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {(['text', 'image', 'rect'] as ElementType[]).map(t => (
-            <Tooltip key={t} title={`Add ${typeLabel(t)}`}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {/* Row 1: Addable Elements */}
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {(['text', 'image', 'rect'] as ElementType[]).map(t => (
+              <Tooltip key={t} title={`Add ${typeLabel(t)}`}>
+                <IconButton
+                  onClick={() => onAdd(t)}
+                  sx={{
+                    flex: 1, borderRadius: '8px', py: 1.5,
+                    bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: '#6366F1' },
+                  }}
+                >
+                  {typeIcon(t)}
+                </IconButton>
+              </Tooltip>
+            ))}
+          </Box>
+          {/* Row 2: Modes */}
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title={isDrawMode ? 'Exit Draw Mode' : 'Free-hand Draw'}>
               <IconButton
-                onClick={() => onAdd(t)}
+                onClick={onToggleDrawMode}
                 sx={{
                   flex: 1, borderRadius: '8px', py: 1.5,
-                  bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: '#6366F1' },
+                  bgcolor: isDrawMode ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)',
+                  border: isDrawMode ? '1px solid #6366F1' : '1px solid rgba(255,255,255,0.08)',
+                  color: isDrawMode ? '#6366F1' : '#9CA3AF',
+                  '&:hover': { bgcolor: isDrawMode ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.08)', borderColor: '#6366F1' },
                 }}
               >
-                {typeIcon(t)}
+                <DrawIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
-          ))}
-          <Tooltip title={isDrawMode ? 'Exit Draw Mode' : 'Free-hand Draw'}>
-            <IconButton
-              onClick={onToggleDrawMode}
-              sx={{
-                flex: 1, borderRadius: '8px', py: 1.5,
-                bgcolor: isDrawMode ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)',
-                border: isDrawMode ? '1px solid #6366F1' : '1px solid rgba(255,255,255,0.08)',
-                color: isDrawMode ? '#6366F1' : '#9CA3AF',
-                '&:hover': { bgcolor: isDrawMode ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.08)', borderColor: '#6366F1' },
-              }}
-            >
-              <DrawIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Tooltip>
+            
+            <Tooltip title={isEditTextMode ? 'Exit Edit Text Mode' : 'Edit PDF Text'}>
+              <IconButton
+                onClick={onToggleEditTextMode}
+                sx={{
+                  flex: 1, borderRadius: '8px', py: 1.5,
+                  bgcolor: isEditTextMode ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.03)',
+                  border: isEditTextMode ? '1px solid #A855F7' : '1px solid rgba(255,255,255,0.08)',
+                  color: isEditTextMode ? '#A855F7' : '#9CA3AF',
+                  '&:hover': { bgcolor: isEditTextMode ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.08)', borderColor: '#A855F7' },
+                }}
+              >
+                <EditNoteIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       </Box>
 
