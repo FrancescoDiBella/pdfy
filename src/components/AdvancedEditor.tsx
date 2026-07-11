@@ -36,6 +36,11 @@ export default function AdvancedEditor({ onBack }: Props) {
   const [drawOpacity] = useState(1);
   const pageRef = useRef<HTMLDivElement>(null);
 
+  // Multi-page states
+  const [numPages, setNumPages] = useState(1);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [pageDimsMap, setPageDimsMap] = useState<Record<number, { width: number; height: number }>>({});
+
   const selectedElement = elements.find(e => e.id === selectedId) ?? null;
 
   /* ── File I/O ────────────────────────────── */
@@ -46,6 +51,9 @@ export default function AdvancedEditor({ onBack }: Props) {
     setElements([]);
     setSelectedId(null);
     setDocTitle(file.name.replace(/\.pdf$/i, ''));
+    setCurrentPageIndex(0);
+    setNumPages(1);
+    setPageDimsMap({});
   };
 
   const createBlank = async () => {
@@ -56,6 +64,9 @@ export default function AdvancedEditor({ onBack }: Props) {
     setFileBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
     setElements([]);
     setSelectedId(null);
+    setCurrentPageIndex(0);
+    setNumPages(1);
+    setPageDimsMap({});
   };
 
   /* ── Element CRUD ────────────────────────── */
@@ -64,6 +75,7 @@ export default function AdvancedEditor({ onBack }: Props) {
     const el: EditorElement = {
       id: crypto.randomUUID(),
       type, x: 80, y: 80,
+      pageIndex: currentPageIndex,
       width: type === 'text' ? 200 : 120,
       height: type === 'text' ? 36 : 120,
       content: type === 'text' ? 'Type here…' : undefined,
@@ -90,7 +102,7 @@ export default function AdvancedEditor({ onBack }: Props) {
       setElements(prev => [...prev, el]);
       setSelectedId(el.id);
     }
-  }, [fileBlob]);
+  }, [fileBlob, currentPageIndex]);
 
   /* ── Drawing ─────────────────────────────── */
   const handleStrokeComplete = useCallback((points: StrokePoint[]) => {
@@ -120,6 +132,7 @@ export default function AdvancedEditor({ onBack }: Props) {
       id: crypto.randomUUID(),
       type: 'draw',
       x: minX, y: minY,
+      pageIndex: currentPageIndex,
       width: maxX - minX || 1,
       height: maxY - minY || 1,
       points: relPoints,
@@ -128,7 +141,7 @@ export default function AdvancedEditor({ onBack }: Props) {
       opacity: drawOpacity,
     };
     setElements(prev => [...prev, el]);
-  }, [drawColor, drawWidth, drawOpacity]);
+  }, [drawColor, drawWidth, drawOpacity, currentPageIndex]);
 
   const deleteElement = (id: string) => {
     setElements(prev => prev.filter(e => e.id !== id));
@@ -139,18 +152,93 @@ export default function AdvancedEditor({ onBack }: Props) {
     setElements(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
   };
 
+  /* ── Page Navigation & Manipulation ──────── */
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(currentPageIndex - 1);
+      setSelectedId(null);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPageIndex < numPages - 1) {
+      setCurrentPageIndex(currentPageIndex + 1);
+      setSelectedId(null);
+    }
+  };
+
+  const addPage = async () => {
+    if (!originalBytes) return;
+    try {
+      const doc = await PDFDocument.load(originalBytes);
+      doc.addPage([A4_W * (72 / 96), A4_H * (72 / 96)]);
+      const bytes = await doc.save();
+      setOriginalBytes(bytes);
+      setFileBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
+      const nextPagesCount = doc.getPageCount();
+      setNumPages(nextPagesCount);
+      setCurrentPageIndex(nextPagesCount - 1);
+      setSelectedId(null);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add page.');
+    }
+  };
+
+  const deletePage = async () => {
+    if (!originalBytes || numPages <= 1) return;
+    if (!window.confirm('Are you sure you want to delete the current page? This will also delete all elements on this page.')) return;
+    try {
+      const doc = await PDFDocument.load(originalBytes);
+      doc.removePage(currentPageIndex);
+      const bytes = await doc.save();
+      setOriginalBytes(bytes);
+      setFileBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
+
+      // Remove all elements associated with the deleted page and shift remaining
+      setElements(prev =>
+        prev
+          .filter(el => (el.pageIndex ?? 0) !== currentPageIndex)
+          .map(el => {
+            const elPageIndex = el.pageIndex ?? 0;
+            if (elPageIndex > currentPageIndex) {
+              return { ...el, pageIndex: elPageIndex - 1 };
+            }
+            return el;
+          })
+      );
+
+      const newNumPages = doc.getPageCount();
+      setNumPages(newNumPages);
+      setCurrentPageIndex(prev => Math.min(prev, newNumPages - 1));
+      setSelectedId(null);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete page.');
+    }
+  };
+
   /* ── Export ───────────────────────────────── */
   const exportPDF = async () => {
     if (!originalBytes) return;
     setIsSaving(true);
     try {
       const doc = await PDFDocument.load(originalBytes);
-      const page = doc.getPages()[0];
-      const { width: pw, height: ph } = page.getSize();
-      const sx = pw / pageDims.width;
-      const sy = ph / pageDims.height;
+      const pages = doc.getPages();
 
       for (const el of elements) {
+        const elPageIndex = el.pageIndex ?? 0;
+        const page = pages[elPageIndex];
+        if (!page) continue;
+        const { width: pw, height: ph } = page.getSize();
+        const dims = pageDimsMap[elPageIndex] || pageDimsMap[currentPageIndex] || { width: A4_W, height: A4_H };
+        const sx = pw / dims.width;
+        const sy = ph / dims.height;
+
         const px = el.x * sx;
         const py = ph - ((el.y + el.height) * sy);
         const ew = el.width * sx;
@@ -263,13 +351,20 @@ export default function AdvancedEditor({ onBack }: Props) {
         onClear={() => { setElements([]); setSelectedId(null); }}
         onBack={onBack}
         isSaving={isSaving}
+        currentPageIndex={currentPageIndex}
+        numPages={numPages}
+        onPrevPage={handlePrevPage}
+        onNextPage={handleNextPage}
+        onAddPage={addPage}
+        onDeletePage={deletePage}
       />
 
       {/* Main 3-Panel Layout */}
       <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Left Panel */}
         <LeftToolboxPanel
-          elements={elements} selectedId={selectedId}
+          elements={elements.filter(el => (el.pageIndex ?? 0) === currentPageIndex)}
+          selectedId={selectedId}
           isDrawMode={isDrawMode}
           onSelect={setSelectedId} onDelete={deleteElement} onAdd={addElement}
           onToggleDrawMode={() => setIsDrawMode(d => !d)}
@@ -286,7 +381,7 @@ export default function AdvancedEditor({ onBack }: Props) {
         >
           <Document
             file={fileBlob}
-            onLoadSuccess={() => {}}
+            onLoadSuccess={onDocumentLoadSuccess}
             loading={<CircularProgress sx={{ color: '#6366F1' }} />}
           >
             <Box
@@ -301,9 +396,15 @@ export default function AdvancedEditor({ onBack }: Props) {
             >
               {/* PDF Page */}
               <Page
-                pageNumber={1}
+                pageNumber={currentPageIndex + 1}
                 width={canvasWidth}
-                onRenderSuccess={(data: any) => setPageDims({ width: data.width, height: data.height })}
+                onRenderSuccess={(data: any) => {
+                  setPageDims({ width: data.width, height: data.height });
+                  setPageDimsMap(prev => ({
+                    ...prev,
+                    [currentPageIndex]: { width: data.width / zoom, height: data.height / zoom }
+                  }));
+                }}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
               />
@@ -322,7 +423,9 @@ export default function AdvancedEditor({ onBack }: Props) {
               )}
 
               {/* Draggable Elements */}
-              {pageDims.width > 0 && elements.map(el => (
+              {pageDims.width > 0 && elements
+                .filter(el => (el.pageIndex ?? 0) === currentPageIndex)
+                .map(el => (
                 <Rnd
                   key={el.id}
                   size={{ width: el.width, height: el.height }}

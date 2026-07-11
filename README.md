@@ -59,6 +59,7 @@ The compiled static assets will be output to the `dist` directory, ready to be d
 
 ## 🛣️ Roadmap
 
+- [ ] Support for rich PDF content editing not only adding thingss
 - [ ] Support for multi-page editing in the Advanced Editor.
 - [ ] PWA (Progressive Web App) integration for native-like offline desktop installation.
 - [x] Free-hand drawing and annotation tools.

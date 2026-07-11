@@ -6,6 +6,10 @@ import {
   ZoomOut as ZoomOutIcon,
   SaveAlt as ExportIcon,
   DeleteSweep as ClearIcon,
+  ChevronLeft as PrevIcon,
+  ChevronRight as NextIcon,
+  AddCircleOutlined as AddPageIcon,
+  RemoveCircleOutlined as DeletePageIcon,
 } from '@mui/icons-material';
 
 interface Props {
@@ -18,9 +22,31 @@ interface Props {
   onClear: () => void;
   onBack: () => void;
   isSaving: boolean;
+  currentPageIndex: number;
+  numPages: number;
+  onPrevPage: () => void;
+  onNextPage: () => void;
+  onAddPage: () => void;
+  onDeletePage: () => void;
 }
 
-export default function TopNavigationBar({ docTitle, onTitleChange, zoom, onZoomIn, onZoomOut, onExport, onClear, onBack, isSaving }: Props) {
+export default function TopNavigationBar({
+  docTitle,
+  onTitleChange,
+  zoom,
+  onZoomIn,
+  onZoomOut,
+  onExport,
+  onClear,
+  onBack,
+  isSaving,
+  currentPageIndex,
+  numPages,
+  onPrevPage,
+  onNextPage,
+  onAddPage,
+  onDeletePage,
+}: Props) {
   return (
     <Box sx={{
       width: '100%', height: 64, flexShrink: 0,
@@ -91,6 +117,45 @@ export default function TopNavigationBar({ docTitle, onTitleChange, zoom, onZoom
           {Math.round(zoom * 100)}%
         </Typography>
         <IconButton size="small" onClick={onZoomIn}><ZoomInIcon sx={{ fontSize: 18 }} /></IconButton>
+      </Box>
+
+      <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 1 }} />
+
+      {/* Page Navigation */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Tooltip title="Previous Page">
+          <span>
+            <IconButton size="small" onClick={onPrevPage} disabled={currentPageIndex === 0}>
+              <PrevIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Typography className="mono" sx={{ color: '#9CA3AF', minWidth: 80, textAlign: 'center', fontSize: 12 }}>
+          Page {currentPageIndex + 1} of {numPages}
+        </Typography>
+        <Tooltip title="Next Page">
+          <span>
+            <IconButton size="small" onClick={onNextPage} disabled={currentPageIndex === numPages - 1}>
+              <NextIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+        
+        <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 0.5 }} />
+        
+        <Tooltip title="Add Page">
+          <IconButton size="small" onClick={onAddPage} sx={{ color: '#10B981' }}>
+            <AddPageIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
+        
+        <Tooltip title="Delete Current Page">
+          <span>
+            <IconButton size="small" onClick={onDeletePage} disabled={numPages <= 1} sx={{ color: '#EF4444' }}>
+              <DeletePageIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
       </Box>
 
       <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 1 }} />

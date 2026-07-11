@@ -12,6 +12,7 @@ export interface EditorElement {
   y: number;
   width: number;
   height: number;
+  pageIndex?: number;
   content?: string;
   src?: string;
   fontSize?: number;
