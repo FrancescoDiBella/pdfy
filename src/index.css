@@ -1,47 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap');
-
 /* ═══════════════════════════════════════════════
-   PDFy Studio — Design Tokens (CSS Custom Properties)
+   PDFy Studio Pro — Design Tokens & Base Styles
    ═══════════════════════════════════════════════ */
 :root {
-  /* Backgrounds */
-  --pdfy-canvas-base: #0B0F19;
+  --pdfy-canvas-base: #0B0F17;
   --pdfy-app-workspace: #111827;
-  --pdfy-surface-glass: rgba(22, 30, 49, 0.65);
+  --pdfy-surface-elevated: rgba(17, 24, 39, 0.85);
   --pdfy-surface-accent: rgba(255, 255, 255, 0.03);
 
-  /* Accents */
-  --pdfy-primary-start: #6366F1;
-  --pdfy-primary-end: #A855F7;
+  --pdfy-primary: #6366F1;
   --pdfy-secondary: #06B6D4;
   --pdfy-success: #10B981;
   --pdfy-error: #EF4444;
 
-  /* Text */
   --pdfy-text-high: #F9FAFB;
   --pdfy-text-medium: #9CA3AF;
-  --pdfy-text-low: #4B5563;
+  --pdfy-text-low: #6B7280;
 
-  /* Borders */
   --pdfy-border: rgba(255, 255, 255, 0.08);
-
-  /* Radii */
-  --pdfy-radius-container: 16px;
-  --pdfy-radius-inner: 12px;
+  --pdfy-radius-container: 12px;
   --pdfy-radius-control: 8px;
-  --pdfy-radius-pill: 9999px;
-
-  /* Shadows */
-  --pdfy-shadow-low: 0 4px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  --pdfy-shadow-high: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.3);
-
-  /* Glass */
-  --pdfy-glass-blur: blur(16px) saturate(180%);
 }
 
-/* ═══════════════════════════════════════════════
-   Reset & Base
-   ═══════════════════════════════════════════════ */
 *,
 *::before,
 *::after {
@@ -52,11 +31,16 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--pdfy-canvas-base);
   color: var(--pdfy-text-high);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  text-wrap: balance;
 }
 
 /* ═══════════════════════════════════════════════
@@ -72,29 +56,29 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: var(--pdfy-radius-pill);
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* ═══════════════════════════════════════════════
    react-pdf grid layout helper (Splitter view)
    ═══════════════════════════════════════════════ */
 .pdf-grid-document .react-pdf__Document {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+  gap: 20px;
 }
 
 /* ═══════════════════════════════════════════════
-   Coordinate/numeric mono text
+   Coordinate / Numeric Tabular Monospace
    ═══════════════════════════════════════════════ */
 .mono {
   font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
   letter-spacing: 0;
 }

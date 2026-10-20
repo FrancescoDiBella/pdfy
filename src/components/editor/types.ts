@@ -1,4 +1,12 @@
-export type ElementType = 'text' | 'image' | 'rect' | 'draw' | 'edit-text';
+export type ElementType =
+  | 'text'
+  | 'image'
+  | 'rect'
+  | 'circle'
+  | 'highlight'
+  | 'redact'
+  | 'draw'
+  | 'edit-text';
 
 export interface StrokePoint {
   x: number;
@@ -8,6 +16,7 @@ export interface StrokePoint {
 export interface EditorElement {
   id: string;
   type: ElementType;
+  label?: string;
   x: number;
   y: number;
   width: number;
@@ -23,7 +32,7 @@ export interface EditorElement {
   fillColor?: string;
   strokeWidth?: number;
   opacity?: number;
-  // Freehand drawing
+  // Freehand drawing & text color
   points?: StrokePoint[];
   strokeColor?: string;
   // Existing text editing metadata

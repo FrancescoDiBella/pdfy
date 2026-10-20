@@ -1,6 +1,14 @@
-import { Box, Typography, Chip, IconButton, Tooltip, Button, TextField, Divider, CircularProgress } from '@mui/material';
 import {
-  Lock as LockIcon,
+  Box,
+  Typography,
+  IconButton,
+  Tooltip,
+  Button,
+  TextField,
+  Divider,
+  CircularProgress,
+} from '@mui/material';
+import {
   ArrowBack as BackIcon,
   ZoomIn as ZoomInIcon,
   ZoomOut as ZoomOutIcon,
@@ -10,6 +18,10 @@ import {
   ChevronRight as NextIcon,
   AddCircleOutlined as AddPageIcon,
   RemoveCircleOutlined as DeletePageIcon,
+  Undo as UndoIcon,
+  Redo as RedoIcon,
+  Draw as SignatureIcon,
+  Approval as StampIcon,
 } from '@mui/icons-material';
 
 interface Props {
@@ -28,6 +40,12 @@ interface Props {
   onNextPage: () => void;
   onAddPage: () => void;
   onDeletePage: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onOpenSignature: () => void;
+  onOpenStamp: () => void;
 }
 
 export default function TopNavigationBar({
@@ -46,48 +64,49 @@ export default function TopNavigationBar({
   onNextPage,
   onAddPage,
   onDeletePage,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  onOpenSignature,
+  onOpenStamp,
 }: Props) {
   return (
-    <Box sx={{
-      width: '100%', height: 64, flexShrink: 0,
-      display: 'flex', alignItems: 'center', px: 3, gap: 2,
-      bgcolor: 'rgba(22, 30, 49, 0.65)',
-      backdropFilter: 'blur(16px) saturate(180%)',
-      borderBottom: '1px solid rgba(255,255,255,0.08)',
-      zIndex: 1100,
-    }}>
-      {/* Logo & Back */}
-      <Tooltip title="Back to tools">
-        <IconButton onClick={onBack} sx={{ mr: 0.5 }}>
-          <BackIcon sx={{ fontSize: 20 }} />
+    <Box
+      sx={{
+        width: '100%',
+        height: 60,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        px: 2.5,
+        gap: 1.5,
+        bgcolor: '#111827',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        zIndex: 1100,
+      }}
+    >
+      {/* Back + Brand */}
+      <Tooltip title="Return to Workspace">
+        <IconButton onClick={onBack} size="small">
+          <BackIcon sx={{ fontSize: 19 }} />
         </IconButton>
       </Tooltip>
 
-      <Box sx={{
-        width: 32, height: 32, borderRadius: '8px',
-        background: 'linear-gradient(135deg, #6366F1, #A855F7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        <Typography sx={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>P</Typography>
-      </Box>
-
-      <Typography variant="h1" sx={{ fontSize: 18, mr: 1, whiteSpace: 'nowrap' }}>
-        PDFy <span style={{ color: '#A855F7', fontWeight: 300 }}>Studio</span>
+      <Typography
+        variant="h1"
+        sx={{
+          fontSize: 16,
+          fontWeight: 700,
+          letterSpacing: '-0.02em',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
+        PDFy Studio
       </Typography>
 
-      <Chip
-        icon={<LockIcon sx={{ fontSize: '12px !important' }} />}
-        label="100% Local"
-        size="small"
-        sx={{
-          bgcolor: 'rgba(16,185,129,0.12)', color: '#10B981',
-          border: '1px solid rgba(16,185,129,0.25)',
-          fontWeight: 600, fontSize: 10, height: 24,
-          '& .MuiChip-icon': { color: '#10B981' },
-        }}
-      />
-
-      <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 1 }} />
+      <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 0.5 }} />
 
       {/* Document Title */}
       <TextField
@@ -98,28 +117,82 @@ export default function TopNavigationBar({
           input: {
             disableUnderline: true,
             sx: {
-              fontSize: 14, fontWeight: 500, color: '#F9FAFB',
-              px: 1, py: 0.5, borderRadius: '6px',
+              fontSize: 13,
+              fontWeight: 500,
+              color: '#F9FAFB',
+              px: 1,
+              py: 0.5,
+              borderRadius: '6px',
               '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
               '&.Mui-focused': { bgcolor: 'rgba(255,255,255,0.06)' },
             },
           },
         }}
-        sx={{ flex: 1, maxWidth: 300 }}
+        sx={{ width: 200 }}
       />
+
+      <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 0.5 }} />
+
+      {/* Undo / Redo */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+        <Tooltip title="Undo (Ctrl+Z)">
+          <span>
+            <IconButton size="small" onClick={onUndo} disabled={!canUndo}>
+              <UndoIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Redo (Ctrl+Y)">
+          <span>
+            <IconButton size="small" onClick={onRedo} disabled={!canRedo}>
+              <RedoIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
+
+      {/* Quick Sign & Stamp Buttons */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<SignatureIcon sx={{ fontSize: 15 }} />}
+          onClick={onOpenSignature}
+          sx={{ py: 0.5, px: 1.5, fontSize: 12, whiteSpace: 'nowrap' }}
+        >
+          Sign PDF
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<StampIcon sx={{ fontSize: 15 }} />}
+          onClick={onOpenStamp}
+          sx={{ py: 0.5, px: 1.5, fontSize: 12, whiteSpace: 'nowrap' }}
+        >
+          Add Stamp
+        </Button>
+      </Box>
 
       <Box sx={{ flex: 1 }} />
 
       {/* Zoom Controls */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <IconButton size="small" onClick={onZoomOut}><ZoomOutIcon sx={{ fontSize: 18 }} /></IconButton>
-        <Typography className="mono" sx={{ color: '#9CA3AF', minWidth: 40, textAlign: 'center', fontSize: 12 }}>
+        <Tooltip title="Zoom Out">
+          <IconButton size="small" onClick={onZoomOut}>
+            <ZoomOutIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
+        <Typography className="mono" sx={{ color: '#9CA3AF', minWidth: 44, textAlign: 'center', fontSize: 12 }}>
           {Math.round(zoom * 100)}%
         </Typography>
-        <IconButton size="small" onClick={onZoomIn}><ZoomInIcon sx={{ fontSize: 18 }} /></IconButton>
+        <Tooltip title="Zoom In">
+          <IconButton size="small" onClick={onZoomIn}>
+            <ZoomInIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
       </Box>
 
-      <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 1 }} />
+      <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 0.5 }} />
 
       {/* Page Navigation */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -130,8 +203,8 @@ export default function TopNavigationBar({
             </IconButton>
           </span>
         </Tooltip>
-        <Typography className="mono" sx={{ color: '#9CA3AF', minWidth: 80, textAlign: 'center', fontSize: 12 }}>
-          Page {currentPageIndex + 1} of {numPages}
+        <Typography className="mono" sx={{ color: '#9CA3AF', minWidth: 78, textAlign: 'center', fontSize: 12, whiteSpace: 'nowrap' }}>
+          Page {currentPageIndex + 1} / {numPages}
         </Typography>
         <Tooltip title="Next Page">
           <span>
@@ -140,15 +213,13 @@ export default function TopNavigationBar({
             </IconButton>
           </span>
         </Tooltip>
-        
-        <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 0.5 }} />
-        
-        <Tooltip title="Add Page">
+
+        <Tooltip title="Append Blank Page">
           <IconButton size="small" onClick={onAddPage} sx={{ color: '#10B981' }}>
             <AddPageIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
-        
+
         <Tooltip title="Delete Current Page">
           <span>
             <IconButton size="small" onClick={onDeletePage} disabled={numPages <= 1} sx={{ color: '#EF4444' }}>
@@ -158,21 +229,21 @@ export default function TopNavigationBar({
         </Tooltip>
       </Box>
 
-      <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 1 }} />
+      <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 0.5 }} />
 
-      {/* Actions */}
-      <Tooltip title="Clear Canvas">
-        <IconButton onClick={onClear} sx={{ color: '#EF4444' }}>
+      {/* Clear & Export */}
+      <Tooltip title="Clear All Annotations">
+        <IconButton size="small" onClick={onClear} sx={{ color: '#EF4444' }}>
           <ClearIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </Tooltip>
 
       <Button
         variant="contained"
-        startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <ExportIcon />}
+        startIcon={isSaving ? <CircularProgress size={15} color="inherit" /> : <ExportIcon />}
         disabled={isSaving}
         onClick={onExport}
-        sx={{ px: 2.5 }}
+        sx={{ px: 2.25, py: 0.75, whiteSpace: 'nowrap', flexShrink: 0 }}
       >
         {isSaving ? 'Exporting…' : 'Export PDF'}
       </Button>
