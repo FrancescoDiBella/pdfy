@@ -18,6 +18,8 @@ interface Props {
 export default function PDFSessionControls({ tool, active, hasSession, busy, pendingName, error, onOpen, onSample, onCancel, onConfirm }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const openButton = useRef<HTMLButtonElement>(null);
+  const trigger = useRef<HTMLButtonElement | null>(null);
+  const confirmed = useRef(false);
   const titleId = useId();
   const descriptionId = useId();
   return (
@@ -29,12 +31,22 @@ export default function PDFSessionControls({ tool, active, hasSession, busy, pen
         <input ref={input} hidden type="file" accept="application/pdf,.pdf" aria-label={`PDF for ${tool}`} disabled={busy} onChange={event => {
           const file = event.target.files?.[0];
           event.target.value = '';
-          if (file) onOpen(file);
+          if (file) {
+            trigger.current = openButton.current;
+            confirmed.current = false;
+            onOpen(file);
+          }
         }} />
-        <Button variant="outlined" startIcon={<AutoFixHigh />} disabled={busy} onClick={onSample}>Try a sample PDF</Button>
+        <Button variant="outlined" startIcon={<AutoFixHigh />} disabled={busy} onClick={event => {
+          trigger.current = event.currentTarget;
+          confirmed.current = false;
+          onSample();
+        }}>Try a sample PDF</Button>
       </Box>
       {error && <Alert severity="error" sx={{ overflowWrap: 'anywhere' }}>{error}</Alert>}
-      <Dialog open={active && !!pendingName} onClose={onCancel} aria-labelledby={titleId} aria-describedby={descriptionId} disableRestoreFocus slotProps={{ transition: { onExited: () => { if (active) openButton.current?.focus(); } } }}>
+      <Dialog open={active && !!pendingName} onClose={onCancel} aria-labelledby={titleId} aria-describedby={descriptionId} disableRestoreFocus slotProps={{ transition: { onExited: () => {
+        if (active) (confirmed.current ? openButton.current : trigger.current ?? openButton.current)?.focus();
+      } } }}>
         <DialogTitle id={titleId}>Replace the {tool} document?</DialogTitle>
         <DialogContent>
           <DialogContentText id={descriptionId} sx={{ overflowWrap: 'anywhere' }}>
@@ -43,7 +55,7 @@ export default function PDFSessionControls({ tool, active, hasSession, busy, pen
         </DialogContent>
         <DialogActions sx={{ flexWrap: 'wrap', gap: 1, p: 2 }}>
           <Button autoFocus onClick={onCancel}>Cancel</Button>
-          <Button variant="contained" onClick={onConfirm}>Replace document</Button>
+          <Button variant="contained" onClick={() => { confirmed.current = true; onConfirm(); }}>Replace document</Button>
         </DialogActions>
       </Dialog>
     </>
