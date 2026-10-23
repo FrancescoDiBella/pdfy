@@ -22,7 +22,17 @@ async function dismissOfflineNotice(page: Page) {
 }
 
 async function expectNoPageOverflow(page: Page) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const layout = await page.evaluate(() => ({
+    viewport: innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    outside: [...document.querySelectorAll('body *')].flatMap(element => {
+      const rect = element.getBoundingClientRect();
+      if (!rect.width || rect.right <= innerWidth) return [];
+      const style = getComputedStyle(element);
+      return [{ tag: element.tagName, class: element.className, text: element.textContent?.slice(0, 60), left: rect.left, right: rect.right, position: style.position, overflow: style.overflow }];
+    }).slice(0, 15),
+  }));
+  expect(layout.documentWidth, JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewport);
 }
 
 async function expectAccessible(page: Page) {

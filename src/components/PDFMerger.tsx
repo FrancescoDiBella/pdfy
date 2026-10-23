@@ -132,13 +132,8 @@ export default function PDFMerger() {
     }
   };
 
-  return (
-    <Box aria-busy={isBusy} sx={{ width: '100%', maxWidth: 880, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Box role="status" aria-live="polite" aria-atomic="true" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>
-        {announcement}
-      </Box>
-      <ToolIntro icon={<MergeIcon fontSize="large" />} title="Start with two or more PDFs" description="Add your files, arrange them in order, and download one combined PDF.">
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: 'center', mt: 1 }}>
+  const fileActions = (
+    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: queue.length ? 'flex-start' : 'center' }}>
           <Button variant="contained" disabled={isBusy} onClick={() => fileInputRef.current?.click()} startIcon={<UploadIcon />} sx={{ whiteSpace: 'nowrap' }}>
             {isAdding ? 'Reading PDFs…' : 'Add PDF files'}
           </Button>
@@ -147,7 +142,20 @@ export default function PDFMerger() {
             Try two sample PDFs
           </Button>
         </Box>
-      </ToolIntro>
+  );
+
+  return (
+    <Box aria-busy={isBusy} sx={{ width: '100%', maxWidth: 880, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Box role="status" aria-live="polite" aria-atomic="true" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>
+        {announcement}
+      </Box>
+      {queue.length === 0 ? (
+        <ToolIntro icon={<MergeIcon fontSize="large" />} title="Start with two or more PDFs" description="Add your files, arrange them in order, and download one combined PDF.">
+          {fileActions}
+        </ToolIntro>
+      ) : (
+        <Paper variant="outlined" sx={{ p: 2 }}>{fileActions}</Paper>
+      )}
 
       {queue.length > 0 && (
         <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}>

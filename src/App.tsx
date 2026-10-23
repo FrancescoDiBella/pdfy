@@ -52,10 +52,11 @@ export default function App() {
     // Each tool owns a stable input snapshot. Navigation must not replace its work.
     setSessions(previous => previous[mode] ? previous : { ...previous, [mode]: { file: sharedFile, version: 0 } });
     setViewMode(mode);
-    if (menuOpen) {
+    if (menuOpen && !desktop) {
       setMenuSelected(true);
       setMenuOpen(false);
     } else {
+      setMenuOpen(false);
       requestAnimationFrame(() => focusWorkspace(mode));
     }
   };
