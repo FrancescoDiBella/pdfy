@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole('button', { name: 'Merge', exact: true }).click();
 });
 
-test('dragging reorders the queue and exported PDF; keyboard controls preserve focus', async ({ page }) => {
+test('dragging reorders the queue and exported PDF; keyboard controls preserve focus', async ({ page }, testInfo) => {
   await page.getByLabel('PDF files to merge').setInputFiles([
     await pdfFile('A.pdf', [200, 210]),
     await pdfFile('B.pdf', [300]),
@@ -29,12 +29,49 @@ test('dragging reorders the queue and exported PDF; keyboard controls preserve f
   await page.keyboard.press('Enter');
   await expect(up).toBeFocused();
   await expect(rows.nth(1)).toContainText('A.pdf');
+  await page.screenshot({ path: testInfo.outputPath('merger-desktop.png') });
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download merged PDF', exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('Merged_Document.pdf');
   const pdf = await PDFDocument.load(await readFile((await download.path())!));
   expect(pdf.getPages().map(p => p.getWidth())).toEqual([300, 200, 210, 400]);
+});
+
+test('identical filenames announce each completed move and keep the live region visually hidden', async ({ page }) => {
+  await page.getByLabel('PDF files to merge').setInputFiles([
+    await pdfFile('same.pdf', [200]),
+    await pdfFile('same.pdf', [300, 310]),
+  ]);
+  const rows = page.getByRole('list', { name: 'Merge order' }).getByRole('listitem');
+  await expect(rows).toHaveCount(2);
+  const status = page.getByRole('status');
+  const history = await status.evaluateHandle(element => {
+    const messages: string[] = [];
+    const observer = new MutationObserver(() => messages.push(element.textContent || ''));
+    observer.observe(element, { childList: true, characterData: true, subtree: true });
+    return { element, messages, observer };
+  });
+  const message = 'same.pdf moved to position 2 of 2.';
+  try {
+    for (const firstRowPages of ['2 pages', '1 page']) {
+      await rows.first().getByRole('button', { name: 'Move same.pdf down', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await expect(rows.first()).toContainText(firstRowPages);
+      await expect(status).toHaveText(message);
+    }
+    await expect.poll(() => history.evaluate(({ messages }, expected) => messages.filter(value => value === expected).length, message)).toBe(2);
+    expect(await history.evaluate(({ messages }) => messages)).toEqual([message, '', message]);
+    expect(await history.evaluate(({ element }) => element.isConnected)).toBe(true);
+    const dimensions = await status.evaluate(element => {
+      const { width, height } = element.getBoundingClientRect();
+      return { width, height };
+    });
+    expect(dimensions).toEqual({ width: 1, height: 1 });
+  } finally {
+    await history.evaluate(({ observer }) => observer.disconnect());
+    await history.dispose();
+  }
 });
 
 test('invalid PDFs are rejected and selecting the same file twice creates independent entries', async ({ page }) => {

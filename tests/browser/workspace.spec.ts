@@ -159,6 +159,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectNoPageOverflow(page);
       await expectAccessible(page);
       await page.screenshot({ path: testInfo.outputPath(`reader-${width}-${colorScheme}.png`) });
+      await page.getByRole('button', { name: 'Try a sample PDF', exact: true }).click();
+      const pages = page.getByRole('region', { name: 'PDF pages', exact: true });
+      await expect(pages.locator('.react-pdf__Page__canvas').first()).toBeVisible();
+      await expectNoPageOverflow(page);
+      await expectAccessible(page);
+      await page.screenshot({ path: testInfo.outputPath(`reader-loaded-${width}-${colorScheme}.png`) });
+      await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+      await expectNoPageOverflow(page);
+      await page.getByRole('button', { name: 'Page thumbnails', exact: true }).click();
+      await page.getByRole('button', { name: 'Go to page 2', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('#viewer-page-2')).toBeFocused();
+      await expectNoPageOverflow(page);
       await navigate(page, 'Merge');
       await page.getByLabel('PDF files to merge').setInputFiles([
         await pdfFile('A-very-long-document-name-without-spaces-that-must-wrap-instead-of-hiding-the-file.pdf'),

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import {
   Box,
@@ -36,10 +36,24 @@ export default function PDFMerger() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const announcementTimer = useRef<number | undefined>(undefined);
   const busyRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isBusy = isMerging || isAdding;
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
+
+  useEffect(() => () => window.clearTimeout(announcementTimer.current), []);
+
+  const clearAnnouncement = () => {
+    window.clearTimeout(announcementTimer.current);
+    setAnnouncement('');
+  };
+
+  const announce = (message: string) => {
+    clearAnnouncement();
+    // Keep the region mounted and commit an empty state before repeating a message.
+    announcementTimer.current = window.setTimeout(() => setAnnouncement(message), 100);
+  };
 
   const appendFiles = async (incoming: File[]) => {
     const { accepted, rejected } = await preparePDFs(incoming);
@@ -53,6 +67,7 @@ export default function PDFMerger() {
 
   const addFiles = async (getFiles: () => Promise<File[]>) => {
     if (busyRef.current) return;
+    clearAnnouncement();
     busyRef.current = true;
     setIsAdding(true);
     try {
@@ -82,7 +97,7 @@ export default function PDFMerger() {
     if (reordered === queue) return;
     setQueue(reordered);
     const position = reordered.findIndex(item => item.id === sourceId);
-    setAnnouncement(`${reordered[position].file.name} moved to position ${position + 1} of ${queue.length}.`);
+    announce(`${reordered[position].file.name} moved to position ${position + 1} of ${queue.length}.`);
   };
 
   const resetDrag = () => {
@@ -99,6 +114,7 @@ export default function PDFMerger() {
 
   const removeFile = (id: string) => {
     if (busyRef.current) return;
+    clearAnnouncement();
     setQueue(prev => prev.filter(item => item.id !== id));
   };
 
@@ -163,7 +179,7 @@ export default function PDFMerger() {
             <Typography variant="h2" sx={{ fontSize: 16 }}>
               Your files ({queue.length} files · <span className="mono">{totalPages}</span> pages)
             </Typography>
-            <Button size="small" variant="text" disabled={isBusy} onClick={() => { setQueue([]); resetDrag(); }} sx={{ color: 'text.secondary' }}>
+            <Button size="small" variant="text" disabled={isBusy} onClick={() => { clearAnnouncement(); setQueue([]); resetDrag(); }} sx={{ color: 'text.secondary' }}>
               Clear files
             </Button>
           </Box>
