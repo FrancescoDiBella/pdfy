@@ -10,7 +10,7 @@ async function pdfFile(name: string, widths: number[]) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Merge Documents', exact: true }).click();
+  await page.getByRole('button', { name: 'Merge', exact: true }).click();
 });
 
 test('dragging reorders the queue and exported PDF; keyboard controls preserve focus', async ({ page }, testInfo) => {
@@ -31,7 +31,7 @@ test('dragging reorders the queue and exported PDF; keyboard controls preserve f
   await expect(rows.nth(1)).toContainText('A.pdf');
   await page.screenshot({ path: testInfo.outputPath('merger-desktop.png') });
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Merge 3 PDFs', exact: true }).click();
+  await page.getByRole('button', { name: 'Download merged PDF', exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('Merged_Document.pdf');
   const pdf = await PDFDocument.load(await readFile((await download.path())!));
@@ -81,7 +81,7 @@ test('invalid PDFs are rejected and selecting the same file twice creates indepe
   const rows = page.getByRole('list', { name: 'Merge order' }).getByRole('listitem');
   await expect(rows).toHaveCount(1);
   await expect(page.getByRole('alert')).toContainText('Could not add broken.pdf');
-  await expect(page.getByRole('button', { name: 'Merge 1 PDFs', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Download merged PDF', exact: true })).toBeDisabled();
   await input.setInputFiles(file);
   await expect(rows).toHaveCount(2);
   await rows.nth(0).getByRole('button', { name: 'Remove same.pdf', exact: true }).click();
