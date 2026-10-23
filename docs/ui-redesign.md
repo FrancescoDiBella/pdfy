@@ -23,8 +23,8 @@ These are project-specific design choices. They still need usability testing wit
 | Merge | Add PDFs or try two samples | Independent file entries, order, download filename | Download a combined PDF | Invalid files are reported; valid files remain. Download failures retain the queue. |
 | Edit | Open a PDF, sample, blank page, or reader handoff | Title, annotations, history, pages, drawing and text settings | Export edited PDF | Reader handoffs to an existing session require confirmation. Internal file replacement and responsive controls still need the next increment. |
 | Organize | Open a PDF, sample, or reader handoff | Page order/rotation, watermark, numbering | Export organized PDF | Reader handoffs require confirmation. Internal replacement and settings layout need further work. |
-| Split | Open a PDF or sample | File, page selection, range | Extract selected pages or separate files | Existing export feedback; file validation and consistent replacement behavior need further work. |
-| Info | Open a PDF, sample, or initialize from Read | File, editable metadata | Download updated or sanitized PDF | Existing parsing/export feedback; consistent replacement handling needs further work. |
+| Split | Open a PDF or sample | File, page selection, range | Extract selected pages or separate files | Validate before staging a replacement; confirmation, cancellation, and parsing errors preserve the current session until explicitly replaced. Invalid ranges block export without losing the last selection. |
+| Info | Open a PDF, sample, or initialize from Read | File, editable metadata | Download updated fields or a copy without the six displayed fields | Prepare metadata and page details before staging a replacement; cancellation/errors preserve edits. Clearing displayed fields is not full metadata or content sanitization. |
 
 ## Session ownership
 
@@ -36,14 +36,15 @@ Retaining sessions increases memory usage for large documents. There is no autom
 
 ## Current boundaries
 
-- This increment redesigns the workspace, Read, and Merge. Edit, Organize, Split, and Info retain their existing dark tool panels until their layouts and colors are migrated together.
+- The workspace, Read, Merge, Split, and Info now share responsive layouts and semantic colors. Edit and Organize retain their existing dark tool panels until their layouts and colors are migrated together.
 - This is not a promise that every legacy control is responsive or accessible. In particular, the editor still needs compact toolbars and adaptive side panels.
 - Merging preserves the existing PDF ordering and validation logic. Reader zoom/rotation change the preview only.
 - Downloads report that a download started; the browser controls the final save destination.
+- Split and Info preserve work until a validated replacement is confirmed, including same-name files and sample actions. A delayed file read in a hidden tool cannot open its confirmation over another tool. The remaining internal Edit/Organize replacement actions are still tracked in #10.
 
 ## Review and validation
 
-Automated Chromium coverage includes keyboard navigation and dialog focus, session preservation, inactive editor shortcuts, reader error recovery, thumbnail navigation, appearance persistence, and light/dark Read/Merge screens at 320 and 1280 CSS pixels. axe checks WCAG A/AA tags, including contrast, on the empty Read and populated Merge screens. Existing PDF-ordering and offline/update tests remain part of CI.
+Automated Chromium coverage includes keyboard navigation and dialog focus, session preservation, inactive/modal editor shortcuts, reader error recovery, thumbnail navigation, appearance persistence, and light/dark Read/Merge/Split/Info screens at 320 and 1280 CSS pixels. axe checks WCAG A/AA tags, including contrast, on empty and populated tool screens. Split/Info regression checks include invalid/protected/empty inputs, same-name replacement, cancellation, delayed reads during navigation, and exported PDF content. Existing PDF-ordering and offline/update tests remain part of CI.
 
 CI uploads `browser-test-results-and-screenshots`, including Read/Merge screenshots in both appearances and widths. Download this artifact from the workflow run for visual review. Screenshots are not pixel-diff baselines.
 

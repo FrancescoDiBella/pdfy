@@ -135,10 +135,10 @@ export default function App() {
             </Box>
             {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
               const session = sessions[item.mode]!;
-              const legacy = ['organize', 'split', 'inspect'].includes(item.mode);
+              const legacy = item.mode === 'organize';
               const content = item.mode === 'view' ? (
                 <PDFViewer activeFile={sharedFile} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} />
-              ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} /> : item.mode === 'split' ? <PDFSplitter /> : <PDFInspector initialFile={session.file} />;
+              ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
               return (
                 <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
                   {legacy ? <ThemeProvider theme={legacyTheme}><Box sx={{ p: { xs: 1, sm: 2 }, borderRadius: 2, bgcolor: 'background.default', color: 'text.primary', overflow: 'auto', flex: 1 }}>{content}</Box></ThemeProvider> : content}
