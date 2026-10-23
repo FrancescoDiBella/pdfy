@@ -1,6 +1,6 @@
 # PDFy Studio
 
-PDFy Studio is a powerful, local-first web application that provides a comprehensive suite of tools for managing and editing PDF documents. Built with modern web technologies, it features a premium glassmorphic UI and ensures that your files never leave your device.
+PDFy Studio is a powerful, local-first web application that provides a comprehensive suite of tools for managing and editing PDF documents. It processes PDF files on your device and provides a responsive workspace for choosing tools and downloading results.
 
 ## ✨ Features
 
@@ -18,7 +18,7 @@ PDFy Studio is a powerful, local-first web application that provides a comprehen
 ## 🛠️ Tech Stack
 
 - **Framework**: React + Vite + TypeScript for a blazing fast development and build experience.
-- **Styling**: Material UI (`@mui/material`) configured with a custom, premium dark-mode theme featuring modern gradients and glassmorphic overlays.
+- **Styling**: Material UI (`@mui/material`) with system/light/dark appearance for the workspace, Reader, and Merger. The remaining tool panels retain their dark theme during the incremental redesign.
 - **PDF Rendering**: `react-pdf` is used to accurately render PDF pages to the DOM.
 - **PDF Manipulation**: `pdf-lib` handles the heavy lifting of parsing, modifying, and generating the raw PDF binaries.
 - **Visual Editing**: `react-rnd` provides the interactive drag-and-drop overlay mechanics.
@@ -68,6 +68,14 @@ npm run test:e2e
 ```
 
 Browser tests run against the production preview. Run `npm run lint` for repository-wide linting; the existing lint cleanup is tracked in [#6](https://github.com/FrancescoDiBella/pdfy/issues/6).
+
+### Workspace and Appearance
+
+Use the sidebar on desktop or **Open tools menu** on smaller screens. **Appearance** follows your system by default and remembers an explicit Light or Dark choice. The menu, Reader, and Merger support both appearances.
+
+Switching tools preserves their current work in this tab. Opening another PDF in Read does not overwrite other tools. Sending a document from Read to an existing Edit or Organize session asks before replacing it. Download your work before closing or reloading; files and edits are not persisted.
+
+See the [redesign scope, flow inventory, and review guide](docs/ui-redesign.md) for current boundaries and remaining accessibility/usability validation.
 
 ### Installation and Offline Use
 

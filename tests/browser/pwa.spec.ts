@@ -19,10 +19,10 @@ test('reopens offline, renders a local PDF and merges without caching documents'
   await page.locator('input[type="file"]').setInputFiles({ name: 'private-document.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await source.save()) });
   await expect(page.locator('.react-pdf__Page__canvas').first()).toBeVisible({ timeout: 15000 });
   await expect(page.locator('.react-pdf__Page__textContent').getByText('Offline document').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Merge Documents', exact: true }).click();
-  await page.getByRole('button', { name: 'Load 2 Sample PDFs to Test', exact: true }).click();
+  await page.getByRole('button', { name: 'Merge', exact: true }).click();
+  await page.getByRole('button', { name: 'Try two sample PDFs', exact: true }).click();
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Merge 2 PDFs', exact: true }).click();
+  await page.getByRole('button', { name: 'Download merged PDF', exact: true }).click();
   const download = await downloadPromise;
   const merged = await PDFDocument.load(await readFile((await download.path())!));
   expect(merged.getPageCount()).toBe(4);
@@ -69,9 +69,9 @@ for (const initiallyControlled of [false, true]) {
       expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(initiallyControlled);
       await otherTab.goto(origin);
       for (const tab of [page, otherTab]) {
-        await tab.getByRole('button', { name: 'Merge Documents', exact: true }).click();
-        await tab.getByRole('button', { name: 'Load 2 Sample PDFs to Test', exact: true }).click();
-        await tab.getByRole('textbox', { name: 'Output Filename' }).fill('unsaved-name');
+        await tab.getByRole('button', { name: 'Merge', exact: true }).click();
+        await tab.getByRole('button', { name: 'Try two sample PDFs', exact: true }).click();
+        await tab.getByRole('textbox', { name: 'Download filename' }).fill('unsaved-name');
         await tab.evaluate(() => { document.documentElement.dataset.sessionMarker = 'original'; });
       }
       revision = 2;
@@ -83,19 +83,19 @@ for (const initiallyControlled of [false, true]) {
         await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('update-confirmation-desktop.png') });
       }
       await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-      await expect(page.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
+      await expect(page.getByRole('textbox', { name: 'Download filename' })).toHaveValue('unsaved-name');
       await page.getByRole('button', { name: 'Review update', exact: true }).click();
       await page.getByRole('button', { name: 'Reload and update', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'High-Precision PDF Reader & Inspector' })).toBeVisible();
-      await expect(otherTab.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
+      await expect(page.getByRole('heading', { name: 'Open a PDF to get started' })).toBeVisible();
+      await expect(otherTab.getByRole('textbox', { name: 'Download filename' })).toHaveValue('unsaved-name');
       await expect(otherTab.locator('html')).toHaveAttribute('data-session-marker', 'original');
       await expect(otherTab.getByRole('button', { name: 'Review update', exact: true })).toBeVisible();
       await otherTab.getByRole('button', { name: 'Review update', exact: true }).click();
       await otherTab.getByRole('button', { name: 'Cancel', exact: true }).click();
-      await expect(otherTab.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
+      await expect(otherTab.getByRole('textbox', { name: 'Download filename' })).toHaveValue('unsaved-name');
       await otherTab.getByRole('button', { name: 'Review update', exact: true }).click();
       await otherTab.getByRole('button', { name: 'Reload and update', exact: true }).click();
-      await expect(otherTab.getByRole('heading', { name: 'High-Precision PDF Reader & Inspector' })).toBeVisible();
+      await expect(otherTab.getByRole('heading', { name: 'Open a PDF to get started' })).toBeVisible();
       await expect(otherTab.locator('html')).not.toHaveAttribute('data-session-marker', 'original');
     } finally {
       await otherTab.close();
