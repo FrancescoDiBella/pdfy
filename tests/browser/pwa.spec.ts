@@ -78,7 +78,10 @@ for (const initiallyControlled of [false, true]) {
       await page.evaluate(async () => { await (await navigator.serviceWorker.ready).update(); });
       await expect(page.getByRole('button', { name: 'Review update', exact: true })).toBeVisible({ timeout: 15000 });
       await page.getByRole('button', { name: 'Review update', exact: true }).click();
-      if (!initiallyControlled) await page.screenshot({ path: testInfo.outputPath('update-confirmation-desktop.png') });
+      if (!initiallyControlled) {
+        await expect(page.getByRole('dialog', { name: 'Update PDFy?', exact: true })).toBeVisible();
+        await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('update-confirmation-desktop.png') });
+      }
       await page.getByRole('button', { name: 'Cancel', exact: true }).click();
       await expect(page.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
       await page.getByRole('button', { name: 'Review update', exact: true }).click();
