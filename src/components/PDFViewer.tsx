@@ -122,7 +122,7 @@ export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEdit
               <Box role="group" aria-label="View controls" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Tooltip title="Page thumbnails"><IconButton aria-label="Page thumbnails" aria-pressed={showThumbnails} onClick={() => setShowThumbnails(value => !value)} color={showThumbnails ? 'primary' : 'default'}><ViewSidebarOutlined /></IconButton></Tooltip>
                 <IconButton aria-label="Zoom out" disabled={scale <= 0.5} onClick={() => setScale(value => Math.max(0.5, value - 0.25))}><ZoomOut /></IconButton>
-                <Button aria-label="Fit page width" onClick={() => setScale(1)} sx={{ minWidth: 60, px: 1 }}>{Math.round(scale * 100)}%</Button>
+                <Button aria-label={`${Math.round(scale * 100)}% zoom, fit page width`} onClick={() => setScale(1)} sx={{ minWidth: 60, px: 1 }}>{Math.round(scale * 100)}%</Button>
                 <IconButton aria-label="Zoom in" disabled={scale >= 2.5} onClick={() => setScale(value => Math.min(2.5, value + 0.25))}><ZoomIn /></IconButton>
                 <IconButton aria-label="Rotate view clockwise" onClick={() => setRotation(value => (value + 90) % 360)}><RotateRight /></IconButton>
               </Box>

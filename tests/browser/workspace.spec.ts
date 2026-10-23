@@ -167,6 +167,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.screenshot({ path: testInfo.outputPath(`reader-loaded-${width}-${colorScheme}.png`) });
       await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
       await expectNoPageOverflow(page);
+      await page.getByRole('button', { name: '125% zoom, fit page width', exact: true }).click();
+      await expect(page.getByRole('button', { name: '100% zoom, fit page width', exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'Page thumbnails', exact: true }).click();
       await page.getByRole('button', { name: 'Go to page 2', exact: true }).focus();
       await page.keyboard.press('Enter');
