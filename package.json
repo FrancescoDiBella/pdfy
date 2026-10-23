@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
-    "test:pwa": "node --test tests/build/*.test.mjs"
+    "test:pwa": "node --test tests/build/*.test.mjs",
+    "test:pages": "node --test tests/pages-build/*.test.mjs && playwright test --config playwright.pages.config.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

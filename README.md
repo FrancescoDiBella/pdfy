@@ -57,6 +57,22 @@ npm run build
 ```
 The compiled static assets will be output to the `dist` directory, ready to be deployed to any static web host.
 
+### GitHub Pages
+
+The GitHub Pages workflow publishes the validated `dist` output from `main` at `https://francescodibella.github.io/pdfy/` after its first successful deployment. In repository **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source before merging the setup PR. A repository administrator must enable this setting once; the normal workflow token cannot enable Pages itself.
+
+Pull requests run the existing root-path checks and a separate production build for `/pdfy/`. The Pages checks verify asset/manifest paths, PDF rendering, offline reload, merge/export, and service worker cache scope. PRs do not publish a site. Pushes to `main`, or a manual **PDF regression checks → Run workflow** on `main`, deploy only after all checks pass. The deployment uses the exact validated artifact and the `github-pages` environment; only that job receives Pages/OIDC write permissions.
+
+To check the Pages build locally:
+
+```bash
+npm run build -- --base=/pdfy/
+npm run test:pwa
+npm run test:pages
+```
+
+After deployment, open the HTTPS site on your phone. Wait for the offline-ready message before testing without a connection. Files and edits still stay in memory and must be downloaded before closing or reloading. The initial deployment requires the setup PR to be merged; an open PR alone does not make the site available.
+
 ### Regression Checks
 
 ```bash

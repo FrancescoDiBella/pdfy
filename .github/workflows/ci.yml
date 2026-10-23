@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,16 +13,20 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: pdfy-check-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
       - run: npm ci
       - run: npx eslint src/App.tsx src/main.tsx src/theme.ts src/legacyTheme.ts src/components/AppearanceControl.tsx src/components/ToolIntro.tsx src/components/PDFViewer.tsx src/components/PDFMerger.tsx src/components/PWAStatus.tsx src/utils/serviceWorkerUpdate.ts src/components/editor/TopNavigationBar.tsx tests/browser/*.ts
       - run: npx eslint src/components/PDFSplitter.tsx src/components/PDFInspector.tsx src/components/PDFSessionControls.tsx src/hooks/usePDFSession.ts src/utils/pageRanges.ts src/utils/pdfInfo.ts tests/pageRanges.test.mjs tests/pdfInfo.test.mjs
-      - run: npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2023 --types node tests/browser/*.ts playwright.config.ts
+      - run: npx eslint tests/pages/*.ts playwright.pages.config.ts tests/pages-build/*.mjs
+      - run: npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2023 --types node tests/browser/*.ts tests/pages/*.ts playwright.config.ts playwright.pages.config.ts
       - run: npm test
       - run: npm run build
       - run: npm run test:pwa
@@ -36,9 +41,39 @@ jobs:
           await browser.close();
           NODE
       - run: npm run test:e2e
+      - name: Build for the GitHub Pages project path
+        run: npm run build -- --base=/pdfy/
+      - name: Verify Pages assets and offline behavior
+        run: npm run test:pwa && npm run test:pages
+      - name: Package the validated Pages site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-test-results-and-screenshots
           path: test-results/
           retention-days: 7
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Deploy the validated site
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
