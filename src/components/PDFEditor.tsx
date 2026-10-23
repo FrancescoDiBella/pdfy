@@ -1,3 +1,4 @@
+import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { useState } from 'react';
 import { Box, Button, Typography, Paper, TextField, CircularProgress } from '@mui/material';
 import { CloudUpload as UploadIcon, Save as SaveIcon } from '@mui/icons-material';
@@ -167,6 +168,7 @@ export default function PDFEditor() {
         borderRadius: 1
       }}>
         <Document
+          options={pdfDocumentOptions}
           file={file}
           onLoadSuccess={({ numPages }) => setNumPages(numPages)}
           loading={<CircularProgress />}
@@ -186,3 +188,4 @@ export default function PDFEditor() {
     </Box>
   );
 }
+

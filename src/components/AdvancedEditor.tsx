@@ -1,3 +1,4 @@
+import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress, Snackbar, Alert } from '@mui/material';
 import {
@@ -37,10 +38,11 @@ const fontCache: Record<string, ArrayBuffer> = {};
 
 interface Props {
   onBack: () => void;
+  active?: boolean;
   initialFile?: File | null;
 }
 
-export default function AdvancedEditor({ onBack, initialFile }: Props) {
+export default function AdvancedEditor({ onBack, initialFile, active = true }: Props) {
   const [fileBlob, setFileBlob] = useState<Blob | null>(null);
   const [originalBytes, setOriginalBytes] = useState<Uint8Array | null>(null);
   const [elements, setElements] = useState<EditorElement[]>([]);
@@ -307,6 +309,7 @@ export default function AdvancedEditor({ onBack, initialFile }: Props) {
 
   /* ── Keyboard Shortcuts ───────────────────── */
   useEffect(() => {
+    if (!active) return;
     const onKeyDown = (e: KeyboardEvent) => {
       const activeTag = document.activeElement?.tagName.toLowerCase();
       if (activeTag === 'input' || activeTag === 'textarea') return;
@@ -345,7 +348,7 @@ export default function AdvancedEditor({ onBack, initialFile }: Props) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedId, elements, handleUndo, handleRedo, duplicateElement, deleteElement, updateElement]);
+  }, [active, selectedId, elements, handleUndo, handleRedo, duplicateElement, deleteElement, updateElement]);
 
   /* ── Page Navigation & Manipulation ──────── */
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -426,7 +429,7 @@ export default function AdvancedEditor({ onBack, initialFile }: Props) {
       try {
         const loadingTask = pdfjs.getDocument({
           data: originalBytes.slice(),
-          standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+          ...pdfDocumentOptions,
         });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(currentPageIndex + 1);
@@ -831,6 +834,7 @@ export default function AdvancedEditor({ onBack, initialFile }: Props) {
           }}
         >
           <Document
+            options={pdfDocumentOptions}
             file={fileBlob}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={<CircularProgress sx={{ color: '#6366F1' }} />}
@@ -1228,3 +1232,4 @@ const handleStyle: React.CSSProperties = {
 };
 const edgeH: React.CSSProperties = { height: 4, top: '50%', cursor: 'ns-resize' };
 const edgeV: React.CSSProperties = { width: 4, left: '50%', cursor: 'ew-resize' };
+
