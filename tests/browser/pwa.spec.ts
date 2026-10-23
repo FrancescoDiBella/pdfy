@@ -108,12 +108,15 @@ for (const initiallyControlled of [false, true]) {
         await expect(annotation).not.toHaveCSS('transform', transform);
         await page.keyboard.press('Control+z');
         await expect(annotation).toHaveCSS('transform', transform);
-        // Undo clears the selection; pointer selection must return focus to the canvas.
-        await page.getByText('Double-click to edit text…', { exact: true }).click();
+        // Pointer selection of a non-editable shape must return focus to the canvas.
+        await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+        const shape = page.locator('.react-draggable').filter({ hasNot: page.locator('textarea') });
+        await shape.click({ position: { x: 40, y: 40 } });
         await expect(canvas).toBeFocused();
         await page.keyboard.press('Delete');
-        await expect(annotation).toHaveCount(0);
+        await expect(shape).toHaveCount(0);
         await page.keyboard.press('Control+z');
+        await expect(shape).toHaveCount(1);
         await expect(annotation).toHaveCount(1);
         await page.getByRole('button', { name: 'Return to workspace', exact: true }).click();
         await page.getByRole('button', { name: 'Merge', exact: true }).click();
