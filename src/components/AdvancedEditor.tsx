@@ -1,3 +1,4 @@
+import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress, Snackbar, Alert } from '@mui/material';
 import {
@@ -426,7 +427,7 @@ export default function AdvancedEditor({ onBack, initialFile }: Props) {
       try {
         const loadingTask = pdfjs.getDocument({
           data: originalBytes.slice(),
-          standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+          ...pdfDocumentOptions,
         });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(currentPageIndex + 1);
@@ -831,6 +832,7 @@ export default function AdvancedEditor({ onBack, initialFile }: Props) {
           }}
         >
           <Document
+            options={pdfDocumentOptions}
             file={fileBlob}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={<CircularProgress sx={{ color: '#6366F1' }} />}
@@ -1228,3 +1230,4 @@ const handleStyle: React.CSSProperties = {
 };
 const edgeH: React.CSSProperties = { height: 4, top: '50%', cursor: 'ns-resize' };
 const edgeV: React.CSSProperties = { width: 4, left: '50%', cursor: 'ew-resize' };
+

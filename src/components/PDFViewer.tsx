@@ -1,3 +1,4 @@
+import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -276,7 +277,7 @@ export default function PDFViewer({
               alignItems: 'center',
             }}
           >
-            <Document file={file} loading={<span />}>
+            <Document options={pdfDocumentOptions} file={file} loading={<span />}>
               {Array.from(new Array(numPages || 0), (_, idx) => {
                 const pageNum = idx + 1;
                 const isSelected = activePage === pageNum;
@@ -332,7 +333,7 @@ export default function PDFViewer({
             gap: 3,
           }}
         >
-          <Document file={file} onLoadSuccess={onDocumentLoadSuccess} loading={<CircularProgress />}>
+          <Document options={pdfDocumentOptions} file={file} onLoadSuccess={onDocumentLoadSuccess} loading={<CircularProgress />}>
             {Array.from(new Array(numPages || 0), (_, index) => (
               <Box
                 id={`viewer-page-${index + 1}`}
@@ -361,3 +362,4 @@ export default function PDFViewer({
     </Box>
   );
 }
+

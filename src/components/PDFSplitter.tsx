@@ -1,3 +1,4 @@
+import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { useState } from 'react';
 import {
   Box,
@@ -287,6 +288,7 @@ export default function PDFSplitter() {
         }}
       >
         <Document
+          options={pdfDocumentOptions}
           file={file}
           onLoadSuccess={({ numPages }) => setNumPages(numPages)}
           loading={<CircularProgress />}
@@ -349,3 +351,4 @@ export default function PDFSplitter() {
     </Box>
   );
 }
+
