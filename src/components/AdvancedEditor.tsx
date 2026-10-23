@@ -38,10 +38,11 @@ const fontCache: Record<string, ArrayBuffer> = {};
 
 interface Props {
   onBack: () => void;
+  active?: boolean;
   initialFile?: File | null;
 }
 
-export default function AdvancedEditor({ onBack, initialFile }: Props) {
+export default function AdvancedEditor({ onBack, initialFile, active = true }: Props) {
   const [fileBlob, setFileBlob] = useState<Blob | null>(null);
   const [originalBytes, setOriginalBytes] = useState<Uint8Array | null>(null);
   const [elements, setElements] = useState<EditorElement[]>([]);
@@ -308,6 +309,7 @@ export default function AdvancedEditor({ onBack, initialFile }: Props) {
 
   /* ── Keyboard Shortcuts ───────────────────── */
   useEffect(() => {
+    if (!active) return;
     const onKeyDown = (e: KeyboardEvent) => {
       const activeTag = document.activeElement?.tagName.toLowerCase();
       if (activeTag === 'input' || activeTag === 'textarea') return;
@@ -346,7 +348,7 @@ export default function AdvancedEditor({ onBack, initialFile }: Props) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedId, elements, handleUndo, handleRedo, duplicateElement, deleteElement, updateElement]);
+  }, [active, selectedId, elements, handleUndo, handleRedo, duplicateElement, deleteElement, updateElement]);
 
   /* ── Page Navigation & Manipulation ──────── */
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {

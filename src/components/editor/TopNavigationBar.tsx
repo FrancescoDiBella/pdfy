@@ -88,7 +88,7 @@ export default function TopNavigationBar({
     >
       {/* Back + Brand */}
       <Tooltip title="Return to Workspace">
-        <IconButton onClick={onBack} size="small">
+        <IconButton aria-label="Return to workspace" onClick={onBack} size="small">
           <BackIcon sx={{ fontSize: 19 }} />
         </IconButton>
       </Tooltip>
@@ -110,6 +110,7 @@ export default function TopNavigationBar({
 
       {/* Document Title */}
       <TextField
+        label="Document title"
         variant="standard"
         value={docTitle}
         onChange={e => onTitleChange(e.target.value)}
@@ -250,3 +251,4 @@ export default function TopNavigationBar({
     </Box>
   );
 }
+

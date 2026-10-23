@@ -1,84 +1,43 @@
-/* ═══════════════════════════════════════════════
-   PDFy Studio Pro — Design Tokens & Base Styles
-   ═══════════════════════════════════════════════ */
-:root {
-  --pdfy-canvas-base: #0B0F17;
-  --pdfy-app-workspace: #111827;
-  --pdfy-surface-elevated: rgba(17, 24, 39, 0.85);
-  --pdfy-surface-accent: rgba(255, 255, 255, 0.03);
-
-  --pdfy-primary: #6366F1;
-  --pdfy-secondary: #06B6D4;
-  --pdfy-success: #10B981;
-  --pdfy-error: #EF4444;
-
-  --pdfy-text-high: #F9FAFB;
-  --pdfy-text-medium: #9CA3AF;
-  --pdfy-text-low: #6B7280;
-
-  --pdfy-border: rgba(255, 255, 255, 0.08);
-  --pdfy-radius-container: 12px;
-  --pdfy-radius-control: 8px;
-}
-
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: var(--pdfy-canvas-base);
-  color: var(--pdfy-text-high);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+html, body, #root { height: 100%; }
+body { margin: 0; -webkit-font-smoothing: antialiased; }
+[hidden] { display: none !important; }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  text-wrap: balance;
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1600;
+  transform: translateY(-180%);
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #30268C;
+  font-weight: 600;
 }
+.skip-link:focus { transform: none; }
 
-/* ═══════════════════════════════════════════════
-   Scrollbar (Webkit)
-   ═══════════════════════════════════════════════ */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* ═══════════════════════════════════════════════
-   react-pdf grid layout helper (Splitter view)
-   ═══════════════════════════════════════════════ */
 .pdf-grid-document .react-pdf__Document {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
   gap: 20px;
 }
 
-/* ═══════════════════════════════════════════════
-   Coordinate / Numeric Tabular Monospace
-   ═══════════════════════════════════════════════ */
 .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
-  letter-spacing: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

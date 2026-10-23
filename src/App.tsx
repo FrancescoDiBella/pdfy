@@ -1,24 +1,13 @@
 import { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Button,
-  Divider,
+  Box, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
+  Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
+  useMediaQuery,
 } from '@mui/material';
+import { ThemeProvider, useTheme } from '@mui/material/styles';
 import {
-  DescriptionOutlined as DocumentIcon,
-  MergeType as MergeIcon,
-  CallSplit as SplitIcon,
-  EditOutlined as EditIcon,
-  BrandingWatermarkOutlined as OrganizeIcon,
-  VerifiedUserOutlined as InspectIcon,
-  Add as AddIcon,
+  DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
+  InfoOutlined, Menu as MenuIcon, Close, LockOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import PDFMerger from './components/PDFMerger';
@@ -26,269 +15,157 @@ import PDFSplitter from './components/PDFSplitter';
 import PDFOrganizer from './components/PDFOrganizer';
 import PDFInspector from './components/PDFInspector';
 import AdvancedEditor from './components/AdvancedEditor';
-
-const drawerWidth = 264;
+import AppearanceControl from './components/AppearanceControl';
+import { legacyTheme } from './legacyTheme';
 
 export type ViewMode = 'view' | 'edit' | 'organize' | 'merge' | 'split' | 'inspect';
+type Session = { file: File | null; version: number };
+type Handoff = { mode: 'edit' | 'organize'; file: File };
 
-const navItems: { mode: ViewMode; label: string; shortLabel: string; icon: React.ReactNode }[] = [
-  { mode: 'view', label: 'Reader & Preview', shortLabel: 'Reader', icon: <DocumentIcon sx={{ fontSize: 19 }} /> },
-  { mode: 'edit', label: 'Advanced Vector Editor', shortLabel: 'Editor', icon: <EditIcon sx={{ fontSize: 19 }} /> },
-  { mode: 'organize', label: 'Organize & Watermark', shortLabel: 'Organizer', icon: <OrganizeIcon sx={{ fontSize: 19 }} /> },
-  { mode: 'merge', label: 'Merge Documents', shortLabel: 'Merge', icon: <MergeIcon sx={{ fontSize: 19 }} /> },
-  { mode: 'split', label: 'Split & Extract Pages', shortLabel: 'Split', icon: <SplitIcon sx={{ fontSize: 19 }} /> },
-  { mode: 'inspect', label: 'Metadata & Privacy', shortLabel: 'Metadata', icon: <InspectIcon sx={{ fontSize: 19 }} /> },
-];
+const navItems = [
+  { mode: 'view', label: 'Read', title: 'Read PDF', description: 'Open a document, find your page, and take the next step.', icon: <DescriptionOutlined /> },
+  { mode: 'edit', label: 'Edit', title: 'Edit PDF', description: 'Add text, drawings, and signatures.', icon: <EditOutlined /> },
+  { mode: 'organize', label: 'Organize', title: 'Organize pages', description: 'Reorder, rotate, and watermark your pages.', icon: <DashboardCustomizeOutlined /> },
+  { mode: 'merge', label: 'Merge', title: 'Merge PDFs', description: 'Bring your documents together in the right order.', icon: <MergeType /> },
+  { mode: 'split', label: 'Split', title: 'Split PDF', description: 'Choose the pages you need and save them separately.', icon: <CallSplit /> },
+  { mode: 'inspect', label: 'Info', title: 'Document info', description: 'Review and update the details stored in your PDF.', icon: <InfoOutlined /> },
+] as const;
 
-function App() {
+function focusWorkspace(mode: ViewMode) {
+  document.getElementById(mode === 'edit' ? 'editor-session' : 'workspace-title')?.focus();
+}
+
+export default function App() {
+  const theme = useTheme();
+  const desktop = useMediaQuery(theme.breakpoints.up('md'));
   const [viewMode, setViewMode] = useState<ViewMode>('view');
   const [sharedFile, setSharedFile] = useState<File | null>(null);
+  const [sessions, setSessions] = useState<Partial<Record<ViewMode, Session>>>({ view: { file: null, version: 0 } });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuSelected, setMenuSelected] = useState(false);
+  const [handoff, setHandoff] = useState<Handoff | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [handoffConfirmed, setHandoffConfirmed] = useState(false);
+  const current = navItems.find(item => item.mode === viewMode)!;
 
-  if (viewMode === 'edit') {
-    return (
-      <AdvancedEditor
-        initialFile={sharedFile}
-        onBack={() => setViewMode('view')}
-      />
-    );
-  }
+  const navigate = (mode: ViewMode) => {
+    // Each tool owns a stable input snapshot. Navigation must not replace its work.
+    setSessions(previous => previous[mode] ? previous : { ...previous, [mode]: { file: sharedFile, version: 0 } });
+    setViewMode(mode);
+    if (menuOpen) {
+      setMenuSelected(true);
+      setMenuOpen(false);
+    } else {
+      requestAnimationFrame(() => focusWorkspace(mode));
+    }
+  };
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', bgcolor: '#0B0F17' }}>
-      {/* ─── Strict 3-Zone Top Bar Contract ─── */}
-      <Box
-        component="header"
-        sx={{
-          height: 60,
-          flexShrink: 0,
-          px: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 4,
-          bgcolor: '#111827',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          zIndex: 1200,
-        }}
-      >
-        {/* Zone 1: Single text element wordmark */}
-        <Typography
-          component="div"
-          onClick={() => setViewMode('view')}
-          sx={{
-            fontFamily: '"Plus Jakarta Sans", sans-serif',
-            fontSize: 18,
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-            color: '#F9FAFB',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-            cursor: 'pointer',
-          }}
-        >
-          PDFy Studio Pro
-        </Typography>
+  const openInTool = (mode: Handoff['mode'], file: File) => {
+    if (sessions[mode]) {
+      setHandoff({ mode, file });
+      setHandoffConfirmed(false);
+      setConfirmOpen(true);
+    } else {
+      setSessions(previous => ({ ...previous, [mode]: { file, version: 0 } }));
+      navigate(mode);
+    }
+  };
 
-        {/* Zone 2: 5 concise single-line navigation links */}
-        <Box
-          component="nav"
-          sx={{
-            display: { xs: 'none', md: 'flex' },
-            alignItems: 'center',
-            gap: 3.5,
-          }}
-        >
-          {navItems
-            .filter(item => item.mode !== 'edit')
-            .map(item => {
-              const active = viewMode === item.mode;
-              return (
-                <Box
-                  key={item.mode}
-                  component="button"
-                  onClick={() => setViewMode(item.mode)}
-                  sx={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '4px 0',
-                    cursor: 'pointer',
-                    fontFamily: '"Plus Jakarta Sans", sans-serif',
-                    fontSize: 13,
-                    fontWeight: active ? 600 : 500,
-                    color: active ? '#F9FAFB' : '#9CA3AF',
-                    borderBottom: active ? '2px solid #6366F1' : '2px solid transparent',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    transition: 'color 0.15s ease, border-color 0.15s ease',
-                    '&:hover': {
-                      color: '#F9FAFB',
-                    },
-                  }}
-                >
-                  {item.shortLabel}
-                </Box>
-              );
-            })}
-        </Box>
+  const replaceSession = () => {
+    if (!handoff) return;
+    setSessions(previous => ({ ...previous, [handoff.mode]: { file: handoff.file, version: (previous[handoff.mode]?.version ?? 0) + 1 } }));
+    setHandoffConfirmed(true);
+    setConfirmOpen(false);
+    navigate(handoff.mode);
+  };
 
-        {/* Zone 3: 1 Primary Action */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setViewMode('edit')}
-            sx={{ whiteSpace: 'nowrap', flexShrink: 0, py: 0.9, px: 2 }}
-          >
-            Open Canvas Editor
-          </Button>
-        </Box>
+  const navigation = (
+    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pl: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.08em' }}>PDF TOOLS</Typography>
+        {!desktop && <IconButton aria-label="Close tools menu" onClick={() => setMenuOpen(false)}><Close /></IconButton>}
       </Box>
-
-      {/* ─── Workspace Body (Sidebar + Main Viewport) ─── */}
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Left Navigation Sidebar */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            width: drawerWidth,
-            flexShrink: 0,
-            [`& .MuiDrawer-paper`]: {
-              width: drawerWidth,
-              boxSizing: 'border-box',
-              position: 'relative',
-              height: '100%',
-            },
-          }}
-        >
-          <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%', gap: 2.5 }}>
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'text.secondary',
-                  px: 1.5,
-                  mb: 1,
-                  display: 'block',
-                  fontWeight: 600,
-                }}
+      <Box component="nav" id="tools-navigation" aria-label="PDF tools">
+        <List disablePadding>
+          {navItems.map(item => (
+            <ListItem key={item.mode} disablePadding sx={{ mb: 0.75 }}>
+              <ListItemButton
+                component="button" selected={viewMode === item.mode} aria-current={viewMode === item.mode ? 'page' : undefined}
+                onClick={() => navigate(item.mode)} sx={{ width: '100%', color: viewMode === item.mode ? 'primary.main' : 'text.secondary', textAlign: 'left' }}
               >
-                Document Suites
-              </Typography>
-              <List disablePadding>
-                {navItems.map(({ mode, label, icon }) => {
-                  const selected = viewMode === mode;
-                  return (
-                    <ListItem key={mode} disablePadding sx={{ mb: 0.5 }}>
-                      <ListItemButton
-                        selected={selected}
-                        onClick={() => setViewMode(mode)}
-                        sx={{
-                          borderRadius: 1.5,
-                          py: 1,
-                          px: 1.5,
-                          '&.Mui-selected': {
-                            bgcolor: 'rgba(99, 102, 241, 0.14)',
-                            '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.2)' },
-                          },
-                        }}
-                      >
-                        <ListItemIcon
-                          sx={{
-                            minWidth: 34,
-                            color: selected ? '#818CF8' : '#9CA3AF',
-                          }}
-                        >
-                          {icon}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={label}
-                          slotProps={{
-                            primary: {
-                              sx: {
-                                fontSize: 13,
-                                fontWeight: selected ? 600 : 400,
-                                color: selected ? '#F9FAFB' : '#9CA3AF',
-                                whiteSpace: 'nowrap',
-                              },
-                            },
-                          }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  );
-                })}
-              </List>
-            </Box>
-
-            <Divider />
-
-            {/* Active Document Context */}
-            <Box sx={{ px: 1.5 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>
-                Active Session Buffer
-              </Typography>
-              {sharedFile ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#F9FAFB', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {sharedFile.name}
-                  </Typography>
-                  <Typography className="mono" sx={{ fontSize: 11, color: 'text.secondary' }}>
-                    {(sharedFile.size / 1024).toFixed(1)} KB · In-Memory
-                  </Typography>
-                </Box>
-              ) : (
-                <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
-                  No file buffered yet. Open a PDF or load a sample template.
-                </Typography>
-              )}
-            </Box>
-
-            {/* Quiet Footer Info */}
-            <Box sx={{ mt: 'auto', px: 1.5, pt: 2, borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                100% Client-Side Execution
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 0.25 }}>
-                Files are processed in browser memory and never uploaded.
-              </Typography>
-            </Box>
-          </Box>
-        </Drawer>
-
-        {/* Main Content Viewport */}
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            overflow: 'hidden',
-            p: 3,
-          }}
-        >
-          {viewMode === 'view' && (
-            <PDFViewer
-              activeFile={sharedFile}
-              onFileLoaded={f => setSharedFile(f)}
-              onOpenInEditor={f => {
-                setSharedFile(f);
-                setViewMode('edit');
-              }}
-              onOpenInOrganizer={f => {
-                setSharedFile(f);
-                setViewMode('organize');
-              }}
-            />
-          )}
-          {viewMode === 'organize' && <PDFOrganizer initialFile={sharedFile} />}
-          {viewMode === 'merge' && <PDFMerger />}
-          {viewMode === 'split' && <PDFSplitter />}
-          {viewMode === 'inspect' && <PDFInspector initialFile={sharedFile} />}
-        </Box>
+                <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontWeight: viewMode === item.mode ? 700 : 500 } } }} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+      <Box sx={{ mt: 'auto', p: 1, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+        <LockOutlined sx={{ fontSize: 20, color: 'text.secondary', mb: 0.5 }} />
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.75 }}>Your files stay on your device</Typography>
+        <Typography variant="caption" color="text.secondary">Switch tools without losing your place. Download your work before closing or reloading this tab.</Typography>
       </Box>
     </Box>
   );
-}
 
-export default App;
+  return (
+    <>
+      <a className="skip-link" href={viewMode === 'edit' ? '#editor-session' : '#workspace-title'}>Skip to workspace</a>
+      <Box hidden={viewMode === 'edit'} data-testid="workspace" data-theme={theme.palette.mode} sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', bgcolor: 'background.default', color: 'text.primary' }}>
+        <Box component="header" sx={{ px: { xs: 1, md: 3 }, py: 1, minHeight: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            {!desktop && <IconButton aria-label="Open tools menu" aria-expanded={menuOpen} aria-controls={menuOpen ? 'tools-navigation' : undefined} onClick={() => { setMenuSelected(false); setMenuOpen(true); }}><MenuIcon /></IconButton>}
+            <Box sx={{ color: 'primary.main', display: { xs: 'none', sm: 'grid' }, placeItems: 'center', bgcolor: 'action.selected', width: 38, height: 42, borderRadius: 2 }}><DescriptionOutlined /></Box>
+            <Typography component="span" sx={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.04em' }}>PDFy</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, ml: 1 }}>A little simpler. All yours.</Typography>
+          </Box>
+          <AppearanceControl />
+        </Box>
+        <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          {desktop ? (
+            <Box component="aside" sx={{ width: 232, flexShrink: 0, bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider' }}>{navigation}</Box>
+          ) : (
+            <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} ModalProps={{ disableRestoreFocus: menuSelected }} slotProps={{ paper: { sx: { width: 280, maxWidth: 'calc(100vw - 24px)' } }, transition: { onExited: () => { if (menuSelected) focusWorkspace(viewMode); } } }}>{navigation}</Drawer>
+          )}
+          <Box component="main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', p: { xs: 2, sm: 3, lg: 4 }, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ mb: 3, flexShrink: 0 }}>
+              <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: 0.75 }}>{current.title}</Typography>
+              <Typography color="text.secondary">{current.description}</Typography>
+            </Box>
+            {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
+              const session = sessions[item.mode]!;
+              const legacy = ['organize', 'split', 'inspect'].includes(item.mode);
+              const content = item.mode === 'view' ? (
+                <PDFViewer activeFile={sharedFile} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} />
+              ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} /> : item.mode === 'split' ? <PDFSplitter /> : <PDFInspector initialFile={session.file} />;
+              return (
+                <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
+                  {legacy ? <ThemeProvider theme={legacyTheme}><Box sx={{ p: { xs: 1, sm: 2 }, borderRadius: 2, bgcolor: 'background.default', color: 'text.primary', overflow: 'auto', flex: 1 }}>{content}</Box></ThemeProvider> : content}
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+      </Box>
+      {sessions.edit && (
+        <ThemeProvider theme={legacyTheme}>
+          <Box key={sessions.edit.version} component="main" id="editor-session" aria-label="Edit PDF" tabIndex={-1} hidden={viewMode !== 'edit'} sx={{ color: 'text.primary' }}>
+            <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onBack={() => navigate('view')} />
+          </Box>
+        </ThemeProvider>
+      )}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} aria-labelledby="replace-title" aria-describedby="replace-description" disableRestoreFocus={handoffConfirmed} slotProps={{ transition: { onExited: () => { if (handoffConfirmed) focusWorkspace(viewMode); } } }}>
+        <DialogTitle id="replace-title">Replace the {handoff?.mode === 'edit' ? 'Edit' : 'Organize'} document?</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="replace-description" sx={{ overflowWrap: 'anywhere' }}>
+            Opening “{handoff?.file.name}” here will discard this tool’s current session. Download any work you want to keep first. Other tools will keep their files and changes.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ flexWrap: 'wrap', gap: 1, p: 2 }}>
+          <Button autoFocus onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={replaceSession}>Replace document</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}

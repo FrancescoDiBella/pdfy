@@ -19,14 +19,15 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npx eslint src/App.tsx src/main.tsx src/theme.ts src/legacyTheme.ts src/components/AppearanceControl.tsx src/components/ToolIntro.tsx src/components/PDFViewer.tsx src/components/PDFMerger.tsx src/components/editor/TopNavigationBar.tsx tests/browser/*.ts
       - run: npm test
       - run: npm run build
       - run: npm run test:pwa
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: browser-test-results
+          name: browser-test-results-and-screenshots
           path: test-results/
           retention-days: 7
