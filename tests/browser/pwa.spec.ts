@@ -88,9 +88,11 @@ for (const initiallyControlled of [false, true]) {
         const annotation = page.locator('.react-draggable').filter({ hasText: 'Double-click to edit text…' });
         const style = await annotation.getAttribute('style');
         await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
-        for (const key of ['Delete', 'Backspace', 'Control+z', 'Control+d', 'ArrowRight']) await page.keyboard.press(key);
-        await expect(annotation).toHaveCount(1);
-        await expect(annotation).toHaveAttribute('style', style!);
+        for (const key of ['Delete', 'Backspace', 'Control+z', 'Control+d', 'ArrowRight']) {
+          await page.keyboard.press(key);
+          await expect(annotation).toHaveCount(1);
+          await expect(annotation).toHaveAttribute('style', style!);
+        }
       }
       if (!initiallyControlled) {
         await expect(page.getByRole('dialog', { name: 'Update PDFy?', exact: true })).toBeVisible();
@@ -101,11 +103,11 @@ for (const initiallyControlled of [false, true]) {
         const canvas = page.getByRole('region', { name: 'PDF editing canvas', exact: true });
         const annotation = page.locator('.react-draggable').filter({ hasText: 'Double-click to edit text…' });
         await canvas.focus();
-        const style = await annotation.getAttribute('style');
+        const transform = await annotation.evaluate(element => getComputedStyle(element).transform);
         await page.keyboard.press('ArrowRight');
-        await expect(annotation).not.toHaveAttribute('style', style!);
+        await expect(annotation).not.toHaveCSS('transform', transform);
         await page.keyboard.press('Control+z');
-        await expect(annotation).toHaveAttribute('style', style!);
+        await expect(annotation).toHaveCSS('transform', transform);
         // Undo clears the selection; pointer selection must return focus to the canvas.
         await page.getByText('Double-click to edit text…', { exact: true }).click();
         await expect(canvas).toBeFocused();
