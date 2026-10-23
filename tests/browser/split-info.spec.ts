@@ -53,6 +53,10 @@ for (const tool of ['Split', 'Info'] as const) {
     await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: 'Open another PDF', exact: true })).toBeFocused();
     await keepWork(page, tool);
+    await input.setInputFiles(await pdfFile('same-name.pdf', 1, 'Replacement title'));
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Open another PDF', exact: true })).toBeFocused();
+    await keepWork(page, tool);
     await page.getByRole('button', { name: 'Try a sample PDF', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
     await page.keyboard.press('Escape');
