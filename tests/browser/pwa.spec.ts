@@ -39,54 +39,66 @@ test('reopens offline, renders a local PDF and merges without caching documents'
   expect(cacheURLs.every(url => new URL(url).origin === new URL(page.url()).origin)).toBe(true);
 });
 
-test('an update preserves both tabs until each tab explicitly confirms reloading', async ({ page, context }) => {
-  // Isolated origin serves a changed worker without mutating the build used by other tests.
-  let revision = 1;
-  const root = resolve('dist');
-  const mime: Record<string, string> = {
-    '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
-    '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json',
-    '.png': 'image/png', '.svg': 'image/svg+xml', '.wasm': 'application/wasm',
-  };
-  const server = createServer(async (request, response) => {
+for (const initiallyControlled of [false, true]) {
+  test(`an update reloads a ${initiallyControlled ? 'controlled' : 'first-visit'} tab only after consent and preserves other tabs`, async ({ page, context }, testInfo) => {
+    // Isolated origin serves a changed worker without mutating the build used by other tests.
+    let revision = 1;
+    const root = resolve('dist');
+    const mime: Record<string, string> = {
+      '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
+      '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json',
+      '.png': 'image/png', '.svg': 'image/svg+xml', '.wasm': 'application/wasm',
+    };
+    const server = createServer(async (request, response) => {
+      try {
+        const path = new URL(request.url || '/', 'http://localhost').pathname;
+        const file = resolve(root, `.${path === '/' ? '/index.html' : path}`);
+        if (!file.startsWith(root + sep)) { response.writeHead(404).end(); return; }
+        const contents = await readFile(file);
+        response.writeHead(200, { 'Content-Type': mime[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
+        response.end(path === '/sw.js' ? `${contents.toString()}\n// Test revision ${revision}\n` : contents);
+      } catch { response.writeHead(404).end(); }
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const otherTab = await context.newPage();
     try {
-      const path = new URL(request.url || '/', 'http://localhost').pathname;
-      const file = resolve(root, `.${path === '/' ? '/index.html' : path}`);
-      if (!file.startsWith(root + sep)) { response.writeHead(404).end(); return; }
-      const contents = await readFile(file);
-      response.writeHead(200, { 'Content-Type': mime[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
-      response.end(path === '/sw.js' ? `${contents.toString()}\n// Test revision ${revision}\n` : contents);
-    } catch { response.writeHead(404).end(); }
-  });
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const otherTab = await context.newPage();
-  try {
-    await page.goto(origin);
-    await expect(page.getByText('PDFy is ready for offline use. Export your work before closing.')).toBeVisible({ timeout: 30000 });
-    await page.reload();
-    await otherTab.goto(origin);
-    for (const tab of [page, otherTab]) {
-      await tab.getByRole('button', { name: 'Merge Documents', exact: true }).click();
-      await tab.getByRole('button', { name: 'Load 2 Sample PDFs to Test', exact: true }).click();
-      await tab.getByRole('textbox', { name: 'Output Filename' }).fill('unsaved-name');
-      await tab.evaluate(() => { document.documentElement.dataset.sessionMarker = 'original'; });
+      await page.goto(origin);
+      await expect(page.getByText('PDFy is ready for offline use. Export your work before closing.')).toBeVisible({ timeout: 30000 });
+      if (initiallyControlled) await page.reload();
+      expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(initiallyControlled);
+      await otherTab.goto(origin);
+      for (const tab of [page, otherTab]) {
+        await tab.getByRole('button', { name: 'Merge Documents', exact: true }).click();
+        await tab.getByRole('button', { name: 'Load 2 Sample PDFs to Test', exact: true }).click();
+        await tab.getByRole('textbox', { name: 'Output Filename' }).fill('unsaved-name');
+        await tab.evaluate(() => { document.documentElement.dataset.sessionMarker = 'original'; });
+      }
+      revision = 2;
+      await page.evaluate(async () => { await (await navigator.serviceWorker.ready).update(); });
+      await expect(page.getByRole('button', { name: 'Review update', exact: true })).toBeVisible({ timeout: 15000 });
+      await page.getByRole('button', { name: 'Review update', exact: true }).click();
+      if (!initiallyControlled) await page.screenshot({ path: testInfo.outputPath('update-confirmation-desktop.png') });
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(page.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
+      await page.getByRole('button', { name: 'Review update', exact: true }).click();
+      await page.getByRole('button', { name: 'Reload and update', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'High-Precision PDF Reader & Inspector' })).toBeVisible();
+      await expect(otherTab.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
+      await expect(otherTab.locator('html')).toHaveAttribute('data-session-marker', 'original');
+      await expect(otherTab.getByRole('button', { name: 'Review update', exact: true })).toBeVisible();
+      await otherTab.getByRole('button', { name: 'Review update', exact: true }).click();
+      await otherTab.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(otherTab.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
+      await otherTab.getByRole('button', { name: 'Review update', exact: true }).click();
+      await otherTab.getByRole('button', { name: 'Reload and update', exact: true }).click();
+      await expect(otherTab.getByRole('heading', { name: 'High-Precision PDF Reader & Inspector' })).toBeVisible();
+      await expect(otherTab.locator('html')).not.toHaveAttribute('data-session-marker', 'original');
+    } finally {
+      await otherTab.close();
+      await page.close();
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     }
-    revision = 2;
-    await page.evaluate(async () => { await (await navigator.serviceWorker.ready).update(); });
-    await expect(page.getByRole('button', { name: 'Review update', exact: true })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: 'Review update', exact: true }).click();
-    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(page.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
-    await page.getByRole('button', { name: 'Review update', exact: true }).click();
-    await page.getByRole('button', { name: 'Reload and update', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'High-Precision PDF Reader & Inspector' })).toBeVisible();
-    await expect(otherTab.getByRole('textbox', { name: 'Output Filename' })).toHaveValue('unsaved-name');
-    await expect(otherTab.locator('html')).toHaveAttribute('data-session-marker', 'original');
-  } finally {
-    await otherTab.close();
-    await page.close();
-    server.closeAllConnections();
-    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-  }
-});
+  });
+}

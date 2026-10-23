@@ -1,24 +1,22 @@
 import { useRef, useState } from 'react';
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Snackbar } from '@mui/material';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { activateWaitingWorker } from '../utils/serviceWorkerUpdate';
 
 export default function PWAStatus() {
   const [confirmUpdate, setConfirmUpdate] = useState(false);
   const [registrationFailed, setRegistrationFailed] = useState(false);
   const [externalUpdate, setExternalUpdate] = useState(false);
-  const updateApproved = useRef(false);
-  const reloadPending = useRef(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const updateInProgress = useRef(false);
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
   } = useRegisterSW({
     onRegisterError() { setRegistrationFailed(true); },
     onNeedReload() {
-      reloadPending.current = true;
-      // Another tab may activate the worker. Only this tab's consent permits a reload.
-      if (updateApproved.current) window.location.reload();
-      else setExternalUpdate(true);
+      // Activation elsewhere must never reload this tab without its own consent.
+      setExternalUpdate(true);
     },
   });
   const hasUpdate = needRefresh || externalUpdate;
@@ -31,13 +29,17 @@ export default function PWAStatus() {
   };
 
   const applyUpdate = async () => {
-    setConfirmUpdate(false);
-    updateApproved.current = true;
+    if (updateInProgress.current) return;
+    updateInProgress.current = true;
+    setIsUpdating(true);
     try {
-      if (reloadPending.current) window.location.reload();
-      else await updateServiceWorker(true);
+      const registration = await navigator.serviceWorker.getRegistration();
+      await activateWaitingWorker(registration?.waiting ?? null);
+      window.location.reload();
     } catch {
-      updateApproved.current = false;
+      updateInProgress.current = false;
+      setIsUpdating(false);
+      setConfirmUpdate(false);
       setRegistrationFailed(true);
     }
   };
@@ -62,16 +64,16 @@ export default function PWAStatus() {
               : 'PDFy is ready for offline use. Export your work before closing.'}
         </Alert>
       </Snackbar>
-      <Dialog open={confirmUpdate} onClose={() => setConfirmUpdate(false)} aria-labelledby="pwa-update-title" aria-describedby="pwa-update-description">
+      <Dialog open={confirmUpdate} onClose={() => { if (!updateInProgress.current) setConfirmUpdate(false); }} aria-labelledby="pwa-update-title" aria-describedby="pwa-update-description">
         <DialogTitle id="pwa-update-title">Update PDFy?</DialogTitle>
-        <DialogContent>
+        <DialogContent aria-busy={isUpdating}>
           <DialogContentText id="pwa-update-description">
             Export any unsaved work in every open PDFy tab before updating. Reloading this tab clears its open files and edits. You can cancel and continue working.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmUpdate(false)} autoFocus>Cancel</Button>
-          <Button onClick={applyUpdate} variant="contained">Reload and update</Button>
+          <Button onClick={() => setConfirmUpdate(false)} disabled={isUpdating} autoFocus>Cancel</Button>
+          <Button onClick={applyUpdate} disabled={isUpdating} variant="contained">{isUpdating ? 'Updating…' : 'Reload and update'}</Button>
         </DialogActions>
       </Dialog>
     </>

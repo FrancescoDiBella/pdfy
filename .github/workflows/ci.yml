@@ -22,11 +22,20 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run test:pwa
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
+      - name: Verify browser dependencies
+        run: |
+          # Hosted runners usually have the required libraries already.
+          # Install OS packages only if Chromium cannot launch.
+          node --input-type=module <<'NODE' || npx playwright install-deps chromium
+          import { chromium } from '@playwright/test';
+          const browser = await chromium.launch();
+          await browser.close();
+          NODE
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: browser-test-results
+          name: browser-test-results-and-screenshots
           path: test-results/
           retention-days: 7
