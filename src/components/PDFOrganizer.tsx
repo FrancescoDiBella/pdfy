@@ -1,3 +1,4 @@
+import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -397,6 +398,7 @@ export default function PDFOrganizer({ initialFile }: Props) {
           }}
         >
           <Document
+            options={pdfDocumentOptions}
             file={file}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={
@@ -799,3 +801,4 @@ export default function PDFOrganizer({ initialFile }: Props) {
     </Box>
   );
 }
+
