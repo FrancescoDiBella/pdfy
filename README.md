@@ -26,7 +26,7 @@ PDFy Studio is a powerful, local-first web application that provides a comprehen
 ## 🚀 Getting Started
 
 ### Prerequisites
-Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
+Use [Node.js](https://nodejs.org/) 22.18+ (Node 24 LTS recommended). The regression tests use Node's built-in TypeScript support.
 
 ### Installation
 
@@ -38,7 +38,7 @@ Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
 
 2. Install the dependencies:
    ```bash
-   npm install
+   npm ci
    ```
 
 ### Running the App Locally
@@ -57,14 +57,27 @@ npm run build
 ```
 The compiled static assets will be output to the `dist` directory, ready to be deployed to any static web host.
 
+### Regression Checks
+
+```bash
+npm test
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+Browser tests run against the production preview. Run `npm run lint` for repository-wide linting; the existing lint cleanup is tracked in [#6](https://github.com/FrancescoDiBella/pdfy/issues/6).
+
 ## 🛣️ Roadmap
 
 - [x] Support for rich PDF content editing not only adding thingss
-- [ ] Support for multi-page editing in the Advanced Editor.
-- [ ] PWA (Progressive Web App) integration for native-like offline desktop installation.
+- [x] Support for multi-page editing in the Advanced Editor (merged in [#2](https://github.com/FrancescoDiBella/pdfy/pull/2)).
+- [ ] PWA (Progressive Web App) integration for native-like offline desktop installation ([#4](https://github.com/FrancescoDiBella/pdfy/issues/4)).
 - [x] Free-hand drawing and annotation tools.
-- [ ] Drag-and-drop file reordering in the PDF Merger tool.
+- [x] Drag-and-drop file reordering in the PDF Merger tool, with keyboard/touch alternatives and validated imports ([#3](https://github.com/FrancescoDiBella/pdfy/issues/3)).
+- [ ] Simple, accessible UI/UX redesign: research, shared patterns and responsive layouts ([#5](https://github.com/FrancescoDiBella/pdfy/issues/5)).
 
 ## 📄 License
 
 This project is open-source and available under the MIT License.
+
