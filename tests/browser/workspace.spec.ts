@@ -183,6 +183,14 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectNoPageOverflow(page);
       await expectAccessible(page);
       await page.screenshot({ path: testInfo.outputPath(`merger-${width}-${colorScheme}.png`) });
+      await navigate(page, 'Split');
+      await page.locator('[data-tool="split"] input[type="file"]').setInputFiles(await pdfFile('pages-to-extract.pdf', 3));
+      await expect(page.locator('[data-tool="split"] .react-pdf__Page__canvas').first()).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`split-${width}-${colorScheme}.png`) });
+      await navigate(page, 'Info');
+      await expect(page.getByRole('textbox', { name: /Document title/i })).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`info-${width}-${colorScheme}.png`) });
+      await navigate(page, 'Merge');
       const download = page.waitForEvent('download');
       await page.getByRole('button', { name: 'Download merged PDF' }).click();
       expect((await download).suggestedFilename()).toBe('Merged_Document.pdf');

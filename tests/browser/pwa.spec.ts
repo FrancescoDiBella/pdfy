@@ -74,15 +74,48 @@ for (const initiallyControlled of [false, true]) {
         await tab.getByRole('textbox', { name: 'Download filename' }).fill('unsaved-name');
         await tab.evaluate(() => { document.documentElement.dataset.sessionMarker = 'original'; });
       }
+      if (initiallyControlled) {
+        await page.getByRole('button', { name: 'Edit', exact: true }).click();
+        await page.getByRole('button', { name: 'Blank A4 Canvas', exact: true }).click();
+        await page.getByRole('button', { name: 'Text Block', exact: true }).click();
+        await expect(page.getByText('Double-click to edit text…', { exact: true })).toBeVisible();
+      }
       revision = 2;
       await page.evaluate(async () => { await (await navigator.serviceWorker.ready).update(); });
       await expect(page.getByRole('button', { name: 'Review update', exact: true })).toBeVisible({ timeout: 15000 });
       await page.getByRole('button', { name: 'Review update', exact: true }).click();
+      if (initiallyControlled) {
+        const annotation = page.locator('.react-draggable').filter({ hasText: 'Double-click to edit text…' });
+        const style = await annotation.getAttribute('style');
+        await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
+        for (const key of ['Delete', 'Backspace', 'Control+z', 'Control+d', 'ArrowRight']) await page.keyboard.press(key);
+        await expect(annotation).toHaveCount(1);
+        await expect(annotation).toHaveAttribute('style', style!);
+      }
       if (!initiallyControlled) {
         await expect(page.getByRole('dialog', { name: 'Update PDFy?', exact: true })).toBeVisible();
         await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('update-confirmation-desktop.png') });
       }
       await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+      if (initiallyControlled) {
+        const canvas = page.getByRole('region', { name: 'PDF editing canvas', exact: true });
+        const annotation = page.locator('.react-draggable').filter({ hasText: 'Double-click to edit text…' });
+        await canvas.focus();
+        const style = await annotation.getAttribute('style');
+        await page.keyboard.press('ArrowRight');
+        await expect(annotation).not.toHaveAttribute('style', style!);
+        await page.keyboard.press('Control+z');
+        await expect(annotation).toHaveAttribute('style', style!);
+        // Undo clears the selection; pointer selection must return focus to the canvas.
+        await page.getByText('Double-click to edit text…', { exact: true }).click();
+        await expect(canvas).toBeFocused();
+        await page.keyboard.press('Delete');
+        await expect(annotation).toHaveCount(0);
+        await page.keyboard.press('Control+z');
+        await expect(annotation).toHaveCount(1);
+        await page.getByRole('button', { name: 'Return to workspace', exact: true }).click();
+        await page.getByRole('button', { name: 'Merge', exact: true }).click();
+      }
       await expect(page.getByRole('textbox', { name: 'Download filename' })).toHaveValue('unsaved-name');
       await page.getByRole('button', { name: 'Review update', exact: true }).click();
       await page.getByRole('button', { name: 'Reload and update', exact: true }).click();

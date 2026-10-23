@@ -67,6 +67,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
 
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   // Multi-page states
   const [numPages, setNumPages] = useState(1);
@@ -311,8 +312,9 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   useEffect(() => {
     if (!active) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      const activeTag = document.activeElement?.tagName.toLowerCase();
-      if (activeTag === 'input' || activeTag === 'textarea') return;
+      const target = e.target;
+      if (!(target instanceof Element) || !editorRef.current?.contains(target)) return;
+      if (target.closest('input, textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"]), [role="dialog"], [role="menu"], [role="slider"], [role="listbox"]')) return;
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -753,7 +755,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   const canvasHeight = A4_H * zoom;
 
   return (
-    <Box sx={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#0B0F19', overflow: 'hidden' }}>
+    <Box ref={editorRef} sx={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#0B0F19', overflow: 'hidden' }}>
       {/* Top Bar */}
       <TopNavigationBar
         docTitle={docTitle}
@@ -841,6 +843,14 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
           >
             <Box
               ref={pageRef}
+              role="region"
+              aria-label="PDF editing canvas"
+              tabIndex={0}
+              onPointerDownCapture={event => {
+                if (event.target instanceof Element && !event.target.closest('input, textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"])')) {
+                  pageRef.current?.focus({ preventScroll: true });
+                }
+              }}
               onClick={e => e.stopPropagation()}
               sx={{
                 position: 'relative',
