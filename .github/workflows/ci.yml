@@ -20,6 +20,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx eslint src/App.tsx src/main.tsx src/theme.ts src/legacyTheme.ts src/components/AppearanceControl.tsx src/components/ToolIntro.tsx src/components/PDFViewer.tsx src/components/PDFMerger.tsx src/components/PWAStatus.tsx src/utils/serviceWorkerUpdate.ts src/components/editor/TopNavigationBar.tsx tests/browser/*.ts
+      - run: npx eslint src/components/PDFSplitter.tsx src/components/PDFInspector.tsx src/components/PDFSessionControls.tsx src/hooks/usePDFSession.ts src/utils/pageRanges.ts src/utils/pdfInfo.ts tests/pageRanges.test.mjs tests/pdfInfo.test.mjs
       - run: npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2023 --types node tests/browser/*.ts playwright.config.ts
       - run: npm test
       - run: npm run build
