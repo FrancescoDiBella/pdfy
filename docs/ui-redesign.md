@@ -36,11 +36,11 @@ Retaining sessions increases memory usage for large documents. There is no autom
 
 ## Current boundaries
 
-- The workspace, Read, Merge, Split, and Info now share responsive layouts and semantic colors. Edit and Organize retain their existing dark tool panels until their layouts and colors are migrated together.
-- This is not a promise that every legacy control is responsive or accessible. In particular, the editor still needs compact toolbars and adaptive side panels.
+- All tools now share the workspace appearance. The dedicated [mobile workspace increment](mobile-workspace.md) replaces the editor and organizer fixed panels with closable controls.
+- Automated checks cover selected mobile/desktop workflows. Physical mobile keyboards, screen readers, browser zoom, and non-Chromium browser validation remain required.
 - Merging preserves the existing PDF ordering and validation logic. Reader zoom/rotation change the preview only.
 - Downloads report that a download started; the browser controls the final save destination.
-- Split and Info preserve work until a validated replacement is confirmed, including same-name files and sample actions. A delayed file read in a hidden tool cannot open its confirmation over another tool. The remaining internal Edit/Organize replacement actions are still tracked in #10.
+- Split, Info, and Organize preserve work until a validated replacement is confirmed, including same-name files and sample actions. A delayed file read in a hidden tool cannot open its confirmation over another tool. Remaining editor replacement work is tracked in #10.
 
 ## Review and validation
 

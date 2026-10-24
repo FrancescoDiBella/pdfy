@@ -18,7 +18,7 @@ PDFy Studio is a powerful, local-first web application that provides a comprehen
 ## 🛠️ Tech Stack
 
 - **Framework**: React + Vite + TypeScript for a blazing fast development and build experience.
-- **Styling**: Material UI (`@mui/material`) with system/light/dark appearance for the workspace, Reader, Merger, Splitter, and Info. Edit and Organize retain their dark theme during the incremental redesign.
+- **Styling**: Material UI (`@mui/material`) with system/light/dark appearance for the workspace, Reader, Merger, Splitter, and Info. Edit and Organize use the same theme and expose their tools/settings in closable panels.
 - **PDF Rendering**: `react-pdf` is used to accurately render PDF pages to the DOM.
 - **PDF Manipulation**: `pdf-lib` handles the heavy lifting of parsing, modifying, and generating the raw PDF binaries.
 - **Visual Editing**: `react-rnd` provides the interactive drag-and-drop overlay mechanics.
@@ -87,11 +87,15 @@ Browser tests run against the production preview. Run `npm run lint` for reposit
 
 ### Workspace and Appearance
 
-Use the sidebar on desktop or **Open tools menu** on smaller screens. **Appearance** follows your system by default and remembers an explicit Light or Dark choice. The menu, Reader, Merger, Splitter, and Info support both appearances.
+Use the sidebar on desktop or **Open tools menu** on smaller screens. **Appearance** follows your system by default and remembers an explicit Light or Dark choice. The menu, Reader, Merger, Splitter, Info, Edit, and Organize support both appearances.
 
 Switching tools preserves their current work in this tab. Opening another PDF in Read does not overwrite other tools. Sending a document from Read to an existing Edit or Organize session asks before replacing it. Download your work before closing or reloading; files and edits are not persisted.
 
 Split and Info validate a new file or sample before asking to replace an existing session. Cancelling, or choosing an invalid, protected, or empty PDF, preserves the current selection and edits. Split supports keyboard page selection and checked page ranges. Info edits the six displayed PDF Info dictionary fields; clearing those fields does not remove XMP metadata, dates, annotations, or identifying document content.
+
+On phones, Edit starts with a PDF fitted to the available width. Open **Tools** to insert/select items or choose source text; use **Properties** for text, position, size and appearance. Close either panel to return to the page. The bottom bar holds page navigation, fit width and zoom; **Document actions** contains signatures, stamps and page actions. Drawing and signatures accept finger, pen and mouse input. Organize keeps page actions in the page grid and puts watermark/numbering controls in **Page settings**.
+
+See the [mobile workspace guide](docs/mobile-workspace.md) for interaction details and validation limits.
 
 See the [redesign scope, flow inventory, and review guide](docs/ui-redesign.md) for current boundaries and remaining accessibility/usability validation.
 

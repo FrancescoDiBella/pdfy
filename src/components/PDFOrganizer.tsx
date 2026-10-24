@@ -1,169 +1,68 @@
-import { pdfDocumentOptions } from '../utils/pdfRendering';
-import { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  Typography,
-  Paper,
-  CircularProgress,
-  IconButton,
-  TextField,
-  Slider,
-  Switch,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  Divider,
-  Tooltip,
-  Snackbar,
-  Alert,
-} from '@mui/material';
-import {
-  CloudUpload as UploadIcon,
-  RotateRight as RotateRightIcon,
-  RotateLeft as RotateLeftIcon,
-  DeleteOutlined as DeleteIcon,
-  ArrowBack as MoveLeftIcon,
-  ArrowForward as MoveRightIcon,
-  ContentCopy as DuplicateIcon,
-  AddBoxOutlined as AddBlankIcon,
-  SaveAlt as ExportIcon,
-  AutoFixHigh as SampleIcon,
-  BrandingWatermark as WatermarkIcon,
-  FormatListNumbered as PageNumIcon,
-  RestartAlt as ResetIcon,
-} from '@mui/icons-material';
+import { useRef, useState } from 'react';
+import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined } from '@mui/icons-material';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { generateSamplePDF } from '../utils/pdfSamples';
+import { usePDFSession, type PDFSession } from '../hooks/usePDFSession';
+import PDFSessionControls from './PDFSessionControls';
+import ToolIntro from './ToolIntro';
+import ToolPanel from './ToolPanel';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
-
-interface PageConfig {
-  id: string;
-  originalIndex: number; // -1 means newly inserted blank page
-  rotation: number; // 0, 90, 180, 270
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+interface PageConfig { id: string; originalIndex: number; rotation: number }
+async function prepare(file: File) {
+  const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
+  if (!pdf.getPageCount()) throw new Error('Empty PDF');
+  return { count: pdf.getPageCount() };
 }
 
-interface Props {
-  initialFile?: File | null;
-}
-
-export default function PDFOrganizer({ initialFile }: Props) {
-  const [file, setFile] = useState<File | null>(initialFile || null);
-  const [pageConfigs, setPageConfigs] = useState<PageConfig[]>([]);
+export default function PDFOrganizer({ initialFile, active = true }: { initialFile?: File | null; active?: boolean }) {
+  const replacement = usePDFSession(prepare, initialFile);
   const [isExporting, setIsExporting] = useState(false);
+  return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+    {!replacement.session && <ToolIntro icon={<DashboardCustomizeOutlined />} title="Put your pages in order" description="Move, rotate, copy, or remove pages. Add a watermark or page numbers when you need them."><Typography color="text.secondary">Open a PDF to get started.</Typography></ToolIntro>}
+    <PDFSessionControls tool="Organize" active={active} hasSession={!!replacement.session} busy={replacement.isReading || isExporting} pendingName={replacement.pending?.file.name} error={replacement.error} onOpen={replacement.open} onSample={() => replacement.open(() => generateSamplePDF('multi-page-report'))} onCancel={replacement.cancel} onConfirm={replacement.confirm} />
+    {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><OrganizerWorkspace key={replacement.session.id} session={replacement.session} active={active} onExporting={setIsExporting} /></Box>}
+  </Box>;
+}
 
-  // Watermark settings
+function OrganizerWorkspace({ session: { file, data }, active, onExporting }: { session: PDFSession<{ count: number }>; active: boolean; onExporting: (busy: boolean) => void }) {
+  const initialPages = () => Array.from({ length: data.count }, (_, originalIndex) => ({ id: crypto.randomUUID(), originalIndex, rotation: 0 }));
+  const [pageConfigs, setPageConfigs] = useState<PageConfig[]>(initialPages);
+  const [isExporting, setIsExporting] = useState(false);
+  const [settings, setSettings] = useState(false);
+  const [confirm, setConfirm] = useState<{ type: 'delete'; id: string } | { type: 'reset' } | null>(null);
+  const trigger = useRef<HTMLButtonElement | null>(null);
+  const settingsButton = useRef<HTMLButtonElement>(null);
+  const [announcement, setAnnouncement] = useState('');
   const [enableWatermark, setEnableWatermark] = useState(false);
   const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
   const [watermarkColor, setWatermarkColor] = useState('#EF4444');
   const [watermarkOpacity, setWatermarkOpacity] = useState(0.22);
   const [watermarkSize, setWatermarkSize] = useState(48);
   const [watermarkDiagonal, setWatermarkDiagonal] = useState(true);
-
-  // Page numbering settings
   const [enablePageNumbers, setEnablePageNumbers] = useState(true);
   const [pageNumberFormat, setPageNumberFormat] = useState<'page-of' | 'simple' | 'bates'>('page-of');
   const [pageNumberPosition, setPageNumberPosition] = useState<'bottom-center' | 'bottom-right' | 'top-right'>('bottom-center');
-  const [batesPrefix, setBatesPrefix] = useState('DOC-2026-');
-
+  const [batesPrefix, setBatesPrefix] = useState('DOC-');
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
-
-  useEffect(() => {
-    if (initialFile) {
-      setFile(initialFile);
-    }
-  }, [initialFile]);
-
-  const handleFileLoad = (newFile: File) => {
-    setFile(newFile);
-    setPageConfigs([]);
-  };
-
-  const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      handleFileLoad(event.target.files[0]);
-    }
-  };
-
-  const loadSample = async () => {
-    const sample = await generateSamplePDF('multi-page-report');
-    handleFileLoad(sample);
-    setToast({ message: 'Loaded 4-page Operations Dossier for organization & watermarking', severity: 'info' });
-  };
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setPageConfigs(
-      Array.from({ length: numPages }, (_, idx) => ({
-        id: crypto.randomUUID(),
-        originalIndex: idx,
-        rotation: 0,
-      }))
-    );
-  };
-
-  const rotatePage = (idx: number, delta: number) => {
-    setPageConfigs(prev =>
-      prev.map((p, i) => (i === idx ? { ...p, rotation: (p.rotation + delta + 360) % 360 } : p))
-    );
-  };
-
-  const rotateAll = (delta: number) => {
-    setPageConfigs(prev =>
-      prev.map(p => ({ ...p, rotation: (p.rotation + delta + 360) % 360 }))
-    );
-  };
-
-  const movePage = (idx: number, direction: -1 | 1) => {
-    const target = idx + direction;
+  const movePage = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
     if (target < 0 || target >= pageConfigs.length) return;
-    setPageConfigs(prev => {
-      const copy = [...prev];
-      const [item] = copy.splice(idx, 1);
-      copy.splice(target, 0, item);
-      return copy;
-    });
+    const next = [...pageConfigs]; const [page] = next.splice(index, 1); next.splice(target, 0, page);
+    setPageConfigs(next); setAnnouncement(`Moved page ${index + 1} to position ${target + 1}.`);
+    requestAnimationFrame(() => document.getElementById(`organizer-page-${page.id}`)?.focus());
   };
-
-  const duplicatePage = (idx: number) => {
-    setPageConfigs(prev => {
-      const copy = [...prev];
-      const source = copy[idx];
-      copy.splice(idx + 1, 0, {
-        ...source,
-        id: crypto.randomUUID(),
-      });
-      return copy;
-    });
+  const rotatePage = (id: string, delta: number) => setPageConfigs(previous => previous.map(page => page.id === id ? { ...page, rotation: (page.rotation + delta + 360) % 360 } : page));
+  const insert = (index: number, blank: boolean) => {
+    const next = [...pageConfigs]; next.splice(index + 1, 0, { ...next[index], id: crypto.randomUUID(), ...(blank ? { originalIndex: -1, rotation: 0 } : {}) }); setPageConfigs(next);
   };
-
-  const insertBlankPageAfter = (idx: number) => {
-    setPageConfigs(prev => {
-      const copy = [...prev];
-      copy.splice(idx + 1, 0, {
-        id: crypto.randomUUID(),
-        originalIndex: -1,
-        rotation: 0,
-      });
-      return copy;
-    });
-  };
-
-  const deletePage = (idx: number) => {
-    if (pageConfigs.length <= 1) {
-      setToast({ message: 'Document must contain at least one page.', severity: 'error' });
-      return;
-    }
-    setPageConfigs(prev => prev.filter((_, i) => i !== idx));
-  };
-
   const exportOrganizedPDF = async () => {
     if (!file || pageConfigs.length === 0) return;
     setIsExporting(true);
+    onExporting(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
       const srcDoc = await PDFDocument.load(arrayBuffer);
@@ -271,534 +170,59 @@ export default function PDFOrganizer({ initialFile }: Props) {
       setToast({ message: 'Failed to export organized PDF.', severity: 'error' });
     } finally {
       setIsExporting(false);
+      onExporting(false);
     }
   };
 
-  if (!file) {
-    return (
-      <Box sx={{ width: '100%', maxWidth: 680, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <Paper
-          sx={{
-            p: 5,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center',
-            gap: 2.5,
-            border: '1px dashed rgba(255, 255, 255, 0.14)',
-            bgcolor: 'rgba(17, 24, 39, 0.7)',
-          }}
-        >
-          <Box
-            sx={{
-              width: 52,
-              height: 52,
-              borderRadius: '12px',
-              bgcolor: 'rgba(99, 102, 241, 0.12)',
-              border: '1px solid rgba(99, 102, 241, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#818CF8',
-            }}
-          >
-            <WatermarkIcon sx={{ fontSize: 26 }} />
+  return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+    <Box><Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{file.name}</Typography><Typography color="text.secondary">{pageConfigs.length} pages</Typography></Box>
+    <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: 1, position: 'sticky', top: 0, zIndex: 2 }}>
+      <Button ref={settingsButton} variant="outlined" aria-expanded={settings} onClick={() => setSettings(true)}>Page settings</Button>
+      <Button variant="contained" disabled={isExporting} onClick={exportOrganizedPDF}>{isExporting ? 'Preparing PDF…' : 'Download organized PDF'}</Button>
+    </Paper>
+    {toast && <Alert severity={toast.severity} onClose={() => setToast(null)}>{toast.message}</Alert>}
+    <Typography role="status" className="sr-only">{announcement}</Typography>
+    <Document file={file} options={pdfDocumentOptions} loading={<CircularProgress aria-label="Loading page previews" />} error={<Alert severity="warning">Previews could not be displayed. Your page actions and download remain available.</Alert>}>
+      <Box component="ol" aria-label="Page order" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 2 }}>
+        {pageConfigs.map((page, index) => <Paper component="li" variant="outlined" key={page.id} sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+          <Typography component="h3" id={`organizer-page-${page.id}`} tabIndex={-1} sx={{ fontWeight: 600 }}>Page {index + 1} · {page.originalIndex === -1 ? 'Blank' : `Source ${page.originalIndex + 1}`} · {page.rotation}°</Typography>
+          <Box sx={{ width: 170, height: 235, bgcolor: '#FFFFFF', overflow: 'hidden', position: 'relative', display: 'grid', placeItems: 'center' }}>
+            <Box sx={{ transform: `rotate(${page.rotation}deg)` }}>{page.originalIndex === -1 ? <Box sx={{ width: 170, height: 235 }} /> : <Page pageNumber={page.originalIndex + 1} width={170} renderTextLayer={false} renderAnnotationLayer={false} />}</Box>
+            {enableWatermark && <Typography sx={{ position: 'absolute', color: watermarkColor, opacity: watermarkOpacity, transform: watermarkDiagonal ? 'rotate(-45deg)' : 'none', fontWeight: 700, fontSize: Math.max(10, watermarkSize * 0.28), textAlign: 'center', overflowWrap: 'anywhere' }}>{watermarkText}</Typography>}
+            {enablePageNumbers && <Typography sx={{ position: 'absolute', fontSize: 9, color: '#444444', bgcolor: '#FFFFFF', bottom: pageNumberPosition.startsWith('bottom') ? 5 : 'auto', top: pageNumberPosition.startsWith('top') ? 5 : 'auto', right: pageNumberPosition.endsWith('right') ? 5 : 'auto' }}>{pageNumberFormat === 'page-of' ? `Page ${index + 1} of ${pageConfigs.length}` : pageNumberFormat === 'simple' ? index + 1 : `${batesPrefix}${String(index + 1).padStart(4, '0')}`}</Typography>}
           </Box>
-          <Box>
-            <Typography variant="h1" sx={{ fontSize: 22, mb: 0.75 }}>
-              Page Organizer & Watermark Studio
-            </Typography>
-            <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 460 }}>
-              Reorder pages, rotate individual sheets, insert blank dividers, or stamp diagonal watermarks and Bates page numbers.
-            </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(44px, 1fr))', gap: 1, width: '100%' }}>
+            <IconButton aria-label={`Move page ${index + 1} earlier`} disabled={index === 0 || isExporting} onClick={() => movePage(index, -1)}><ArrowBack /></IconButton>
+            <IconButton aria-label={`Rotate page ${index + 1}`} disabled={isExporting} onClick={() => rotatePage(page.id, 90)}><RotateRight /></IconButton>
+            <IconButton aria-label={`Move page ${index + 1} later`} disabled={index === pageConfigs.length - 1 || isExporting} onClick={() => movePage(index, 1)}><ArrowForward /></IconButton>
+            <IconButton aria-label={`Duplicate page ${index + 1}`} disabled={isExporting} onClick={() => insert(index, false)}><ContentCopy /></IconButton>
+            <IconButton aria-label={`Add blank after page ${index + 1}`} disabled={isExporting} onClick={() => insert(index, true)}><AddBoxOutlined /></IconButton>
+            <IconButton aria-label={`Delete page ${index + 1}`} disabled={pageConfigs.length <= 1 || isExporting} onClick={event => { trigger.current = event.currentTarget; setConfirm({ type: 'delete', id: page.id }); }}><DeleteOutlined /></IconButton>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: 'center', mt: 1 }}>
-            <Button variant="contained" component="label" startIcon={<UploadIcon />} sx={{ whiteSpace: 'nowrap' }}>
-              Select PDF Document
-              <input type="file" hidden accept="application/pdf" onChange={onFileChange} />
-            </Button>
-            <Button variant="outlined" startIcon={<SampleIcon />} onClick={loadSample} sx={{ whiteSpace: 'nowrap' }}>
-              Load 4-Page Sample Dossier
-            </Button>
-          </Box>
-        </Paper>
+        </Paper>)}
       </Box>
-    );
-  }
-
-  return (
-    <Box sx={{ width: '100%', height: '100%', display: 'flex', gap: 3, overflow: 'hidden' }}>
-      {/* Left Main Grid: Page Thumbnails & Reordering */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: 2 }}>
-        {/* Toolbar */}
-        <Paper
-          sx={{
-            px: 2.5,
-            py: 1.5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
-            flexWrap: 'wrap',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="h2" sx={{ fontSize: 15, fontWeight: 600 }}>
-              {file.name}
-            </Typography>
-            <Typography variant="caption" className="mono" sx={{ color: 'text.secondary' }}>
-              · {pageConfigs.length} Pages
-            </Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<RotateLeftIcon />}
-              onClick={() => rotateAll(-90)}
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              Rotate All CCW
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<RotateRightIcon />}
-              onClick={() => rotateAll(90)}
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              Rotate All CW
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<ResetIcon />}
-              onClick={() => onDocumentLoadSuccess({ numPages: pageConfigs.filter(p => p.originalIndex !== -1).length || 1 })}
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              Reset Order
-            </Button>
-            <Button size="small" variant="outlined" component="label" sx={{ whiteSpace: 'nowrap' }}>
-              Switch PDF
-              <input type="file" hidden accept="application/pdf" onChange={onFileChange} />
-            </Button>
-          </Box>
-        </Paper>
-
-        {/* Page Grid */}
-        <Box
-          sx={{
-            flex: 1,
-            overflow: 'auto',
-            p: 3,
-            bgcolor: 'rgba(11, 15, 25, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: 2,
-          }}
-        >
-          <Document
-            options={pdfDocumentOptions}
-            file={file}
-            onLoadSuccess={onDocumentLoadSuccess}
-            loading={
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                <CircularProgress size={32} />
-              </Box>
-            }
-          >
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
-                gap: 2.5,
-              }}
-            >
-              {pageConfigs.map((cfg, idx) => (
-                <Paper
-                  key={cfg.id}
-                  sx={{
-                    p: 1.5,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 1.25,
-                    position: 'relative',
-                    bgcolor: 'rgba(22, 30, 49, 0.75)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    transition: 'transform 0.15s ease, border-color 0.15s ease',
-                    '&:hover': {
-                      borderColor: 'rgba(99, 102, 241, 0.45)',
-                    },
-                  }}
-                >
-                  {/* Page Header Metadata */}
-                  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography className="mono" sx={{ fontSize: 11, fontWeight: 600, color: '#F9FAFB' }}>
-                      Page {String(idx + 1).padStart(2, '0')}
-                    </Typography>
-                    <Typography className="mono" sx={{ fontSize: 10, color: '#9CA3AF' }}>
-                      {cfg.originalIndex === -1 ? 'Blank Sheet' : `Src #${cfg.originalIndex + 1}`}
-                      {cfg.rotation > 0 ? ` · ${cfg.rotation}°` : ''}
-                    </Typography>
-                  </Box>
-
-                  {/* Page Visual Preview with Live Watermark & Rotation */}
-                  <Box
-                    sx={{
-                      width: 170,
-                      height: 235,
-                      bgcolor: '#FFFFFF',
-                      borderRadius: 1,
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                      boxShadow: '0 6px 20px rgba(0, 0, 0, 0.45)',
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        transform: `rotate(${cfg.rotation}deg)`,
-                        transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      }}
-                    >
-                      {cfg.originalIndex === -1 ? (
-                        <Box sx={{ width: 170, height: 235, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
-                            Blank A4 Page
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Page
-                          pageNumber={cfg.originalIndex + 1}
-                          width={170}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                        />
-                      )}
-                    </Box>
-
-                    {/* Live Watermark Overlay Preview */}
-                    {enableWatermark && watermarkText.trim() && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          inset: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          pointerEvents: 'none',
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            color: watermarkColor,
-                            opacity: watermarkOpacity,
-                            fontWeight: 700,
-                            fontSize: Math.max(10, Math.round(watermarkSize * 0.28)),
-                            transform: watermarkDiagonal ? 'rotate(-45deg)' : 'none',
-                            whiteSpace: 'nowrap',
-                            letterSpacing: '0.06em',
-                            userSelect: 'none',
-                          }}
-                        >
-                          {watermarkText}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {/* Live Page Number Preview */}
-                    {enablePageNumbers && (
-                      <Typography
-                        className="mono"
-                        sx={{
-                          position: 'absolute',
-                          bottom: pageNumberPosition.startsWith('bottom') ? 6 : 'auto',
-                          top: pageNumberPosition.startsWith('top') ? 6 : 'auto',
-                          right: pageNumberPosition.endsWith('right') ? 8 : 'auto',
-                          left: pageNumberPosition === 'bottom-center' ? '50%' : 'auto',
-                          transform: pageNumberPosition === 'bottom-center' ? 'translateX(-50%)' : 'none',
-                          fontSize: 8,
-                          color: '#4B5563',
-                          bgcolor: 'rgba(255,255,255,0.85)',
-                          px: 0.5,
-                          borderRadius: 0.5,
-                          pointerEvents: 'none',
-                        }}
-                      >
-                        {pageNumberFormat === 'page-of'
-                          ? `Page ${idx + 1} of ${pageConfigs.length}`
-                          : pageNumberFormat === 'simple'
-                            ? `${idx + 1}`
-                            : `${batesPrefix}${String(idx + 1).padStart(4, '0')}`}
-                      </Typography>
-                    )}
-                  </Box>
-
-                  {/* Page Controls Bar */}
-                  <Box
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      pt: 0.5,
-                      borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                    }}
-                  >
-                    <Tooltip title="Move Earlier">
-                      <span>
-                        <IconButton size="small" disabled={idx === 0} onClick={() => movePage(idx, -1)}>
-                          <MoveLeftIcon sx={{ fontSize: 15 }} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="Rotate 90° CW">
-                      <IconButton size="small" onClick={() => rotatePage(idx, 90)}>
-                        <RotateRightIcon sx={{ fontSize: 15 }} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Duplicate Page">
-                      <IconButton size="small" onClick={() => duplicatePage(idx)}>
-                        <DuplicateIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Insert Blank Page After">
-                      <IconButton size="small" onClick={() => insertBlankPageAfter(idx)}>
-                        <AddBlankIcon sx={{ fontSize: 15 }} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete Page">
-                      <span>
-                        <IconButton
-                          size="small"
-                          disabled={pageConfigs.length <= 1}
-                          onClick={() => deletePage(idx)}
-                          sx={{ '&:hover': { color: '#EF4444' } }}
-                        >
-                          <DeleteIcon sx={{ fontSize: 15 }} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="Move Later">
-                      <span>
-                        <IconButton size="small" disabled={idx === pageConfigs.length - 1} onClick={() => movePage(idx, 1)}>
-                          <MoveRightIcon sx={{ fontSize: 15 }} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Box>
-                </Paper>
-              ))}
-            </Box>
-          </Document>
-        </Box>
+    </Document>
+    <ToolPanel open={active && settings} title="Page settings" onClose={() => setSettings(false)}>
+      <Box component="fieldset" disabled={isExporting} sx={{ border: 0, m: 0, p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <FormControlLabel control={<Switch checked={enableWatermark} onChange={event => setEnableWatermark(event.target.checked)} />} label="Watermark" />
+        <TextField label="Watermark Text" value={watermarkText} onChange={event => setWatermarkText(event.target.value)} disabled={!enableWatermark} fullWidth />
+        <TextField label="Watermark color" type="color" value={watermarkColor} onChange={event => setWatermarkColor(event.target.value)} disabled={!enableWatermark} fullWidth />
+        <Box><Typography>Watermark opacity</Typography><Slider aria-label="Watermark opacity" min={0.05} max={0.8} step={0.01} value={watermarkOpacity} onChange={(_, value) => setWatermarkOpacity(value as number)} disabled={!enableWatermark} /></Box>
+        <Box><Typography>Watermark size</Typography><Slider aria-label="Watermark size" min={16} max={120} value={watermarkSize} onChange={(_, value) => setWatermarkSize(value as number)} disabled={!enableWatermark} /></Box>
+        <FormControlLabel control={<Switch checked={watermarkDiagonal} disabled={!enableWatermark} onChange={event => setWatermarkDiagonal(event.target.checked)} />} label="Diagonal watermark" />
+        <FormControlLabel control={<Switch checked={enablePageNumbers} onChange={event => setEnablePageNumbers(event.target.checked)} />} label="Page numbers" />
+        <TextField select label="Number format" value={pageNumberFormat} onChange={event => setPageNumberFormat(event.target.value as typeof pageNumberFormat)} disabled={!enablePageNumbers}>{[['page-of', 'Page 1 of 3'], ['simple', '1, 2, 3'], ['bates', 'Prefix and number']].map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
+        {pageNumberFormat === 'bates' && <TextField label="Number prefix" value={batesPrefix} onChange={event => setBatesPrefix(event.target.value)} />}
+        <TextField select label="Number position" value={pageNumberPosition} onChange={event => setPageNumberPosition(event.target.value as typeof pageNumberPosition)} disabled={!enablePageNumbers}>{[['bottom-center', 'Bottom center'], ['bottom-right', 'Bottom right'], ['top-right', 'Top right']].map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
+        <Button variant="outlined" startIcon={<RotateLeft />} onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, rotation: (page.rotation + 270) % 360 })))}>Rotate all left</Button>
+        <Button variant="outlined" startIcon={<RotateRight />} onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, rotation: (page.rotation + 90) % 360 })))}>Rotate all right</Button>
+        <Button variant="outlined" onClick={() => { trigger.current = settingsButton.current; setSettings(false); setConfirm({ type: 'reset' }); }}>Reset page order</Button>
       </Box>
-
-      {/* Right Configuration Sidebar: Watermark & Bates Numbering */}
-      <Paper
-        sx={{
-          width: 330,
-          flexShrink: 0,
-          p: 2.5,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2.5,
-          overflow: 'auto',
-        }}
-      >
-        {/* Watermark Configuration */}
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <WatermarkIcon sx={{ fontSize: 18, color: '#6366F1' }} />
-              <Typography variant="h2" sx={{ fontSize: 14 }}>
-                Watermark Stamp
-              </Typography>
-            </Box>
-            <Switch
-              size="small"
-              checked={enableWatermark}
-              onChange={e => setEnableWatermark(e.target.checked)}
-            />
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, opacity: enableWatermark ? 1 : 0.45, pointerEvents: enableWatermark ? 'auto' : 'none' }}>
-            <TextField
-              label="Watermark Text"
-              size="small"
-              fullWidth
-              value={watermarkText}
-              onChange={e => setWatermarkText(e.target.value)}
-            />
-
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {['CONFIDENTIAL', 'DRAFT', 'APPROVED', 'DO NOT COPY'].map(preset => (
-                <Button
-                  key={preset}
-                  size="small"
-                  variant="outlined"
-                  onClick={() => setWatermarkText(preset)}
-                  sx={{ fontSize: 10, py: 0.4, px: 1, minWidth: 0, whiteSpace: 'nowrap' }}
-                >
-                  {preset}
-                </Button>
-              ))}
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Stamp Color
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <input
-                  type="color"
-                  value={watermarkColor}
-                  onChange={e => setWatermarkColor(e.target.value)}
-                  style={{ width: 26, height: 26, border: 'none', background: 'transparent', cursor: 'pointer' }}
-                />
-                <Typography className="mono" sx={{ fontSize: 11, color: 'text.secondary' }}>
-                  {watermarkColor.toUpperCase()}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Opacity</Typography>
-                <Typography className="mono" sx={{ fontSize: 11 }}>{Math.round(watermarkOpacity * 100)}%</Typography>
-              </Box>
-              <Slider
-                size="small"
-                min={0.05}
-                max={0.8}
-                step={0.05}
-                value={watermarkOpacity}
-                onChange={(_, v) => setWatermarkOpacity(v as number)}
-              />
-            </Box>
-
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Font Size</Typography>
-                <Typography className="mono" sx={{ fontSize: 11 }}>{watermarkSize} pt</Typography>
-              </Box>
-              <Slider
-                size="small"
-                min={20}
-                max={84}
-                step={2}
-                value={watermarkSize}
-                onChange={(_, v) => setWatermarkSize(v as number)}
-              />
-            </Box>
-
-            <FormControlLabel
-              control={
-                <Switch
-                  size="small"
-                  checked={watermarkDiagonal}
-                  onChange={e => setWatermarkDiagonal(e.target.checked)}
-                />
-              }
-              label={<Typography variant="body2" sx={{ fontSize: 12 }}>45° Diagonal Orientation</Typography>}
-            />
-          </Box>
-        </Box>
-
-        <Divider />
-
-        {/* Page Numbering & Bates Stamping */}
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PageNumIcon sx={{ fontSize: 18, color: '#6366F1' }} />
-              <Typography variant="h2" sx={{ fontSize: 14 }}>
-                Page & Bates Numbering
-              </Typography>
-            </Box>
-            <Switch
-              size="small"
-              checked={enablePageNumbers}
-              onChange={e => setEnablePageNumbers(e.target.checked)}
-            />
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, opacity: enablePageNumbers ? 1 : 0.45, pointerEvents: enablePageNumbers ? 'auto' : 'none' }}>
-            <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-                Numbering Style
-              </Typography>
-              <Select
-                size="small"
-                fullWidth
-                value={pageNumberFormat}
-                onChange={e => setPageNumberFormat(e.target.value as any)}
-              >
-                <MenuItem value="page-of">Page 1 of N</MenuItem>
-                <MenuItem value="simple">Simple Numeric (1, 2, 3)</MenuItem>
-                <MenuItem value="bates">Legal Bates Stamp (DOC-2026-0001)</MenuItem>
-              </Select>
-            </Box>
-
-            {pageNumberFormat === 'bates' && (
-              <TextField
-                label="Bates Prefix"
-                size="small"
-                fullWidth
-                value={batesPrefix}
-                onChange={e => setBatesPrefix(e.target.value)}
-              />
-            )}
-
-            <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-                Placement
-              </Typography>
-              <Select
-                size="small"
-                fullWidth
-                value={pageNumberPosition}
-                onChange={e => setPageNumberPosition(e.target.value as any)}
-              >
-                <MenuItem value="bottom-center">Bottom Center</MenuItem>
-                <MenuItem value="bottom-right">Bottom Right</MenuItem>
-                <MenuItem value="top-right">Top Right Header</MenuItem>
-              </Select>
-            </Box>
-          </Box>
-        </Box>
-
-        <Box sx={{ mt: 'auto', pt: 2 }}>
-          <Button
-            variant="contained"
-            fullWidth
-            size="large"
-            startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <ExportIcon />}
-            disabled={isExporting || pageConfigs.length === 0}
-            onClick={exportOrganizedPDF}
-            sx={{ py: 1.4, whiteSpace: 'nowrap' }}
-          >
-            {isExporting ? 'Generating PDF…' : `Export ${pageConfigs.length} Pages`}
-          </Button>
-        </Box>
-      </Paper>
-
-      <Snackbar
-        open={!!toast}
-        autoHideDuration={3500}
-        onClose={() => setToast(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        {toast ? (
-          <Alert severity={toast.severity} onClose={() => setToast(null)} sx={{ borderRadius: 2 }}>
-            {toast.message}
-          </Alert>
-        ) : undefined}
-      </Snackbar>
-    </Box>
-  );
+    </ToolPanel>
+    <Dialog open={active && !!confirm} onClose={() => setConfirm(null)} aria-labelledby="organizer-confirm-title" disableRestoreFocus slotProps={{ transition: { onExited: () => (trigger.current?.isConnected ? trigger.current : settingsButton.current)?.focus() } }}>
+      <DialogTitle id="organizer-confirm-title">{confirm?.type === 'reset' ? 'Reset page order?' : 'Delete this page?'}</DialogTitle>
+      <DialogContent><DialogContentText>{confirm?.type === 'reset' ? 'Restore every original source page and remove page copies, blank pages, and rotations. Watermark and numbering settings will stay.' : 'Remove this page from the working document. Your original file stays unchanged.'}</DialogContentText></DialogContent>
+      <DialogActions><Button autoFocus onClick={() => setConfirm(null)}>Cancel</Button><Button color="error" onClick={() => { if (confirm?.type === 'reset') setPageConfigs(initialPages()); else if (confirm) setPageConfigs(previous => previous.filter(page => page.id !== confirm.id)); setConfirm(null); }}>Confirm</Button></DialogActions>
+    </Dialog>
+  </Box>;
 }
-

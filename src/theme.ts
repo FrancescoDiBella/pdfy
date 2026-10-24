@@ -51,6 +51,7 @@ export const workspaceTheme = createTheme({
       styleOverrides: { notchedOutline: ({ theme }) => ({ borderColor: theme.palette.text.secondary }) },
     },
     MuiListItemButton: { styleOverrides: { root: { minHeight: 48, borderRadius: 10 } } },
+    MuiToggleButton: { styleOverrides: { root: { minHeight: 44, minWidth: 44, textTransform: 'none' } } },
     MuiTooltip: { styleOverrides: { tooltip: { fontSize: '0.8125rem' } } },
   },
 });

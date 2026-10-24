@@ -1,6 +1,6 @@
 import { pdfDocumentOptions } from '../utils/pdfRendering';
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Box, Button, Typography, Paper, CircularProgress, Snackbar, Alert } from '@mui/material';
+import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
+import { Box, Button, Typography, Paper, CircularProgress, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, useMediaQuery } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
   Add as AddIcon,
@@ -10,8 +10,12 @@ import {
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Rnd } from 'react-rnd';
+import { reduceEditorHistory } from '../utils/editorHistory';
+import type { TextItem, TextStyle } from 'pdfjs-dist/types/src/display/api';
 import type { EditorElement, ElementType, StrokePoint } from './editor/types';
-import TopNavigationBar from './editor/TopNavigationBar';
+import TopNavigationBar, { EditorViewControls } from './editor/TopNavigationBar';
+import ToolPanel from './ToolPanel';
+import { useVisibleViewport } from '../hooks/useVisibleViewport';
 import LeftToolboxPanel from './editor/LeftToolboxPanel';
 import RightPropertiesPanel from './editor/RightPropertiesPanel';
 import DrawingCanvas from './editor/DrawingCanvas';
@@ -42,17 +46,35 @@ interface Props {
   initialFile?: File | null;
 }
 
+async function prepareEditorFile(source: File | (() => Promise<File>)) {
+  const file = typeof source === 'function' ? await source() : source;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const pdf = await PDFDocument.load(bytes);
+  if (!pdf.getPageCount()) throw new Error('Empty PDF');
+  return { file, bytes, pageCount: pdf.getPageCount(), sizes: Object.fromEntries(pdf.getPages().map((page, index) => [index, page.getSize()])) };
+}
+
 export default function AdvancedEditor({ onBack, initialFile, active = true }: Props) {
   const [fileBlob, setFileBlob] = useState<Blob | null>(null);
   const [originalBytes, setOriginalBytes] = useState<Uint8Array | null>(null);
-  const [elements, setElements] = useState<EditorElement[]>([]);
-  const [history, setHistory] = useState<EditorElement[][]>([[]]);
-  const [historyIndex, setHistoryIndex] = useState(0);
+  const [history, dispatchHistory] = useReducer(reduceEditorHistory<EditorElement>, { entries: [[]], index: 0 });
+  const historyIndex = history.index;
+  const elements = history.entries[historyIndex];
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isChangingPages, setIsChangingPages] = useState(false);
+  const pageOperation = useRef(false);
   const [pageDims, setPageDims] = useState({ width: 0, height: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [manualZoom, setManualZoom] = useState<number | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth - 24);
+  const [panel, setPanel] = useState<'tools' | 'properties' | null>(null);
+  const [confirmAction, setConfirmAction] = useState<'clear' | 'page' | null>(null);
+  const [isLoading, setIsLoading] = useState(!!initialFile);
+  const busy = isSaving || isChangingPages || isLoading;
+  const viewport = useVisibleViewport();
+  const compact = useMediaQuery('(max-width:1199px), (max-height:599px)');
+  const zoom = manualZoom ?? Math.max(0.1, Math.min(1, viewportWidth / A4_W));
   const [docTitle, setDocTitle] = useState('Untitled Document');
 
   // Brush controls
@@ -68,6 +90,19 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const loadRequest = useRef({ sequence: 0 });
+
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width;
+      if (width > 0) setViewportWidth(width);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [fileBlob]);
 
   // Multi-page states
   const [numPages, setNumPages] = useState(1);
@@ -75,94 +110,64 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   const [pdfPageDimsMap, setPdfPageDimsMap] = useState<Record<number, { width: number; height: number }>>({});
 
   const [isEditTextMode, setIsEditTextMode] = useState(false);
-  const [pageTextItems, setPageTextItems] = useState<any[]>([]);
-  const [pageTextStyles, setPageTextStyles] = useState<Record<string, any>>({});
-  const [editingTextId, setEditingTextId] = useState<string | null>(null);
-  const [editingInputValue, setEditingInputValue] = useState('');
+  const [parsedText, setParsedText] = useState<{ source: Uint8Array; page: number; items: (TextItem & { color?: number[] })[]; styles: Record<string, TextStyle> } | null>(null);
+  const currentText = parsedText?.source === originalBytes && parsedText?.page === currentPageIndex ? parsedText : null;
+  const pageTextItems = currentText?.items ?? [];
+  const pageTextStyles = currentText?.styles ?? {};
 
   const selectedElement = elements.find(e => e.id === selectedId) ?? null;
 
   /* ── History Helper ───────────────────────── */
-  const pushElements = useCallback(
-    (updater: EditorElement[] | ((prev: EditorElement[]) => EditorElement[])) => {
-      setElements(prev => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        setHistory(h => {
-          const sliced = h.slice(0, historyIndex + 1);
-          return [...sliced, next];
-        });
-        setHistoryIndex(idx => idx + 1);
-        return next;
-      });
-    },
-    [historyIndex]
-  );
+  const pushElements = useCallback((value: EditorElement[] | ((current: EditorElement[]) => EditorElement[])) => dispatchHistory({ type: 'push', value }), []);
+  const handleUndo = useCallback(() => { dispatchHistory({ type: 'undo' }); setSelectedId(null); }, []);
+  const handleRedo = useCallback(() => { dispatchHistory({ type: 'redo' }); setSelectedId(null); }, []);
 
-  const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      const nextIdx = historyIndex - 1;
-      setHistoryIndex(nextIdx);
-      setElements(history[nextIdx]);
-      setSelectedId(null);
-    }
-  }, [history, historyIndex]);
-
-  const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const nextIdx = historyIndex + 1;
-      setHistoryIndex(nextIdx);
-      setElements(history[nextIdx]);
-      setSelectedId(null);
-    }
-  }, [history, historyIndex]);
-
-  /* ── File I/O ────────────────────────────── */
-  const loadFile = useCallback(async (file: File) => {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    setOriginalBytes(bytes);
-    setFileBlob(file);
-    setElements([]);
-    setHistory([[]]);
-    setHistoryIndex(0);
-    setSelectedId(null);
-    setDocTitle(file.name.replace(/\.pdf$/i, ''));
-    setCurrentPageIndex(0);
-    setNumPages(1);
-    setPdfPageDimsMap({});
+  const installFile = useCallback((file: File, bytes: Uint8Array, pageCount: number, sizes: Record<number, { width: number; height: number }>) => {
+    setOriginalBytes(bytes); setFileBlob(file); dispatchHistory({ type: 'reset', value: [] });
+    setSelectedId(null); setDocTitle(file.name.replace(/\.pdf$/i, '')); setCurrentPageIndex(0);
+    setNumPages(pageCount); setPdfPageDimsMap(sizes); setPageDims({ width: 0, height: 0 });
+    setManualZoom(null); setIsDrawMode(false); setIsEditTextMode(false); setToast(null);
   }, []);
 
-  useEffect(() => {
-    if (initialFile) {
-      loadFile(initialFile);
+  const loadFile = useCallback(async (source: File | (() => Promise<File>)) => {
+    const id = ++loadRequest.current.sequence;
+    setIsLoading(true);
+    try {
+      const prepared = await prepareEditorFile(source);
+      if (id === loadRequest.current.sequence) installFile(prepared.file, prepared.bytes, prepared.pageCount, prepared.sizes);
+    } catch {
+      if (id === loadRequest.current.sequence) setToast({ message: 'Could not open this PDF. Choose a valid, unprotected document with at least one page.', severity: 'error' });
+    } finally {
+      if (id === loadRequest.current.sequence) setIsLoading(false);
     }
-  }, [initialFile, loadFile]);
+  }, [installFile]);
 
-  const loadSampleTemplate = async (templateId: SampleTemplateId) => {
-    const file = await generateSamplePDF(templateId);
-    await loadFile(file);
-    setToast({ message: `Loaded ${file.name} into canvas editor.`, severity: 'info' });
-  };
+  useEffect(() => {
+    const request = loadRequest.current;
+    const id = ++request.sequence;
+    if (initialFile) void prepareEditorFile(initialFile).then(prepared => {
+      if (id !== request.sequence) return;
+      installFile(prepared.file, prepared.bytes, prepared.pageCount, prepared.sizes);
+      setIsLoading(false);
+    }).catch(() => {
+      if (id !== request.sequence) return;
+      setToast({ message: 'Could not open this PDF. Choose another document.', severity: 'error' });
+      setIsLoading(false);
+    });
+    return () => { request.sequence++; };
+  }, [initialFile, installFile]);
 
-  const createBlank = async () => {
-    const doc = await PDFDocument.create();
-    doc.addPage([A4_W * (72 / 96), A4_H * (72 / 96)]);
-    const bytes = await doc.save();
-    setOriginalBytes(bytes);
-    setFileBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
-    setElements([]);
-    setHistory([[]]);
-    setHistoryIndex(0);
-    setSelectedId(null);
-    setDocTitle('Untitled Document');
-    setCurrentPageIndex(0);
-    setNumPages(1);
-    setPdfPageDimsMap({});
-  };
+  const loadSampleTemplate = (templateId: SampleTemplateId) => loadFile(() => generateSamplePDF(templateId));
+  const createBlank = () => loadFile(async () => {
+    const pdf = await PDFDocument.create();
+    pdf.addPage([A4_W * (72 / 96), A4_H * (72 / 96)]);
+    return new File([await pdf.save() as BlobPart], 'Untitled Document.pdf', { type: 'application/pdf' });
+  });
 
   /* ── Element CRUD ────────────────────────── */
   const addElement = useCallback(
     (type: ElementType) => {
-      if (!fileBlob) return;
+      if (!fileBlob || pageOperation.current || isSaving || isLoading) return;
       const offset = (elements.length % 5) * 18;
       const el: EditorElement = {
         id: crypto.randomUUID(),
@@ -172,7 +177,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
         pageIndex: currentPageIndex,
         width: type === 'text' ? 220 : type === 'highlight' || type === 'redact' ? 200 : 120,
         height: type === 'text' ? 40 : type === 'highlight' || type === 'redact' ? 28 : 120,
-        content: type === 'text' ? 'Double-click to edit text…' : undefined,
+        content: type === 'text' ? 'Your text' : undefined,
         fontSize: 16,
         fontFamily: 'Helvetica',
         fontWeight: 400,
@@ -195,13 +200,16 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
         input.onchange = e => {
           const f = (e.target as HTMLInputElement).files?.[0];
           if (!f) return;
+          setIsLoading(true);
           const reader = new FileReader();
           reader.onload = r => {
             el.src = r.target?.result as string;
             el.label = f.name;
             pushElements(prev => [...prev, el]);
             setSelectedId(el.id);
+            setIsLoading(false);
           };
+          reader.onerror = () => { setIsLoading(false); setToast({ message: 'Could not open this image. Try another file.', severity: 'error' }); };
           reader.readAsDataURL(f);
         };
         input.click();
@@ -210,7 +218,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
         setSelectedId(el.id);
       }
     },
-    [fileBlob, currentPageIndex, elements.length, pushElements]
+    [fileBlob, currentPageIndex, elements.length, pushElements, isSaving, isLoading]
   );
 
   const handleInsertSignatureImage = useCallback(
@@ -308,9 +316,29 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
     [pushElements]
   );
 
+  const editPDFText = (item: TextItem & { color?: number[] }) => {
+    if (pageOperation.current || isSaving || isLoading) return;
+    const existing = elements.find(element => element.type === 'edit-text' && (element.pageIndex ?? 0) === currentPageIndex && element.originalPdfX === item.transform[4] && element.originalPdfY === item.transform[5]);
+    if (existing) { setSelectedId(existing.id); setPanel('properties'); return; }
+    const dimensions = pdfPageDimsMap[currentPageIndex] ?? { width: A4_W, height: A4_H };
+    const scaleX = A4_W / dimensions.width; const scaleY = A4_H / dimensions.height;
+    const height = item.height || item.transform[3];
+    const family = pageTextStyles[item.fontName]?.fontFamily ?? 'Helvetica';
+    const element: EditorElement = {
+      id: crypto.randomUUID(), type: 'edit-text', pageIndex: currentPageIndex,
+      x: item.transform[4] * scaleX, y: (dimensions.height - item.transform[5] - height) * scaleY,
+      width: Math.max(item.width * scaleX, 60), height: Math.max(height * scaleY, 16),
+      content: item.str, originalText: item.str, originalPdfX: item.transform[4], originalPdfY: item.transform[5], originalPdfW: item.width, originalPdfH: height,
+      fontSize: height * scaleY, fontFamily: family, fontWeight: family.toLowerCase().includes('bold') ? 700 : 400,
+      fontStyle: /italic|oblique/i.test(family) ? 'italic' : 'normal', fillColor: '#FFFFFF',
+      strokeColor: '#' + (item.color ?? [0, 0, 0]).map(color => Math.max(0, Math.min(255, Math.round(color))).toString(16).padStart(2, '0')).join(''),
+    };
+    pushElements(previous => [...previous, element]); setSelectedId(element.id); setIsEditTextMode(false); setPanel('properties');
+  };
+
   /* ── Keyboard Shortcuts ───────────────────── */
   useEffect(() => {
-    if (!active) return;
+    if (!active || busy) return;
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target;
       if (!(target instanceof Element) || !editorRef.current?.contains(target)) return;
@@ -350,7 +378,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [active, selectedId, elements, handleUndo, handleRedo, duplicateElement, deleteElement, updateElement]);
+  }, [active, busy, selectedId, elements, handleUndo, handleRedo, duplicateElement, deleteElement, updateElement]);
 
   /* ── Page Navigation & Manipulation ──────── */
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -372,7 +400,8 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   };
 
   const addPage = async () => {
-    if (!originalBytes) return;
+    if (!originalBytes || pageOperation.current || isSaving || isLoading) return;
+    pageOperation.current = true; setIsChangingPages(true);
     try {
       const doc = await PDFDocument.load(originalBytes);
       doc.addPage([A4_W * (72 / 96), A4_H * (72 / 96)]);
@@ -387,11 +416,12 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
     } catch (err) {
       console.error(err);
       setToast({ message: 'Failed to add page.', severity: 'error' });
-    }
+    } finally { pageOperation.current = false; setIsChangingPages(false); }
   };
 
   const deletePage = async () => {
-    if (!originalBytes || numPages <= 1) return;
+    if (!originalBytes || numPages <= 1 || pageOperation.current || isSaving || isLoading) return;
+    pageOperation.current = true; setIsChangingPages(true);
     try {
       const doc = await PDFDocument.load(originalBytes);
       doc.removePage(currentPageIndex);
@@ -399,17 +429,10 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
       setOriginalBytes(bytes);
       setFileBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
 
-      pushElements(prev =>
-        prev
-          .filter(el => (el.pageIndex ?? 0) !== currentPageIndex)
-          .map(el => {
-            const elPageIndex = el.pageIndex ?? 0;
-            if (elPageIndex > currentPageIndex) {
-              return { ...el, pageIndex: elPageIndex - 1 };
-            }
-            return el;
-          })
-      );
+      const remaining = elements
+        .filter(element => (element.pageIndex ?? 0) !== currentPageIndex)
+        .map(element => (element.pageIndex ?? 0) > currentPageIndex ? { ...element, pageIndex: (element.pageIndex ?? 0) - 1 } : element);
+      dispatchHistory({ type: 'reset', value: remaining });
 
       const newNumPages = doc.getPageCount();
       setNumPages(newNumPages);
@@ -419,32 +442,19 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
     } catch (err) {
       console.error(err);
       setToast({ message: 'Failed to delete page.', severity: 'error' });
-    }
+    } finally { pageOperation.current = false; setIsChangingPages(false); }
   };
 
   useEffect(() => {
-    const fetchTextContent = async () => {
-      if (!originalBytes) {
-        setPageTextItems([]);
-        return;
-      }
-      try {
-        const loadingTask = pdfjs.getDocument({
-          data: originalBytes.slice(),
-          ...pdfDocumentOptions,
-        });
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(currentPageIndex + 1);
-        const textContent = await page.getTextContent();
-        setPageTextItems(textContent.items);
-        setPageTextStyles(textContent.styles || {});
-      } catch (err) {
-        console.error('Failed to parse text content:', err);
-        setPageTextItems([]);
-        setPageTextStyles({});
-      }
-    };
-    fetchTextContent();
+    if (!originalBytes) return;
+    let cancelled = false;
+    const task = pdfjs.getDocument({ data: originalBytes.slice(), ...pdfDocumentOptions });
+    void task.promise.then(async pdf => {
+      const page = await pdf.getPage(currentPageIndex + 1);
+      const content = await page.getTextContent();
+      if (!cancelled) setParsedText({ source: originalBytes, page: currentPageIndex, items: content.items.filter((item): item is TextItem => 'str' in item), styles: content.styles });
+    }).catch(() => { if (!cancelled) setParsedText(null); });
+    return () => { cancelled = true; void task.destroy(); };
   }, [originalBytes, currentPageIndex]);
 
   useEffect(() => {
@@ -481,7 +491,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
       }
     }
 
-    let fontEnum = StandardFonts.Helvetica;
+    let fontEnum: StandardFonts;
     const familyLower = (el.fontFamily || '').toLowerCase();
     const isBold = el.fontWeight === 'bold' || el.fontWeight === 700 || familyLower.includes('bold');
     const isItalic = el.fontStyle === 'italic' || familyLower.includes('italic') || familyLower.includes('oblique');
@@ -514,7 +524,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   };
 
   const exportPDF = async () => {
-    if (!originalBytes) return;
+    if (!originalBytes || pageOperation.current || isLoading) return;
     setIsSaving(true);
     try {
       const doc = await PDFDocument.load(originalBytes);
@@ -661,40 +671,44 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
     return (
       <Box
         sx={{
-          width: '100vw',
-          height: '100vh',
+          width: '100%',
+          height: viewport.height,
+          position: 'fixed', top: viewport.top, left: 0, right: 0,
+          overflow: 'auto',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#0B0F19',
-          p: 3,
+          justifyContent: 'flex-start',
+          flexDirection: 'column',
+          bgcolor: 'background.default',
+          p: { xs: 2, sm: 3 },
         }}
       >
         <Paper
           sx={{
-            p: 5,
+            p: { xs: 2.5, sm: 4 },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: 2.5,
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: 1, borderColor: 'divider',
             maxWidth: 520,
+            flexShrink: 0,
             width: '100%',
           }}
         >
           <Typography variant="h1" sx={{ fontSize: 26 }}>
-            Advanced Vector & Text Editor
+            Edit your PDF
           </Typography>
-          <Typography variant="body1" sx={{ color: '#9CA3AF', textAlign: 'center' }}>
-            Edit embedded PDF text in place, apply ink signatures, official stamps, permanent redactions, and vector annotations.
+          <Typography variant="body1" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+            Open a PDF or start a blank page. Add text, images, shapes, drawings, and signatures.
           </Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, width: '100%', mt: 1 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5, width: '100%', mt: 1 }}>
             <Button
               variant="contained"
               size="large"
               startIcon={<AddIcon />}
-              onClick={createBlank}
+              onClick={createBlank} disabled={isLoading}
               sx={{ py: 1.4, whiteSpace: 'nowrap' }}
             >
               Blank A4 Canvas
@@ -702,16 +716,16 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
             <Button
               variant="outlined"
               size="large"
-              component="label"
+              component="label" disabled={isLoading}
               startIcon={<UploadIcon />}
-              sx={{ py: 1.4, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.16)', color: '#F9FAFB' }}
+              sx={{ py: 1.4 }}
             >
               Upload PDF File
               <input
                 type="file"
                 hidden
                 accept="application/pdf"
-                onChange={e => e.target.files && loadFile(e.target.files[0])}
+                aria-label="PDF to edit" disabled={isLoading} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void loadFile(file); }}
               />
             </Button>
           </Box>
@@ -720,12 +734,12 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1, textAlign: 'center' }}>
               Or launch immediately with a sample template:
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5 }}>
               <Button
                 variant="outlined"
                 size="small"
                 startIcon={<InvoiceIcon />}
-                onClick={() => loadSampleTemplate('service-invoice')}
+                disabled={isLoading} onClick={() => loadSampleTemplate('service-invoice')}
                 sx={{ py: 1, whiteSpace: 'nowrap' }}
               >
                 Sample Invoice
@@ -734,7 +748,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
                 variant="outlined"
                 size="small"
                 startIcon={<BriefIcon />}
-                onClick={() => loadSampleTemplate('executive-brief')}
+                disabled={isLoading} onClick={() => loadSampleTemplate('executive-brief')}
                 sx={{ py: 1, whiteSpace: 'nowrap' }}
               >
                 3-Page Tech Spec
@@ -742,7 +756,9 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
             </Box>
           </Box>
 
-          <Button variant="text" size="small" onClick={onBack} sx={{ color: '#9CA3AF', mt: 1 }}>
+          {isLoading && <CircularProgress aria-label="Preparing PDF" />}
+          {toast && <Alert severity={toast.severity}>{toast.message}</Alert>}
+          <Button variant="text" size="small" onClick={onBack} sx={{ color: 'text.secondary', mt: 1 }}>
             ← Return to PDFy Studio Workspace
           </Button>
         </Paper>
@@ -755,29 +771,23 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   const canvasHeight = A4_H * zoom;
 
   return (
-    <Box ref={editorRef} sx={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#0B0F19', overflow: 'hidden' }}>
+    <Box ref={editorRef} sx={{ width: '100%', height: viewport.height, position: 'fixed', top: viewport.top, left: 0, right: 0, display: 'flex', flexDirection: 'column', bgcolor: 'background.default', color: 'text.primary', overflow: 'hidden' }}>
+      <h1 className="sr-only">Edit PDF</h1>
       {/* Top Bar */}
       <TopNavigationBar
         docTitle={docTitle}
         onTitleChange={setDocTitle}
-        zoom={zoom}
-        onZoomIn={() => setZoom(z => Math.min(z + 0.1, 2))}
-        onZoomOut={() => setZoom(z => Math.max(z - 0.1, 0.4))}
+        panel={panel}
+        onPanel={next => setPanel(current => current === next ? null : next)}
         onExport={exportPDF}
-        onClear={() => {
-          pushElements([]);
-          setSelectedId(null);
-        }}
+        onClear={() => setConfirmAction('clear')}
         onBack={onBack}
-        isSaving={isSaving}
-        currentPageIndex={currentPageIndex}
+        isSaving={busy}
         numPages={numPages}
-        onPrevPage={handlePrevPage}
-        onNextPage={handleNextPage}
         onAddPage={addPage}
-        onDeletePage={deletePage}
+        onDeletePage={() => setConfirmAction('page')}
         canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
+        canRedo={historyIndex < history.entries.length - 1}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onOpenSignature={() => {
@@ -790,54 +800,29 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
         }}
       />
 
-      {/* Main 3-Panel Layout */}
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Left Panel */}
-        <LeftToolboxPanel
-          elements={elements.filter(el => (el.pageIndex ?? 0) === currentPageIndex)}
-          selectedId={selectedId}
-          isDrawMode={isDrawMode}
-          isEditTextMode={isEditTextMode}
-          drawColor={drawColor}
-          drawWidth={drawWidth}
-          drawOpacity={drawOpacity}
-          onChangeDrawColor={setDrawColor}
-          onChangeDrawWidth={setDrawWidth}
-          onChangeDrawOpacity={setDrawOpacity}
-          onSelect={setSelectedId}
-          onDelete={deleteElement}
-          onDuplicate={duplicateElement}
-          onAdd={addElement}
-          onOpenSignature={() => {
-            setSigModalTab('draw');
-            setSigModalOpen(true);
-          }}
-          onToggleDrawMode={() => {
-            setIsDrawMode(d => !d);
-            setIsEditTextMode(false);
-          }}
-          onToggleEditTextMode={() => {
-            setIsEditTextMode(m => !m);
-            setIsDrawMode(false);
-          }}
-        />
-
+      {(isChangingPages || isLoading) && <Typography role="status" sx={{ p: 1, bgcolor: 'background.paper' }}>{isChangingPages ? 'Updating pages…' : 'Preparing image…'}</Typography>}
+      {(isDrawMode || isEditTextMode) && <Box sx={{ px: 1, py: 0.5, display: 'flex', justifyContent: 'flex-end', flexShrink: 0, bgcolor: 'background.paper' }}><Button variant="outlined" onClick={() => { setIsDrawMode(false); setIsEditTextMode(false); }}>Done {isDrawMode ? 'drawing' : 'editing text'}</Button></Box>}
+      {/* Document viewport */}
+      <Box sx={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
         {/* Canvas Viewport */}
         <Box
+          ref={viewportRef}
+          inert={busy}
+          role="region" aria-label="Editor document viewport"
           onClick={() => setSelectedId(null)}
           sx={{
             flex: 1,
             overflow: 'auto',
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            p: 5,
-            bgcolor: '#0B0F19',
+            minWidth: 0, minHeight: 0, overscrollBehavior: 'contain', pointerEvents: busy ? 'none' : 'auto',
+            p: { xs: 1.5, sm: 3 },
+            bgcolor: 'action.hover',
           }}
         >
           <Document
             options={pdfDocumentOptions}
             file={fileBlob}
+            className="editor-document"
             onLoadSuccess={onDocumentLoadSuccess}
             loading={<CircularProgress sx={{ color: '#6366F1' }} />}
           >
@@ -854,6 +839,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
               onClick={e => e.stopPropagation()}
               sx={{
                 position: 'relative',
+                mx: 'auto', flexShrink: 0,
                 width: canvasWidth,
                 height: canvasHeight,
                 boxShadow: '0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.3)',
@@ -866,7 +852,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
               <Page
                 pageNumber={currentPageIndex + 1}
                 width={canvasWidth}
-                onRenderSuccess={(data: any) => {
+                onRenderSuccess={(data) => {
                   setPageDims({ width: data.width, height: data.height });
                   setPdfPageDimsMap(prev => ({
                     ...prev,
@@ -933,119 +919,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
 
                       if (isEdited) return null;
 
-                      const uniqueId = `parsed-text-${idx}`;
-                      const style = pageTextStyles[item.fontName] || {};
-                      const fontFamily = style.fontFamily || 'sans-serif';
-                      const familyLower = fontFamily.toLowerCase();
-                      const isBold = familyLower.includes('bold');
-                      const isItalic = familyLower.includes('italic') || familyLower.includes('oblique');
-                      const colorArr = item.color || [0, 0, 0];
-                      const hexColor =
-                        '#' +
-                        colorArr
-                          .map((c: any) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0'))
-                          .join('');
-
-                      return (
-                        <Box
-                          key={uniqueId}
-                          onDoubleClick={e => {
-                            e.stopPropagation();
-                            setEditingTextId(uniqueId);
-                            setEditingInputValue(item.str);
-                          }}
-                          sx={{
-                            position: 'absolute',
-                            left,
-                            top,
-                            width: Math.max(width, 20),
-                            height: Math.max(height, 12),
-                            border: '1px dashed rgba(99, 102, 241, 0.5)',
-                            bgcolor: 'rgba(99, 102, 241, 0.06)',
-                            cursor: 'text',
-                            display: 'flex',
-                            alignItems: 'center',
-                            userSelect: 'none',
-                            '&:hover': {
-                              border: '1px solid #6366F1',
-                              bgcolor: 'rgba(99, 102, 241, 0.16)',
-                            },
-                          }}
-                        >
-                          {editingTextId === uniqueId ? (
-                            <input
-                              autoFocus
-                              value={editingInputValue}
-                              onChange={e => setEditingInputValue(e.target.value)}
-                              onBlur={() => {
-                                if (editingInputValue !== item.str) {
-                                  const newEl: EditorElement = {
-                                    id: crypto.randomUUID(),
-                                    type: 'edit-text',
-                                    pageIndex: currentPageIndex,
-                                    x,
-                                    y,
-                                    width: Math.max(w * scaleX, 60),
-                                    height: Math.max(h * scaleY, 16),
-                                    content: editingInputValue,
-                                    originalText: item.str,
-                                    originalPdfX: tx,
-                                    originalPdfY: ty,
-                                    originalPdfW: w,
-                                    originalPdfH: h,
-                                    fontSize: h * scaleY,
-                                    fontFamily: fontFamily,
-                                    fontWeight: isBold ? 'bold' : 'normal',
-                                    fontStyle: isItalic ? 'italic' : 'normal',
-                                    fillColor: '#FFFFFF',
-                                    strokeColor: hexColor,
-                                  };
-                                  pushElements(prev => [...prev, newEl]);
-                                }
-                                setEditingTextId(null);
-                              }}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  e.currentTarget.blur();
-                                } else if (e.key === 'Escape') {
-                                  setEditingTextId(null);
-                                }
-                              }}
-                              onClick={e => e.stopPropagation()}
-                              onDoubleClick={e => e.stopPropagation()}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                background: '#111827',
-                                color: '#F9FAFB',
-                                border: '1px solid #6366F1',
-                                outline: 'none',
-                                fontSize: `${h * scaleY * zoom}px`,
-                                fontFamily: fontFamily,
-                                fontWeight: isBold ? 'bold' : 'normal',
-                                fontStyle: isItalic ? 'italic' : 'normal',
-                                padding: '0 2px',
-                              }}
-                            />
-                          ) : (
-                            <Typography
-                              sx={{
-                                fontSize: `${h * scaleY * zoom}px`,
-                                fontFamily: fontFamily,
-                                fontWeight: isBold ? 'bold' : 'normal',
-                                fontStyle: isItalic ? 'italic' : 'normal',
-                                lineHeight: 1,
-                                color: 'transparent',
-                                whiteSpace: 'nowrap',
-                                width: '100%',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              {item.str}
-                            </Typography>
-                          )}
-                        </Box>
-                      );
+                      return <Box component="button" type="button" key={idx} aria-label={`Edit text: ${item.str.slice(0, 80)}`} onClick={event => { event.stopPropagation(); editPDFText(item); }} sx={{ position: 'absolute', left, top, width: Math.max(width, 24), height: Math.max(height, 24), border: '1px dashed #6366F1', bgcolor: 'rgba(99,102,241,0.08)', cursor: 'text', p: 0 }} />;
                     })}
                 </Box>
               )}
@@ -1081,7 +955,8 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
                           setSelectedId(el.id);
                         }}
                         bounds="parent"
-                        enableResizing={el.type !== 'draw'}
+                        disableDragging={compact}
+                        enableResizing={!compact && el.type !== 'draw'}
                         resizeHandleStyles={
                           el.type !== 'draw'
                             ? {
@@ -1117,6 +992,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
                       >
                         {(el.type === 'text' || el.type === 'edit-text') && (
                           <textarea
+                            aria-label="Annotation text" readOnly={compact || busy} tabIndex={compact ? -1 : 0}
                             value={el.content}
                             onChange={e => updateElement(el.id, { content: e.target.value })}
                             style={{
@@ -1132,7 +1008,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
                               fontSize: `${(el.fontSize ?? 16) * zoom}px`,
                               fontWeight: el.fontWeight ?? 400,
                               fontStyle: el.fontStyle ?? 'normal',
-                              textAlign: (el.textAlign as any) ?? 'left',
+                              textAlign: el.textAlign ?? 'left',
                               padding: el.type === 'edit-text' ? '0px 2px' : '4px 6px',
                               overflow: 'hidden',
                             }}
@@ -1192,6 +1068,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
                             />
                           </svg>
                         )}
+                        {compact && <Box component="button" type="button" aria-label={`Select ${el.label || (el.type === 'text' ? 'text' : el.type)} item`} aria-pressed={selectedId === el.id} onClick={event => { event.stopPropagation(); setSelectedId(el.id); }} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', minHeight: 44, minWidth: 44, cursor: 'pointer', bgcolor: 'transparent', border: 0, p: 0 }} />}
                       </Rnd>
                     );
                   })}
@@ -1199,18 +1076,56 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
           </Document>
         </Box>
 
-        {/* Right Panel */}
-        <RightPropertiesPanel
+      </Box>
+      <EditorViewControls busy={busy} zoom={zoom} onZoomIn={() => setManualZoom(Math.min(3, zoom + 0.1))} onZoomOut={() => setManualZoom(Math.max(0.1, zoom - 0.1))} onFitWidth={() => setManualZoom(null)} currentPageIndex={currentPageIndex} numPages={numPages} onPrevPage={handlePrevPage} onNextPage={handleNextPage} />
+      <ToolPanel open={active && !!panel} title={panel === 'tools' ? 'Editor tools' : 'Item properties'} onClose={() => setPanel(null)}>
+        {panel === 'tools' ? (<LeftToolboxPanel
+          elements={elements.filter(el => (el.pageIndex ?? 0) === currentPageIndex)}
+          selectedId={selectedId}
+          isDrawMode={isDrawMode}
+          isEditTextMode={isEditTextMode}
+          drawColor={drawColor}
+          drawWidth={drawWidth}
+          drawOpacity={drawOpacity}
+          pdfText={pageTextItems.map((item, index) => ({ index, text: item.str })).filter(item => item.text.trim())}
+          onEditPDFText={index => editPDFText(pageTextItems[index])}
+          onChangeDrawColor={setDrawColor}
+          onChangeDrawWidth={setDrawWidth}
+          onChangeDrawOpacity={setDrawOpacity}
+          onSelect={id => { setSelectedId(id); setPanel(null); }}
+          onDelete={deleteElement}
+          onDuplicate={duplicateElement}
+          onAdd={type => { addElement(type); setPanel(null); }}
+          onOpenSignature={() => {
+            setPanel(null);
+            setSigModalTab('draw');
+            setSigModalOpen(true);
+          }}
+          onToggleDrawMode={() => {
+            setIsDrawMode(d => !d);
+            setIsEditTextMode(false);
+            setPanel(null);
+          }}
+          onToggleEditTextMode={() => {
+            setIsEditTextMode(m => !m);
+            setIsDrawMode(false);
+          }}
+        />) : (<RightPropertiesPanel
           element={selectedElement}
           onUpdate={updateElement}
           onDelete={deleteElement}
           onDuplicate={duplicateElement}
-        />
-      </Box>
+        />)}
+      </ToolPanel>
+      <Dialog open={active && !!confirmAction} onClose={() => setConfirmAction(null)} aria-labelledby="editor-confirm-title">
+        <DialogTitle id="editor-confirm-title">{confirmAction === 'page' ? 'Delete this page?' : 'Clear all annotations?'}</DialogTitle>
+        <DialogContent><DialogContentText>{confirmAction === 'page' ? 'This removes the current PDF page and its annotations. Page deletion cannot be undone. Download a copy first if you want to keep it.' : 'This removes all annotations from every page. You can undo this change.'}</DialogContentText></DialogContent>
+        <DialogActions><Button autoFocus onClick={() => setConfirmAction(null)}>Cancel</Button><Button color="error" onClick={() => { if (confirmAction === 'page') void deletePage(); else { pushElements([]); setSelectedId(null); } setConfirmAction(null); }}>Confirm</Button></DialogActions>
+      </Dialog>
 
       {/* Signature & Stamp Studio Modal */}
       <SignatureModal
-        open={sigModalOpen}
+        open={sigModalOpen && active}
         initialTab={sigModalTab}
         onClose={() => setSigModalOpen(false)}
         onInsertImage={handleInsertSignatureImage}
@@ -1221,6 +1136,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
         autoHideDuration={3200}
         onClose={() => setToast(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        sx={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}
       >
         {toast ? (
           <Alert severity={toast.severity} onClose={() => setToast(null)} sx={{ borderRadius: 2 }}>

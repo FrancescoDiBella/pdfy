@@ -26,6 +26,7 @@ jobs:
       - run: npx eslint src/App.tsx src/main.tsx src/theme.ts src/legacyTheme.ts src/components/AppearanceControl.tsx src/components/ToolIntro.tsx src/components/PDFViewer.tsx src/components/PDFMerger.tsx src/components/PWAStatus.tsx src/utils/serviceWorkerUpdate.ts src/components/editor/TopNavigationBar.tsx tests/browser/*.ts
       - run: npx eslint src/components/PDFSplitter.tsx src/components/PDFInspector.tsx src/components/PDFSessionControls.tsx src/hooks/usePDFSession.ts src/utils/pageRanges.ts src/utils/pdfInfo.ts tests/pageRanges.test.mjs tests/pdfInfo.test.mjs
       - run: npx eslint tests/pages/*.ts playwright.pages.config.ts tests/pages-build/*.mjs
+      - run: npx eslint src/components/AdvancedEditor.tsx src/components/PDFOrganizer.tsx src/components/ToolPanel.tsx src/hooks/useVisibleViewport.ts src/components/editor/*.tsx src/utils/editorHistory.ts tests/editorHistory.test.mjs tests/visual/*.mjs
       - run: npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2023 --types node tests/browser/*.ts tests/pages/*.ts playwright.config.ts playwright.pages.config.ts
       - run: npm test
       - run: npm run build
@@ -41,6 +42,18 @@ jobs:
           await browser.close();
           NODE
       - run: npm run test:e2e
+      - name: Check out the PR base for visual comparison
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .ui-baseline
+      - name: Capture mobile and desktop UI before the change
+        if: github.event_name == 'pull_request'
+        run: |
+          npm ci --prefix .ui-baseline
+          npm run build --prefix .ui-baseline
+          node tests/visual/capture-mobile-before.mjs
       - name: Build for the GitHub Pages project path
         run: npm run build -- --base=/pdfy/
       - name: Verify Pages assets and offline behavior

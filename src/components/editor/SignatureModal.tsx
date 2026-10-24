@@ -13,6 +13,7 @@ import {
   Slider,
   Switch,
   FormControlLabel,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Draw as DrawIcon,
@@ -22,6 +23,7 @@ import {
   FileUploadOutlined as UploadIcon,
   AutoFixHigh as MagicIcon,
 } from '@mui/icons-material';
+import { useVisibleViewport } from '../../hooks/useVisibleViewport';
 
 export type SignatureTabMode = 'draw' | 'type' | 'upload' | 'stamp';
 
@@ -121,10 +123,16 @@ function createSamplePaperScanDataUrl(): string {
   return c.toDataURL('image/png');
 }
 
-export default function SignatureModal({ open, initialTab = 'draw', onClose, onInsertImage }: Props) {
+export default function SignatureModal(props: Props) {
+  return props.open ? <SignatureStudio key={props.initialTab} {...props} /> : null;
+}
+
+function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: Props) {
+  const compact = useMediaQuery('(max-width:599px)');
+  const viewport = useVisibleViewport();
   const [tab, setTab] = useState<SignatureTabMode>(initialTab);
   const [inkColor, setInkColor] = useState('#1D4ED8');
-  const [typedName, setTypedName] = useState('Alexander Vance');
+  const [typedName, setTypedName] = useState('');
   const [selectedStamp, setSelectedStamp] = useState(STAMP_PRESETS[0]);
   const [includeDate, setIncludeDate] = useState(true);
 
@@ -142,6 +150,8 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
+  const activePointer = useRef<number | null>(null);
+  const [hasInk, setHasInk] = useState(false);
   const hasStrokes = useRef(false);
 
   const clearCanvas = useCallback(() => {
@@ -151,21 +161,13 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     hasStrokes.current = false;
+    setHasInk(false);
+    activePointer.current = null;
   }, []);
-
-  useEffect(() => {
-    if (open) {
-      setTab(initialTab);
-      setTimeout(() => clearCanvas(), 50);
-      if (!uploadedSrc) {
-        setUploadedSrc(createSamplePaperScanDataUrl());
-      }
-    }
-  }, [open, initialTab, clearCanvas, uploadedSrc]);
 
   // Process the uploaded PNG/image through the ink extraction & paper removal pipeline
   useEffect(() => {
-    if (!uploadedSrc) return;
+    if (!uploadedSrc || tab !== 'upload') return;
     let cancelled = false;
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -340,7 +342,7 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
     return () => {
       cancelled = true;
     };
-  }, [uploadedSrc, threshold, contrastBoost, strokeBoldness, scanInkColor, removeBackground, autoCropInk]);
+  }, [tab, uploadedSrc, threshold, contrastBoost, strokeBoldness, scanInkColor, removeBackground, autoCropInk]);
 
   const handleUploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -352,7 +354,7 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
     reader.readAsDataURL(f);
   };
 
-  const getPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     return {
       x: (e.clientX - rect.left) * (canvasRef.current!.width / rect.width),
@@ -360,9 +362,14 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
     };
   };
 
-  const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!e.isPrimary || e.button !== 0 || activePointer.current !== null) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    activePointer.current = e.pointerId;
     isDrawing.current = true;
     hasStrokes.current = true;
+    setHasInk(true);
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
     const { x, y } = getPos(e);
@@ -372,10 +379,12 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
     ctx.lineJoin = 'round';
     ctx.beginPath();
     ctx.moveTo(x, y);
+    ctx.lineTo(x + 0.1, y + 0.1);
+    ctx.stroke();
   };
 
-  const moveDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing.current) return;
+  const moveDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current || e.pointerId !== activePointer.current) return;
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
     const { x, y } = getPos(e);
@@ -383,15 +392,17 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
     ctx.stroke();
   };
 
-  const endDraw = () => {
-    isDrawing.current = false;
+  const endDraw = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (event.pointerId !== activePointer.current) return;
+    isDrawing.current = false; activePointer.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
   const handleInsert = () => {
     if (tab === 'draw') {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      onInsertImage(canvas.toDataURL('image/png'), 200, 80, 'Ink Signature');
+      onInsertImage(canvas.toDataURL('image/png'), 200, Math.round(200 * canvas.height / canvas.width), 'Ink Signature');
       onClose();
       return;
     }
@@ -459,48 +470,55 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
     <Dialog
       open={open}
       onClose={onClose}
+      fullScreen={compact}
+      aria-labelledby="signature-title"
       maxWidth="md"
       fullWidth
       slotProps={{
+        container: { sx: { alignItems: compact ? 'flex-start' : 'center', paddingTop: compact ? `${viewport.top}px` : 0 } },
         paper: {
           sx: {
-            bgcolor: '#111827',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: 2.5,
+            bgcolor: 'background.paper',
+            height: compact ? viewport.height : 'auto',
+            maxHeight: viewport.height,
+            borderRadius: compact ? 0 : 2.5,
+            '& .MuiToggleButton-root': { minHeight: 44 },
           },
         },
       }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, pb: 1 }}>
-        <Typography variant="h2" sx={{ fontSize: 17 }}>
-          Signature & Official Stamp Studio
+      <DialogTitle component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, pb: 1 }}>
+        <Typography id="signature-title" variant="h2" sx={{ fontSize: 17 }}>
+          Signature and stamp
         </Typography>
         <ToggleButtonGroup
           size="small"
+          fullWidth aria-label="Signature method"
+          sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', '& .MuiToggleButton-root': { minWidth: 0, px: 0.5, fontSize: 13, '& svg': { display: { xs: 'none', sm: 'block' } } } }}
           exclusive
           value={tab}
           onChange={(_, v) => v && setTab(v)}
         >
           <ToggleButton value="draw" sx={{ px: 1.5, py: 0.5, fontSize: 12, gap: 0.75, whiteSpace: 'nowrap' }}>
-            <DrawIcon sx={{ fontSize: 15 }} /> Draw Ink
+            <DrawIcon sx={{ fontSize: 15 }} /> Draw
           </ToggleButton>
           <ToggleButton value="upload" sx={{ px: 1.5, py: 0.5, fontSize: 12, gap: 0.75, whiteSpace: 'nowrap' }}>
-            <UploadIcon sx={{ fontSize: 16 }} /> PNG / Paper Scan
+            <UploadIcon sx={{ fontSize: 16 }} /> Upload
           </ToggleButton>
           <ToggleButton value="type" sx={{ px: 1.5, py: 0.5, fontSize: 12, gap: 0.75, whiteSpace: 'nowrap' }}>
-            <TypeIcon sx={{ fontSize: 15 }} /> Calligraphic
+            <TypeIcon sx={{ fontSize: 15 }} /> Type
           </ToggleButton>
           <ToggleButton value="stamp" sx={{ px: 1.5, py: 0.5, fontSize: 12, gap: 0.75, whiteSpace: 'nowrap' }}>
-            <StampIcon sx={{ fontSize: 15 }} /> Official Stamp
+            <StampIcon sx={{ fontSize: 15 }} /> Stamp
           </ToggleButton>
         </ToggleButtonGroup>
       </DialogTitle>
 
-      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: '12px !important' }}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: '12px !important', minWidth: 0, px: { xs: 2, sm: 3 }, '& .MuiBox-root': { minWidth: 0 }, '& .MuiButton-root': { whiteSpace: 'normal' } }}>
         {/* ─── TAB 1 & 3: DRAW INK OR TYPE CALLIGRAPHIC ─── */}
         {(tab === 'draw' || tab === 'type') && (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1 }}>
                 Ink Color:
               </Typography>
@@ -548,11 +566,11 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
               ref={canvasRef}
               width={640}
               height={190}
-              onMouseDown={startDraw}
-              onMouseMove={moveDraw}
-              onMouseUp={endDraw}
-              onMouseLeave={endDraw}
-              style={{ width: '100%', height: 190, display: 'block', cursor: 'crosshair' }}
+              aria-label="Draw signature" onPointerDown={startDraw}
+              onPointerMove={moveDraw}
+              onPointerUp={endDraw}
+              onPointerCancel={endDraw} onLostPointerCapture={endDraw}
+              style={{ width: '100%', height: 'auto', display: 'block', cursor: 'crosshair', touchAction: 'none' }}
             />
             <Box
               sx={{
@@ -566,9 +584,9 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
             />
             <Typography
               variant="caption"
-              sx={{ position: 'absolute', bottom: 12, left: 32, color: '#94A3B8', pointerEvents: 'none' }}
+              sx={{ position: 'absolute', bottom: 12, left: 32, color: '#475569', pointerEvents: 'none' }}
             >
-              Sign above the baseline using mouse or trackpad
+              Sign here with your finger, pen, or mouse
             </Typography>
           </Box>
         )}
@@ -616,7 +634,7 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
             {/* Left Column: Live Before/After & On-Paper Preview */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   <Button
                     variant="contained"
                     component="label"
@@ -747,7 +765,7 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
                       }}
                     />
                     <Box>
-                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#F9FAFB' }}>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.primary' }}>
                         Source Image → Clean Ink Vectorized Alpha
                       </Typography>
                       <Typography className="mono" sx={{ fontSize: 10.5, color: 'text.secondary' }}>
@@ -764,14 +782,14 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
               sx={{
                 p: 2,
                 borderRadius: 2,
-                bgcolor: 'rgba(11, 15, 23, 0.7)',
+                bgcolor: 'action.hover',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1.75,
               }}
             >
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#F9FAFB', letterSpacing: '0.02em' }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '0.02em' }}>
                 On-Paper Stroke Enhancement Filters
               </Typography>
 
@@ -816,7 +834,7 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                     Paper Background Cutoff
                   </Typography>
-                  <Typography className="mono" sx={{ fontSize: 11, color: '#818CF8' }}>
+                  <Typography className="mono" sx={{ fontSize: 11, color: 'primary.main' }}>
                     {threshold}
                   </Typography>
                 </Box>
@@ -836,7 +854,7 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                     Stroke Contrast & Ink Density
                   </Typography>
-                  <Typography className="mono" sx={{ fontSize: 11, color: '#818CF8' }}>
+                  <Typography className="mono" sx={{ fontSize: 11, color: 'primary.main' }}>
                     {contrastBoost.toFixed(1)}x
                   </Typography>
                 </Box>
@@ -960,14 +978,15 @@ export default function SignatureModal({ open, initialTab = 'draw', onClose, onI
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+      <DialogActions sx={{ px: 2, pb: 'max(16px, env(safe-area-inset-bottom))', flexWrap: 'wrap', gap: 1 }}>
         <Button onClick={onClose} variant="outlined" size="small">
           Cancel
         </Button>
-        <Button onClick={handleInsert} variant="contained" size="small">
+        <Button onClick={handleInsert} variant="contained" size="small" disabled={(tab === 'draw' && !hasInk) || (tab === 'type' && !typedName.trim()) || (tab === 'upload' && !processedDataUrl)}>
           Place on PDF Page
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
+
