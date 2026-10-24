@@ -10,9 +10,9 @@ Issue [#14](https://github.com/FrancescoDiBella/pdfy/issues/14) follows a real p
 - Drawings and signatures use captured pointer input. Secondary pointers cannot modify or finish the primary stroke. Cancelling a freehand stroke discards its temporary trace. Signature paper stays light independently of the interface appearance.
 - Page deletion and clearing annotations require confirmation. Structural page updates lock pointer and keyboard edits until the byte and annotation snapshots are installed. Annotation history is updated atomically; page deletion resets that history because removed PDF pages cannot be restored by annotation Undo.
 - Organize shows page previews and labelled move/rotate/copy/blank/delete actions. Watermark and numbering settings live in a closable panel. New files/samples are prepared before replacement confirmation; cancellation and invalid inputs preserve work.
-- Panel height and editor height follow the visible viewport. Fields use readable text sizes; dialogs/panels scroll, and safe areas are respected. Session state lives outside the panels, so closing/reopening them retains work.
+- Panel height and editor height follow the visible viewport. Fields use readable text sizes and dialogs/panels scroll. The viewport retains browser-default safe-area containment instead of opting into edge-to-edge layout; supplemental inset spacing protects fixed controls. Session state lives outside the panels, so closing/reopening them retains work.
 
-The patterns follow [MUI temporary drawers](https://mui.com/material-ui/react-drawer/) and [Pointer Events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events). These are project-specific interaction choices, to be checked with actual users.
+Safe-area containment follows [WebKit viewport guidance](https://webkit.org/blog/7929/designing-websites-for-iphone-x/). The interaction patterns follow [MUI temporary drawers](https://mui.com/material-ui/react-drawer/) and [Pointer Events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events). These are project-specific interaction choices, to be checked with actual users.
 
 ## Verification
 
