@@ -1,0 +1,26 @@
+{
+  "url": "https://francescodibella.github.io/pdfy/",
+  "deployed_commit": "125ff6486f6b3e5d5f8b658cbd4bec4aeb69c441",
+  "application_tree": "9734129b94fe8f376e34bd21c5f3e0c54c52f032",
+  "main_workflow_run": 40085791580,
+  "loaded_bundle": "/pdfy/assets/index-5_ym1nY0.js",
+  "browser": "Cloud Chromium, desktop viewport",
+  "verified": [
+    "Existing PWA update reviewed and activated",
+    "Loaded bundle matches the successful Pages build",
+    "Sample Invoice renders",
+    "Tools opens with icons and visible labels",
+    "Text insertion returns focus to canvas",
+    "ArrowRight moves the selected text by one logical unit; Undo restores its horizontal position",
+    "Item properties edits text; explicit Resize exposes its 44px handle"
+  ],
+  "limits": "This live desktop smoke check supplements the 51 native/emulated Chromium browser scenarios. It does not verify a physical phone.",
+  "image": {
+    "name": "pdfy-live-editor-1792837785833.jpg",
+    "bytes": 85118,
+    "width": 1363,
+    "height": 936,
+    "sha256": "bf0cc48127c9f1cc4f023883d683e5fd60e84bd3e6ebd8f696d5e5b9f03536de",
+    "blob_sha": "a621c1fdfd2e1f77fac7e7725b4069419f5e5e44"
+  }
+}
