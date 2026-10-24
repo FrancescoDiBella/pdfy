@@ -20,7 +20,7 @@ export default function TopNavigationBar({ actionsRef, ...props }: Props) {
   const [settings, setSettings] = useState(false);
   const action = (run: () => void) => { setAnchor(null); run(); };
   return (
-    <Box component="header" aria-label="Editor controls" sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', px: { xs: 1, sm: 2 }, pt: 'env(safe-area-inset-top)' }}>
+    <Box component="header" aria-label="Editor controls" sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', px: { xs: 1, sm: 2 }, pt: 'env(safe-area-inset-top)', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', '@media (min-width: 900px), (min-width: 760px) and (max-height: 500px)': { gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center', gap: 1, '& .editor-tools-row': { pb: 0 }, '& .editor-tools-button': { flex: '0 0 auto', minWidth: 100 } } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, minWidth: 0 }}>
         <IconButton aria-label="Return to workspace" disabled={props.busy} onClick={props.onBack}><ArrowBack /></IconButton>
         <TextField label="Document title" value={props.docTitle} onChange={event => props.onTitleChange(event.target.value)} disabled={props.busy} size="small" sx={{ flex: 1, minWidth: 0, '& input': { fontSize: 16 } }} />
@@ -28,8 +28,8 @@ export default function TopNavigationBar({ actionsRef, ...props }: Props) {
           {props.exporting ? <CircularProgress aria-label="Working on the PDF" size={20} color="inherit" /> : <DownloadOutlined sx={{ mr: 0.5 }} />}<Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Export PDF</Box><Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Export</Box>
         </Button>
       </Box>
-      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', pb: 0.5 }}>
-        <Button startIcon={<WidgetsOutlined />} variant={props.panel === 'tools' ? 'contained' : 'outlined'} aria-expanded={props.panel === 'tools'} onClick={() => props.onPanel('tools')} disabled={props.busy} sx={{ flex: 1, minWidth: 0, px: 1 }}>Tools</Button>
+      <Box className="editor-tools-row" sx={{ display: 'flex', gap: 0.5, alignItems: 'center', pb: 0.5 }}>
+        <Button className="editor-tools-button" startIcon={<WidgetsOutlined />} variant={props.panel === 'tools' ? 'contained' : 'outlined'} aria-expanded={props.panel === 'tools'} onClick={() => props.onPanel('tools')} disabled={props.busy} sx={{ flex: 1, minWidth: 0, px: 1 }}>Tools</Button>
         <Tooltip title="Properties"><span><IconButton aria-label="Properties" aria-expanded={props.panel === 'properties'} color={props.panel === 'properties' ? 'primary' : 'default'} onClick={() => props.onPanel('properties')} disabled={props.busy}><Tune /></IconButton></span></Tooltip>
         <Tooltip title="Undo annotation"><span><IconButton aria-label="Undo" disabled={!props.canUndo || props.busy} onClick={props.onUndo}><Undo /></IconButton></span></Tooltip>
         <Tooltip title="Redo annotation"><span><IconButton aria-label="Redo" disabled={!props.canRedo || props.busy} onClick={props.onRedo}><Redo /></IconButton></span></Tooltip>

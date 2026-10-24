@@ -12,8 +12,8 @@ interface Props {
 }
 export default function EditorInteractionBar(props: Props) {
   const hint = props.mode === 'pan' ? 'Swipe anywhere on the page to scroll.' : props.mode === 'draw' ? 'Draw on the page. Choose Select to move items.' : props.mode === 'text' ? 'Choose original text on the page or in Tools.' : 'Drag an item to move it. Swipe blank space to scroll.';
-  return <Box sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: { xs: 'column', md: 'row' }, px: 0.5, gap: { xs: 0, md: 2 } }}>
-    <ToggleButtonGroup aria-label="Canvas mode" value={props.mode} exclusive onChange={(_, mode) => { if (mode) props.onMode(mode); }} sx={{ display: 'flex', flex: { xs: '0 0 auto', md: '0 0 320px' }, '& .MuiToggleButton-root': { flex: 1, minWidth: 0, gap: 0.75, py: 0.5, borderRadius: 1 } }}>
+  return <Box sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: { xs: 'column', md: 'row' }, px: 0.5, gap: { xs: 0, md: 2 }, '@media (min-width: 760px) and (max-height: 500px)': { flexDirection: 'row', gap: 2, '& .editor-mode-controls': { flex: '0 0 300px' } } }}>
+    <ToggleButtonGroup className="editor-mode-controls" aria-label="Canvas mode" value={props.mode} exclusive onChange={(_, mode) => { if (mode) props.onMode(mode); }} sx={{ display: 'flex', flex: { xs: '0 0 auto', md: '0 0 320px' }, '& .MuiToggleButton-root': { flex: 1, minWidth: 0, gap: 0.75, py: 0.5, borderRadius: 1 } }}>
       <ToggleButton value="select" disabled={props.disabled}><NearMeOutlined fontSize="small" />Select</ToggleButton>
       <ToggleButton value="pan" disabled={props.disabled}><PanToolOutlined fontSize="small" />Pan</ToggleButton>
       <ToggleButton value="draw" disabled={props.disabled}><DrawOutlined fontSize="small" />Draw</ToggleButton>

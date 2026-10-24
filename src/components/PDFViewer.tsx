@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress, IconButton, Tooltip, Divider, Alert } from '@mui/material';
 import { FolderOpenOutlined, ZoomIn, ZoomOut, RotateRight, ViewSidebarOutlined, EditOutlined, DashboardCustomizeOutlined, DescriptionOutlined } from '@mui/icons-material';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -16,6 +17,11 @@ interface Props {
   onFileLoaded: (file: File) => void;
   onOpenInEditor: (file: File) => void;
   onOpenInOrganizer: (file: File) => void;
+}
+
+function ViewerPage({ viewRotation, ...props }: ComponentProps<typeof Page> & { viewRotation: number }) {
+  const [originalRotation, setOriginalRotation] = useState<number>();
+  return <Page {...props} rotate={originalRotation === undefined ? undefined : (originalRotation + viewRotation) % 360} onLoadSuccess={page => setOriginalRotation(page.rotate)} />;
 }
 
 export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEditor, onOpenInOrganizer }: Props) {
@@ -135,11 +141,11 @@ export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEdit
           <Box sx={{ flex: 1, minHeight: 320, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
             {showThumbnails && (
               <Paper variant="outlined" sx={{ width: { xs: '100%', sm: 160 }, flexShrink: 0, overflow: 'auto', maxHeight: { xs: 200, sm: 600 }, p: 1.5 }}>
-                <Document options={pdfDocumentOptions} file={file} loading="" error="" className="reader-thumbnails">
+                <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} loading="" error="" className="reader-thumbnails">
                   <Box sx={{ display: 'flex', flexDirection: { xs: 'row', sm: 'column' }, gap: 1.5 }}>
                     {Array.from({ length: numPages }, (_, index) => (
                       <Box component="button" key={index} aria-label={`Go to page ${index + 1}`} aria-current={activePage === index + 1 ? 'page' : undefined} onClick={() => scrollToPage(index + 1)} sx={{ p: 0.5, borderRadius: 1.5, border: '2px solid', borderColor: activePage === index + 1 ? 'primary.main' : 'divider', bgcolor: 'background.paper', color: 'text.primary', cursor: 'pointer', flexShrink: 0 }}>
-                        <Page pageNumber={index + 1} width={110} rotate={rotation} renderTextLayer={false} renderAnnotationLayer={false} />
+                        <ViewerPage pageNumber={index + 1} width={110} viewRotation={rotation} renderTextLayer={false} renderAnnotationLayer={false} />
                         <Typography variant="caption" component="span">Page {index + 1}</Typography>
                       </Box>
                     ))}
@@ -151,7 +157,7 @@ export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEdit
               <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} onLoadSuccess={({ numPages: count }) => setNumPages(count)} onLoadError={() => setError('This PDF could not be displayed. Try opening another PDF.')} loading={<CircularProgress aria-label="Loading PDF pages" />} error="" >
                 {Array.from({ length: numPages }, (_, index) => (
                   <Box id={`viewer-page-${index + 1}`} tabIndex={-1} aria-label={`Page ${index + 1}`} key={index} onClick={() => setActivePage(index + 1)} sx={{ mb: 3, mx: 'auto', width: 'max-content', boxShadow: '0 4px 20px rgba(0,0,0,0.14)', bgcolor: '#FFFFFF' }}>
-                    <Page pageNumber={index + 1} width={Math.max(100, Math.min(900, viewportWidth)) * scale} rotate={rotation} renderTextLayer renderAnnotationLayer />
+                    <ViewerPage pageNumber={index + 1} width={Math.max(100, Math.min(900, viewportWidth)) * scale} viewRotation={rotation} renderTextLayer renderAnnotationLayer />
                   </Box>
                 ))}
               </Document>

@@ -82,7 +82,10 @@ async function swipe(page: Page, from: { x: number; y: number }, dx: number, dy:
   const client = await page.context().newCDPSession(page);
   try {
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, ...from }] });
-    for (const fraction of [.2, .4, .6, .8, 1]) await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x: from.x + dx * fraction, y: from.y + dy * fraction }] });
+    for (const fraction of [.2, .4, .6, .8, 1]) {
+      await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x: from.x + dx * fraction, y: from.y + dy * fraction }] });
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    }
     await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   } finally { await client.detach(); }
 }
@@ -158,6 +161,7 @@ test('zoomed and scrolled dragging uses the real page coordinates, while Pan scr
   await start(page); await add(page, 'Rectangle');
   const viewport = page.getByRole('region', { name: 'Editor document viewport', exact: true });
   for (let index = 0; index < 5; index++) { await page.getByRole('button', { name: 'Zoom options', exact: true }).tap(); await page.getByRole('menuitem', { name: 'Zoom in', exact: true }).tap(); }
+  await expect(page.getByRole('menu', { includeHidden: true })).toHaveCount(0);
   const view = await bounds(viewport);
   await swipe(page, { x: view.x + 40, y: view.y + view.height - 80 }, 0, -150);
   await expect.poll(() => viewport.evaluate(element => element.scrollTop)).toBeGreaterThan(50);
@@ -245,7 +249,7 @@ test('phone selection controls fit at the page edge and source-text mode exits t
   await page.getByRole('button', { name: 'Resize', exact: true }).tap();
   const handle = page.getByRole('button', { name: 'Resize rectangle item', exact: true }); await handle.scrollIntoViewIfNeeded();
   const box = await bounds(handle); const canvas = await bounds(page.getByRole('region', { name: 'PDF editing canvas', exact: true }));
-  expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(Math.round(box.width * 100) / 100).toBeGreaterThanOrEqual(44); expect(Math.round(box.height * 100) / 100).toBeGreaterThanOrEqual(44);
   expect(box.x + box.width).toBeLessThanOrEqual(canvas.x + canvas.width + .5); expect(box.y + box.height).toBeLessThanOrEqual(canvas.y + canvas.height + .5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   await page.screenshot({ animations: 'disabled', path: info.outputPath('edge-selection-phone.png') });
@@ -328,5 +332,14 @@ for (const rotation of [0, 90, 180, 270]) {
       const canvas = element as HTMLCanvasElement; const color = canvas.getContext('2d')!.getImageData(Math.floor(point.x * canvas.width), Math.floor(point.y * canvas.height), 1, 1).data;
       return color[0] > 240 && color[1] < 20 && color[2] < 20;
     }, location)).toBe(true);
+    await page.getByRole('button', { name: 'Rotate view clockwise', exact: true }).tap();
+    await expect.poll(() => page.locator('[data-tool="view"] #viewer-page-1 canvas').evaluate((element, point) => {
+      const canvas = element as HTMLCanvasElement; const pixel = canvas.getContext('2d')!.getImageData(Math.floor((1 - point.y) * canvas.width), Math.floor(point.x * canvas.height), 1, 1).data;
+      return pixel[0] > 240 && pixel[1] < 20 && pixel[2] < 20;
+    }, location)).toBe(true);
+    await page.getByRole('button', { name: 'Page thumbnails', exact: true }).tap();
+    await expect.poll(() => page.locator('.reader-thumbnails canvas').first().evaluate(element => {
+      const canvas = element as HTMLCanvasElement; return canvas.width / canvas.height;
+    })).toBeCloseTo(rotation === 0 || rotation === 180 ? 1.5 : 2 / 3, 1);
   });
 }

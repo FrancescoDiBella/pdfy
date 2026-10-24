@@ -25,6 +25,8 @@ These are project-specific design judgments. Primary references are [MUI buttons
 
 Closing Tools after adding or selecting an item returns focus to the canvas and brings the item into view. Closing ordinary settings returns focus to its trigger. The editor retains browser safe-area containment and visible-viewport sizing; panels scroll and have a fixed close action.
 
+Portrait phones use two compact control rows. Wide desktop and phone-landscape viewports combine document controls into one row; landscape also puts canvas modes beside contextual actions to preserve more document height.
+
 ## Gesture and document behavior
 
 Annotation movement/resizing uses a single captured primary pointer. Touch ownership is set before the gesture starts. Only annotation targets and drawing surfaces disable native touch manipulation; the document viewport retains native touch scrolling/pinch gestures.
@@ -32,6 +34,8 @@ Annotation movement/resizing uses a single captured primary pointer. Touch owner
 Live geometry is separate from annotation history. Pointer release commits at most one change, using the final event coordinates. Pointer cancellation, lost capture, Escape, focus leaving the window, or a modal taking focus rolls back the live gesture. Secondary pointers and keyboard selection mutations cannot commit over an active gesture. Mode, page, zoom, viewport, visibility and document-operation changes cancel interaction frames; toolbar mutations are locked while a transform is active.
 
 The geometry pipeline accounts for the displayed page aspect ratio, CropBox and standard page rotations. Preview and export use the same coordinate mapping. Drawing points scale with a resized frame. PNG/JPEG files are decoded before insertion, and unsupported/corrupt images report an error instead of becoming a silently missing export.
+
+The reader preserves each page's native PDF rotation, including thumbnails. Its Rotate view action adds a viewing offset to that original orientation without modifying the file.
 
 Source-text edits are overlays. Their original mask stays at the old position when the replacement moves; masks are rendered before overlays so a duplicate cannot erase an earlier annotation. Right-angle source orientations are preserved. Unsupported diagonal/skew text reports a clear limitation without changing the document. **Revert text edit** restores the original appearance. Visual covering does not remove the underlying original PDF text.
 
