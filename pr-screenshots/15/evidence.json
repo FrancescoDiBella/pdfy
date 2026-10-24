@@ -1,0 +1,201 @@
+{
+  "pr": 15,
+  "repository": "FrancescoDiBella/pdfy",
+  "base": "7592d9e617dbd87d7ee94f17928ef8360f25b76c",
+  "head": "f22f46e13ca2bf6da1035de94c45c1917caa6aca",
+  "run_id": 40080091217,
+  "artifact_id": 12554957375,
+  "artifact_sha256": "826f19e7688c6a664d3432703fc8d764b80f9ae616006c3617e6d65c0c3f2e91",
+  "images": [
+    {
+      "name": "editor-before-1280-dark.png",
+      "size": 122700,
+      "dimensions": [
+        1280,
+        900
+      ],
+      "sha": "d23a64a35424832fb7b1ef604f9d0d67a90b8c53",
+      "sha256": "401b2b16ee460c5dcbe5f073a44d8fc1491525fc9b20be898c5c815d99bb336d"
+    },
+    {
+      "name": "editor-before-1280-light.png",
+      "size": 122700,
+      "dimensions": [
+        1280,
+        900
+      ],
+      "sha": "d23a64a35424832fb7b1ef604f9d0d67a90b8c53",
+      "sha256": "401b2b16ee460c5dcbe5f073a44d8fc1491525fc9b20be898c5c815d99bb336d"
+    },
+    {
+      "name": "editor-before-320-dark.png",
+      "size": 34238,
+      "dimensions": [
+        320,
+        900
+      ],
+      "sha": "f43af8adc0759fb5ae8d723cb1b0ecfeae621ded",
+      "sha256": "a1405b12fc142a7f96819512b1373daef91b1f295d5efef698d143e393dad9f9"
+    },
+    {
+      "name": "editor-before-320-light.png",
+      "size": 34238,
+      "dimensions": [
+        320,
+        900
+      ],
+      "sha": "f43af8adc0759fb5ae8d723cb1b0ecfeae621ded",
+      "sha256": "a1405b12fc142a7f96819512b1373daef91b1f295d5efef698d143e393dad9f9"
+    },
+    {
+      "name": "organizer-before-1280-dark.png",
+      "size": 126685,
+      "dimensions": [
+        1280,
+        900
+      ],
+      "sha": "d740265ca6f313282f659f4c0e1f66ecd8246b1e",
+      "sha256": "a3df8a251c5fb31f388fff9f2095d92682d50526d71cfb40161e2a5059b3676c"
+    },
+    {
+      "name": "organizer-before-1280-light.png",
+      "size": 125856,
+      "dimensions": [
+        1280,
+        900
+      ],
+      "sha": "9aa018aba6881584df67aa5c1976e00dad6b3ec4",
+      "sha256": "2ac67a7d421b757a0f84f270934abb3c7bde8f110e4759493775d2ff00938e45"
+    },
+    {
+      "name": "organizer-before-320-dark.png",
+      "size": 42452,
+      "dimensions": [
+        320,
+        900
+      ],
+      "sha": "aaf2f1168da9c1ff9821660404e5c03c734cf4b7",
+      "sha256": "24fd18e678486ac1898557886c07cbbecd14d9a58963ac4c4c42e327f4bd3443"
+    },
+    {
+      "name": "organizer-before-320-light.png",
+      "size": 42494,
+      "dimensions": [
+        320,
+        900
+      ],
+      "sha": "0a64a9626f109c207f3b44d291ed942e6d2f677f",
+      "sha256": "536ad9942bbaf5f1802aa62e371b508f9482ab82d9f592551d7cb2fcac25f52a"
+    },
+    {
+      "name": "signature-phone.png",
+      "size": 24360,
+      "dimensions": [
+        390,
+        844
+      ],
+      "sha": "a11a3d14c5f21fbdf34b483e17d4c45f2c4f442d",
+      "sha256": "2a61c738f6edfed9c42229103c3497a41b47b2fa4a723a7296dcdf0efa614f71"
+    },
+    {
+      "name": "editor-landscape-phone.png",
+      "size": 19734,
+      "dimensions": [
+        844,
+        390
+      ],
+      "sha": "3c3a55af9f9bf83a9a4980ceb7d6f18d48460e50",
+      "sha256": "32eb2c1a9f9763f1c48f783122c2ebe50a7e6cb31042c8bb024c2c6de92ccdb2"
+    },
+    {
+      "name": "editor-properties-phone.png",
+      "size": 35245,
+      "dimensions": [
+        390,
+        844
+      ],
+      "sha": "66202526487f5962ac2faefa31cfd96663c9ea85",
+      "sha256": "619b7e997e061c26bc5a8575dde0c907b0c3328ee97ee3bda53ee75d633134cb"
+    },
+    {
+      "name": "editor-after-1280-dark.png",
+      "size": 91846,
+      "dimensions": [
+        1280,
+        900
+      ],
+      "sha": "8bf11224091b51891dc87739792c19d5b2de494b",
+      "sha256": "a2df19cd272c645ab7129b64f350bb55dfc6d28668da2cf9477ec4da220719bc"
+    },
+    {
+      "name": "organizer-after-1280-dark.png",
+      "size": 100765,
+      "dimensions": [
+        1280,
+        900
+      ],
+      "sha": "d940cdb3cefb790574b484c31d6797581a309d76",
+      "sha256": "00adf01f71927d035349a5e81efc0be0a942ccaa00e4efaa9acfe2bd9c8f8311"
+    },
+    {
+      "name": "editor-after-320-dark.png",
+      "size": 39114,
+      "dimensions": [
+        320,
+        900
+      ],
+      "sha": "72081cdb31d806993a609dda32b6946e8928d703",
+      "sha256": "514811bbe95680dfd9f5d9439c5502e73e4f21d6d091e6f8bb5e2826462f7323"
+    },
+    {
+      "name": "organizer-after-320-dark.png",
+      "size": 47775,
+      "dimensions": [
+        320,
+        900
+      ],
+      "sha": "f4c10f719227048e14e1c49a273734efc3f07f82",
+      "sha256": "b9c9bdac36ede69fbee8efb71e21bb5f746aa45c03254ce6f5e30c6411915212"
+    },
+    {
+      "name": "editor-after-320-light.png",
+      "size": 40602,
+      "dimensions": [
+        320,
+        900
+      ],
+      "sha": "a6a942d27a5e2b7dfd871ba8c3d829758303b0cf",
+      "sha256": "7950028fc08653148e336ab661732d265b8d0ac8b12e215763650fdf8d6ced9e"
+    },
+    {
+      "name": "organizer-after-320-light.png",
+      "size": 47187,
+      "dimensions": [
+        320,
+        900
+      ],
+      "sha": "332102a4440aa3418ed04c92257c3ff895e3743e",
+      "sha256": "0cdb008939dee531051b4a530d9619e6c7ce339337b4f6514ef648f4d5a28622"
+    },
+    {
+      "name": "editor-after-1280-light.png",
+      "size": 93128,
+      "dimensions": [
+        1280,
+        900
+      ],
+      "sha": "7f156c189e2bccec37e866529cf02842ab6c5efe",
+      "sha256": "9765d9e609d99326a9371a62e7ddc1f211a7f7bc7e57cf502fd3fd2887d942ae"
+    },
+    {
+      "name": "organizer-after-1280-light.png",
+      "size": 98710,
+      "dimensions": [
+        1280,
+        900
+      ],
+      "sha": "440b781c2fee959d016833cdc32de57bf8b3974a",
+      "sha256": "6a4036e48659d9d1e1da9e105d3e413f179eddcdbe9dad4195ff57a9c7e2a04e"
+    }
+  ]
+}
