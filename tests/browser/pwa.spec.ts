@@ -79,7 +79,7 @@ for (const initiallyControlled of [false, true]) {
         await page.getByRole('button', { name: 'Blank A4 Canvas', exact: true }).click();
         await page.getByRole('button', { name: 'Tools', exact: true }).click();
         await page.getByRole('button', { name: 'Text Block', exact: true }).click();
-        await expect(page.getByText('Your text', { exact: true })).toBeVisible();
+        await expect(page.getByRole('textbox', { name: 'Annotation text', exact: true })).toHaveValue('Your text');
       }
       revision = 2;
       await page.evaluate(async () => { await (await navigator.serviceWorker.ready).update(); });

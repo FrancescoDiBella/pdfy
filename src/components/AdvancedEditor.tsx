@@ -68,7 +68,10 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   const [pageDims, setPageDims] = useState({ width: 0, height: 0 });
   const [manualZoom, setManualZoom] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth - 24);
-  const [panel, setPanel] = useState<'tools' | 'properties' | null>(null);
+  const [panelState, setPanelState] = useState<{ view: 'tools' | 'properties'; open: boolean }>({ view: 'tools', open: false });
+  const panel = panelState.open ? panelState.view : null;
+  const openPanel = (view: 'tools' | 'properties') => setPanelState({ view, open: true });
+  const closePanel = () => setPanelState(previous => ({ ...previous, open: false }));
   const [confirmAction, setConfirmAction] = useState<'clear' | 'page' | null>(null);
   const [isLoading, setIsLoading] = useState(!!initialFile);
   const busy = isSaving || isChangingPages || isLoading;
@@ -319,7 +322,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
   const editPDFText = (item: TextItem & { color?: number[] }) => {
     if (pageOperation.current || isSaving || isLoading) return;
     const existing = elements.find(element => element.type === 'edit-text' && (element.pageIndex ?? 0) === currentPageIndex && element.originalPdfX === item.transform[4] && element.originalPdfY === item.transform[5]);
-    if (existing) { setSelectedId(existing.id); setPanel('properties'); return; }
+    if (existing) { setSelectedId(existing.id); openPanel('properties'); return; }
     const dimensions = pdfPageDimsMap[currentPageIndex] ?? { width: A4_W, height: A4_H };
     const scaleX = A4_W / dimensions.width; const scaleY = A4_H / dimensions.height;
     const height = item.height || item.transform[3];
@@ -333,7 +336,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
       fontStyle: /italic|oblique/i.test(family) ? 'italic' : 'normal', fillColor: '#FFFFFF',
       strokeColor: '#' + (item.color ?? [0, 0, 0]).map(color => Math.max(0, Math.min(255, Math.round(color))).toString(16).padStart(2, '0')).join(''),
     };
-    pushElements(previous => [...previous, element]); setSelectedId(element.id); setIsEditTextMode(false); setPanel('properties');
+    pushElements(previous => [...previous, element]); setSelectedId(element.id); setIsEditTextMode(false); openPanel('properties');
   };
 
   /* ── Keyboard Shortcuts ───────────────────── */
@@ -778,7 +781,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
         docTitle={docTitle}
         onTitleChange={setDocTitle}
         panel={panel}
-        onPanel={next => setPanel(current => current === next ? null : next)}
+        onPanel={next => { if (panel === next) closePanel(); else openPanel(next); }}
         onExport={exportPDF}
         onClear={() => setConfirmAction('clear')}
         onBack={onBack}
@@ -1078,8 +1081,8 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
 
       </Box>
       <EditorViewControls busy={busy} zoom={zoom} onZoomIn={() => setManualZoom(Math.min(3, zoom + 0.1))} onZoomOut={() => setManualZoom(Math.max(0.1, zoom - 0.1))} onFitWidth={() => setManualZoom(null)} currentPageIndex={currentPageIndex} numPages={numPages} onPrevPage={handlePrevPage} onNextPage={handleNextPage} />
-      <ToolPanel open={active && !!panel} title={panel === 'tools' ? 'Editor tools' : 'Item properties'} onClose={() => setPanel(null)}>
-        {panel === 'tools' ? (<LeftToolboxPanel
+      <ToolPanel open={active && !!panel} title={panelState.view === 'tools' ? 'Editor tools' : 'Item properties'} onClose={() => closePanel()}>
+        {panelState.view === 'tools' ? (<LeftToolboxPanel
           elements={elements.filter(el => (el.pageIndex ?? 0) === currentPageIndex)}
           selectedId={selectedId}
           isDrawMode={isDrawMode}
@@ -1092,19 +1095,19 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
           onChangeDrawColor={setDrawColor}
           onChangeDrawWidth={setDrawWidth}
           onChangeDrawOpacity={setDrawOpacity}
-          onSelect={id => { setSelectedId(id); setPanel(null); }}
+          onSelect={id => { setSelectedId(id); closePanel(); }}
           onDelete={deleteElement}
           onDuplicate={duplicateElement}
-          onAdd={type => { addElement(type); setPanel(null); }}
+          onAdd={type => { addElement(type); closePanel(); }}
           onOpenSignature={() => {
-            setPanel(null);
+            closePanel();
             setSigModalTab('draw');
             setSigModalOpen(true);
           }}
           onToggleDrawMode={() => {
             setIsDrawMode(d => !d);
             setIsEditTextMode(false);
-            setPanel(null);
+            closePanel();
           }}
           onToggleEditTextMode={() => {
             setIsEditTextMode(m => !m);

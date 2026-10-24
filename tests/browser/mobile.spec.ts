@@ -64,8 +64,11 @@ test('phone text editing, geometry, undo, orientation and PDF export form a comp
   await page.getByRole('textbox', { name: 'Text content', exact: true }).fill('Mobile note');
   await page.getByRole('spinbutton', { name: 'Font size', exact: true }).fill('24');
   await page.getByRole('spinbutton', { name: 'Horizontal position', exact: true }).fill('40');
+  await page.getByRole('spinbutton', { name: 'Width', exact: true }).fill('300');
+  await page.getByRole('spinbutton', { name: 'Height', exact: true }).fill('80');
   await page.getByRole('button', { name: 'Move selection right', exact: true }).tap();
   await expect(page.getByRole('spinbutton', { name: 'Horizontal position', exact: true })).toHaveValue('50');
+  await page.getByRole('textbox', { name: 'Text content', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ animations: 'disabled', path: info.outputPath('editor-properties-phone.png') });
   await page.getByRole('button', { name: 'Close item properties', exact: true }).tap();
   await expect(page.getByRole('button', { name: 'Properties', exact: true })).toBeFocused();
@@ -75,6 +78,14 @@ test('phone text editing, geometry, undo, orientation and PDF export form a comp
   await expect(item).not.toHaveCSS('transform', position);
   await page.getByRole('button', { name: 'Redo', exact: true }).tap();
   await expect(item).toHaveCSS('transform', position);
+  await page.getByRole('button', { name: 'Zoom options', exact: true }).tap();
+  await page.getByRole('menuitem', { name: 'Zoom in', exact: true }).tap();
+  const documentViewport = page.getByRole('region', { name: 'Editor document viewport', exact: true });
+  await expect.poll(() => documentViewport.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+  await documentViewport.evaluate(element => { element.scrollLeft = 40; });
+  await expect.poll(() => documentViewport.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+  await page.getByRole('button', { name: /% zoom, fit width$/ }).tap();
+  await expectFitted(page);
   await page.setViewportSize({ width: 844, height: 390 });
   await expectFitted(page);
   await page.screenshot({ animations: 'disabled', path: info.outputPath('editor-landscape-phone.png') });
@@ -133,12 +144,22 @@ test('freehand and signature strokes use real touch input and ignore secondary p
   await page.getByRole('menuitem', { name: 'Sign PDF', exact: true }).tap();
   const surface = page.getByLabel('Draw signature', { exact: true });
   await expect(page.getByRole('button', { name: 'Place on PDF Page', exact: true })).toBeDisabled();
-  await surface.evaluate(element => element.addEventListener('pointerdown', event => { (element as HTMLElement).dataset.pointer = String((event as PointerEvent).pointerId); }, { once: true }));
+  await surface.evaluate(element => {
+    for (const type of ['pointerdown', 'pointermove']) element.addEventListener(type, event => {
+      const pointer = event as PointerEvent;
+      if (!pointer.isTrusted || !pointer.isPrimary) return;
+      const target = element as HTMLElement;
+      target.dataset.pointer = String(pointer.pointerId);
+      target.dataset[type] = String(pointer.clientX);
+    });
+  });
   await surface.click({ trial: true, position: { x: 25, y: 25 } });
   const rect = (await surface.boundingBox())!; const client = await page.context().newCDPSession(page);
   try {
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x: rect.x + 25, y: rect.y + 25 }] });
+    await expect.poll(async () => Number(await surface.getAttribute('data-pointerdown'))).toBeCloseTo(rect.x + 25, 0);
     await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x: rect.x + 45, y: rect.y + 35 }] });
+    await expect.poll(async () => Number(await surface.getAttribute('data-pointermove'))).toBeCloseTo(rect.x + 45, 0);
     const before = await surface.evaluate(element => (element as HTMLCanvasElement).toDataURL());
     await surface.evaluate(element => {
       const pointerId = Number((element as HTMLElement).dataset.pointer) + 1;
@@ -146,7 +167,8 @@ test('freehand and signature strokes use real touch input and ignore secondary p
     });
     expect(await surface.evaluate(element => (element as HTMLCanvasElement).toDataURL())).toBe(before);
     await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x: rect.x + 65, y: rect.y + 45 }] });
-    expect(await surface.evaluate(element => (element as HTMLCanvasElement).toDataURL())).not.toBe(before);
+    await expect.poll(async () => Number(await surface.getAttribute('data-pointermove'))).toBeCloseTo(rect.x + 65, 0);
+    await expect.poll(() => surface.evaluate(element => (element as HTMLCanvasElement).toDataURL())).not.toBe(before);
     await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   } finally { await client.detach(); }
   await expect(page.getByRole('button', { name: 'Place on PDF Page', exact: true })).toBeEnabled();
