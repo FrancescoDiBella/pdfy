@@ -24,6 +24,7 @@ export const workspaceTheme = createTheme({
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     h1: { fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.035em' },
     h2: { fontSize: '1.25rem', fontWeight: 650, letterSpacing: '-0.02em' },
+    h3: { fontSize: '1rem', fontWeight: 650, letterSpacing: '-0.01em' },
     body1: { fontSize: '1rem', lineHeight: 1.65 },
     body2: { fontSize: '0.875rem', lineHeight: 1.6 },
     caption: { fontSize: '0.8125rem', lineHeight: 1.5 },

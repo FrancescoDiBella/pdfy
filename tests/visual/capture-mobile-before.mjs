@@ -26,6 +26,13 @@ try {
         await page.getByRole('button', { name: 'Sample Invoice', exact: true }).click();
         await page.waitForFunction(() => { const canvas = document.querySelector('#editor-session .react-pdf__Page__canvas'); return canvas instanceof HTMLCanvasElement && canvas.width > 0 && getComputedStyle(canvas).visibility === 'visible'; });
         await page.screenshot({ animations: 'disabled', path: `${output}/editor-before-${width}-${colorScheme}.png` });
+        await page.getByRole('button', { name: 'Tools', exact: true }).click();
+        await page.getByRole('dialog', { name: 'Editor tools', exact: true }).waitFor({ state: 'visible' });
+        await page.screenshot({ animations: 'disabled', path: `${output}/tools-before-${width}-${colorScheme}.png` });
+        await page.getByRole('button', { name: 'Text Block', exact: true }).click();
+        await page.locator('[role="dialog"][aria-label="Editor tools"]').waitFor({ state: 'hidden' });
+        await page.locator('.react-draggable, .editor-item').first().waitFor({ state: 'visible' });
+        await page.screenshot({ animations: 'disabled', path: `${output}/selection-before-${width}-${colorScheme}.png` });
         await page.getByRole('button', { name: 'Return to workspace', exact: true }).click();
         await navigate('Organize');
         await page.getByRole('button', { name: /^(Load 4-Page Sample Dossier|Try a sample PDF)$/ }).click();

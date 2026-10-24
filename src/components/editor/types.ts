@@ -32,6 +32,9 @@ export interface EditorElement {
   fillColor?: string;
   strokeWidth?: number;
   opacity?: number;
+  lockAspectRatio?: boolean;
+  textRotation?: number;
+  originalPdfAngle?: number;
   // Freehand drawing & text color
   points?: StrokePoint[];
   strokeColor?: string;
@@ -42,3 +45,4 @@ export interface EditorElement {
   originalPdfW?: number;
   originalPdfH?: number;
 }
+

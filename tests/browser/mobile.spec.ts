@@ -53,7 +53,7 @@ async function touchStroke(page: Page, surface: Locator, cancel = false) {
 
 test('phone text editing, geometry, undo, orientation and PDF export form a complete workflow', async ({ page }, info) => {
   await start(page);
-  await page.getByRole('button', { name: 'Blank A4 Canvas', exact: true }).tap();
+  await page.getByRole('button', { name: 'New blank PDF', exact: true }).tap();
   await expect(page.locator('.react-pdf__Page__canvas').first()).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expectFitted(page);
@@ -72,7 +72,7 @@ test('phone text editing, geometry, undo, orientation and PDF export form a comp
   await page.screenshot({ animations: 'disabled', path: info.outputPath('editor-properties-phone.png') });
   await page.getByRole('button', { name: 'Close item properties', exact: true }).tap();
   await expect(page.getByRole('button', { name: 'Properties', exact: true })).toBeFocused();
-  const item = page.locator('.react-draggable').first();
+  const item = page.locator('.editor-item').first();
   const position = await item.evaluate(element => getComputedStyle(element).transform);
   await page.getByRole('button', { name: 'Undo', exact: true }).tap();
   await expect(item).not.toHaveCSS('transform', position);
@@ -114,6 +114,7 @@ test('source PDF text can be edited through a touch-friendly list and exported',
   await page.getByRole('button', { name: 'Source page 1', exact: true }).tap();
   await expect(page.getByRole('dialog', { name: 'Item properties', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'Text content', exact: true }).fill('Updated on phone');
+  await page.getByRole('spinbutton', { name: 'Width', exact: true }).fill('600');
   await expect(page.getByLabel('Background mask color', { exact: true })).toHaveValue('#ffffff');
   await page.getByRole('button', { name: 'Bold', exact: true }).tap();
   await expect(page.getByRole('button', { name: 'Bold', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -130,15 +131,15 @@ test('source PDF text can be edited through a touch-friendly list and exported',
 
 test('freehand and signature strokes use real touch input and ignore secondary pointer events', async ({ page }, info) => {
   await start(page);
-  await page.getByRole('button', { name: 'Blank A4 Canvas', exact: true }).tap();
+  await page.getByRole('button', { name: 'New blank PDF', exact: true }).tap();
   await expect(page.locator('.react-pdf__Page__canvas').first()).toBeVisible();
   await page.getByRole('button', { name: 'Tools', exact: true }).tap();
   await page.getByRole('button', { name: 'Freehand', exact: true }).tap();
   await expect(page.getByRole('dialog', { includeHidden: true })).toHaveCount(0);
   await touchStroke(page, page.getByLabel('Freehand drawing surface', { exact: true }));
-  await expect(page.locator('.react-draggable svg path')).toHaveCount(1);
+  await expect(page.locator('.editor-item svg path')).toHaveCount(1);
   await touchStroke(page, page.getByLabel('Freehand drawing surface', { exact: true }), true);
-  await expect(page.locator('.react-draggable svg path')).toHaveCount(1);
+  await expect(page.locator('.editor-item svg path')).toHaveCount(1);
   await page.getByRole('button', { name: 'Done drawing', exact: true }).tap();
   await page.getByRole('button', { name: 'Document actions', exact: true }).tap();
   await page.getByRole('menuitem', { name: 'Sign PDF', exact: true }).tap();
@@ -234,7 +235,7 @@ test('a delayed page deletion locks pointer and keyboard editing until its snaps
   await page.evaluate(() => window.dispatchEvent(new Event('resume-writes')));
   await expect(page.getByRole('status').filter({ hasText: 'Page 1 / 79' })).toBeVisible({ timeout: 15000 });
   await expect(viewport).not.toHaveAttribute('inert', '');
-  await expect(page.locator('.react-draggable')).toHaveCount(0);
+  await expect(page.locator('.editor-item')).toHaveCount(0);
 });
 
 test('mobile organizer settings preserve work, reorder pages, and export the visible order', async ({ page }) => {
@@ -279,8 +280,15 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.screenshot({ animations: 'disabled', path: info.outputPath(`editor-after-${width}-${colorScheme}.png`) });
       await page.getByRole('button', { name: 'Tools', exact: true }).tap();
       await expect(page.getByRole('dialog', { name: 'Editor tools', exact: true })).toBeVisible();
-      await page.getByRole('button', { name: 'Close editor tools', exact: true }).tap();
-      await expect(page.getByRole('button', { name: 'Tools', exact: true })).toBeFocused();
+      const toolResults = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+      expect(toolResults.violations).toEqual([]);
+      await page.screenshot({ animations: 'disabled', path: info.outputPath(`tools-after-${width}-${colorScheme}.png`) });
+      await page.getByRole('button', { name: 'Text Block', exact: true }).tap();
+      await expect(page.getByRole('dialog', { includeHidden: true })).toHaveCount(0);
+      await expect(page.getByRole('region', { name: 'PDF editing canvas', exact: true })).toBeFocused();
+      await page.getByRole('button', { name: 'Resize', exact: true }).tap();
+      await expect(page.getByRole('button', { name: 'Resize text item', exact: true })).toBeVisible();
+      await page.screenshot({ animations: 'disabled', path: info.outputPath(`selection-after-${width}-${colorScheme}.png`) });
       await page.getByRole('button', { name: 'Return to workspace', exact: true }).tap();
       await navigate(page, 'Organize');
       await page.getByRole('button', { name: 'Try a sample PDF', exact: true }).tap();

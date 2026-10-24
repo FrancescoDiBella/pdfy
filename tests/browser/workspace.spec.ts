@@ -110,7 +110,7 @@ test('editor state survives returning to the workspace and handoffs require conf
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto('/');
   await navigate(page, 'Edit');
-  await page.getByRole('button', { name: 'Blank A4 Canvas', exact: true }).click();
+  await page.getByRole('button', { name: 'New blank PDF', exact: true }).click();
   await page.getByRole('textbox', { name: 'Document title' }).fill('Work in progress');
   await page.getByRole('button', { name: 'Tools', exact: true }).click();
   await page.getByRole('button', { name: 'Text Block', exact: true }).click();

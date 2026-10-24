@@ -76,7 +76,7 @@ for (const initiallyControlled of [false, true]) {
       }
       if (initiallyControlled) {
         await page.getByRole('button', { name: 'Edit', exact: true }).click();
-        await page.getByRole('button', { name: 'Blank A4 Canvas', exact: true }).click();
+        await page.getByRole('button', { name: 'New blank PDF', exact: true }).click();
         await page.getByRole('button', { name: 'Tools', exact: true }).click();
         await page.getByRole('button', { name: 'Text Block', exact: true }).click();
         await expect(page.getByRole('textbox', { name: 'Annotation text', exact: true })).toHaveValue('Your text');
@@ -86,7 +86,7 @@ for (const initiallyControlled of [false, true]) {
       await expect(page.getByRole('button', { name: 'Review update', exact: true })).toBeVisible({ timeout: 15000 });
       await page.getByRole('button', { name: 'Review update', exact: true }).click();
       if (initiallyControlled) {
-        const annotation = page.locator('.react-draggable').filter({ hasText: 'Your text' });
+        const annotation = page.locator('.editor-item').filter({ hasText: 'Your text' });
         const style = await annotation.getAttribute('style');
         await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
         for (const key of ['Delete', 'Backspace', 'Control+z', 'Control+d', 'ArrowRight']) {
@@ -102,7 +102,7 @@ for (const initiallyControlled of [false, true]) {
       await page.getByRole('button', { name: 'Cancel', exact: true }).click();
       if (initiallyControlled) {
         const canvas = page.getByRole('region', { name: 'PDF editing canvas', exact: true });
-        const annotation = page.locator('.react-draggable').filter({ hasText: 'Your text' });
+        const annotation = page.locator('.editor-item').filter({ hasText: 'Your text' });
         await canvas.focus();
         const transform = await annotation.evaluate(element => getComputedStyle(element).transform);
         await page.keyboard.press('ArrowRight');
@@ -112,7 +112,7 @@ for (const initiallyControlled of [false, true]) {
         // Pointer selection of a non-editable shape must return focus to the canvas.
         await page.getByRole('button', { name: 'Tools', exact: true }).click();
         await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
-        const shape = page.locator('.react-draggable').filter({ hasNot: page.locator('textarea') });
+        const shape = page.locator('.editor-item').filter({ hasNot: page.locator('textarea') });
         await shape.click({ position: { x: 40, y: 40 } });
         await expect(canvas).toBeFocused();
         await page.keyboard.press('Delete');
