@@ -93,9 +93,9 @@ Switching tools preserves their current work in this tab. Opening another PDF in
 
 Split and Info validate a new file or sample before asking to replace an existing session. Cancelling, or choosing an invalid, protected, or empty PDF, preserves the current selection and edits. Split supports keyboard page selection and checked page ranges. Info edits the six displayed PDF Info dictionary fields; clearing those fields does not remove XMP metadata, dates, annotations, or identifying document content.
 
-On phones, Edit starts with a PDF fitted to the available width. Open **Tools** to insert/select items or choose source text; use **Properties** for text, position, size and appearance. Close either panel to return to the page. The bottom bar holds page navigation, fit width and zoom; **Document actions** contains signatures, stamps and page actions. Drawing and signatures accept finger, pen and mouse input. Organize keeps page actions in the page grid and puts watermark/numbering controls in **Page settings**.
+On phones, Edit starts with a PDF fitted to the available width. Open **Tools** to insert/select items or choose source text; use **Properties** for text, position, size and appearance. Close either panel to return to the page. The bottom bar holds page navigation, fit width and zoom; **Document actions** contains signatures, stamps and page actions. **Select** supports direct touch movement and an explicit **Resize** handle; **Pan** scrolls over items and **Draw** creates strokes. The contextual bar offers Edit, Resize, Duplicate and Delete. Images keep their proportions by default. Tools use icons with labels, and annotation fonts export without remote font downloads. Drawing and signatures accept finger, pen and mouse input. Organize keeps page actions in the page grid and puts watermark/numbering controls in **Page settings**.
 
-See the [mobile workspace guide](docs/mobile-workspace.md) for interaction details and validation limits.
+See the [mobile workspace guide](docs/mobile-workspace.md) and [editor interaction redesign](docs/editor-interactions.md) for interaction details, overlay-editing scope and validation limits.
 
 See the [redesign scope, flow inventory, and review guide](docs/ui-redesign.md) for current boundaries and remaining accessibility/usability validation.
 
