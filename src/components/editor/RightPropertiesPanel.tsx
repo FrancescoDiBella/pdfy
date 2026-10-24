@@ -1,370 +1,47 @@
-import {
-  Box,
-  Typography,
-  TextField,
-  Slider,
-  Divider,
-  ToggleButtonGroup,
-  ToggleButton,
-  Select,
-  MenuItem,
-  FormControl,
-  Button,
-} from '@mui/material';
-import {
-  FormatAlignLeft,
-  FormatAlignCenter,
-  FormatAlignRight,
-  FormatBold,
-  FormatItalic,
-  ContentCopy as DuplicateIcon,
-  DeleteOutlined as DeleteIcon,
-} from '@mui/icons-material';
+import { Box, Typography, TextField, Slider, Divider, ToggleButtonGroup, ToggleButton, MenuItem, Button, IconButton } from '@mui/material';
+import { ArrowBack, ArrowForward, ArrowUpward, ArrowDownward } from '@mui/icons-material';
 import type { EditorElement } from './types';
 
 interface Props {
-  element: EditorElement | null;
-  onUpdate: (id: string, patch: Partial<EditorElement>) => void;
-  onDelete: (id: string) => void;
-  onDuplicate: (id: string) => void;
+  element: EditorElement | null; onUpdate: (id: string, patch: Partial<EditorElement>) => void;
+  onDelete: (id: string) => void; onDuplicate: (id: string) => void;
 }
 
-function NumericField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <Box sx={{ flex: 1 }}>
-      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 10, mb: 0.5, display: 'block' }}>
-        {label}
-      </Typography>
-      <TextField
-        size="small"
-        type="number"
-        value={Math.round(value)}
-        onChange={e => onChange(Number(e.target.value))}
-        fullWidth
-        slotProps={{
-          htmlInput: {
-            style: {
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: 12,
-              padding: '6px 8px',
-            },
-          },
-        }}
-      />
-    </Box>
-  );
+function NumericField({ label, value, min = 0, onChange }: { label: string; value: number; min?: number; onChange: (value: number) => void }) {
+  return <TextField label={label} type="number" value={Math.round(value)} fullWidth slotProps={{ htmlInput: { min, inputMode: 'decimal' } }} onChange={event => {
+    const next = Number(event.target.value); if (Number.isFinite(next)) onChange(Math.max(min, next));
+  }} />;
 }
-
-const HIGHLIGHT_SWATCHES = ['#FACC15', '#34D399', '#38BDF8', '#F472B6', '#A78BFA'];
 
 export default function RightPropertiesPanel({ element, onUpdate, onDelete, onDuplicate }: Props) {
+  if (!element) return <Box sx={{ p: 2 }}><Typography>Select an item on the page or in Tools, then edit its text, position, and appearance here.</Typography></Box>;
+  const text = element.type === 'text' || element.type === 'edit-text';
+  const colorKey = text || element.type === 'draw' ? 'strokeColor' : 'fillColor';
   return (
-    <Box
-      sx={{
-        width: 300,
-        flexShrink: 0,
-        height: '100%',
-        bgcolor: '#111827',
-        borderLeft: '1px solid rgba(255,255,255,0.08)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto',
-      }}
-    >
-      {!element ? (
-        <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 1 }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-            Select any layer on the canvas
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'text.disabled', textAlign: 'center' }}>
-            Use arrow keys to nudge selected items or double-click PDF text in "Edit Text" mode.
-          </Typography>
-        </Box>
-      ) : (
-        <>
-          {/* Coordinates & Dimensions */}
-          <Box sx={{ p: 2.5 }}>
-            <Typography
-              variant="caption"
-              sx={{ color: 'text.secondary', fontWeight: 600, mb: 1.5, display: 'block' }}
-            >
-              Geometry & Coordinates
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-              <NumericField label="X (pt)" value={element.x} onChange={v => onUpdate(element.id, { x: v })} />
-              <NumericField label="Y (pt)" value={element.y} onChange={v => onUpdate(element.id, { y: v })} />
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <NumericField label="Width" value={element.width} onChange={v => onUpdate(element.id, { width: Math.max(10, v) })} />
-              <NumericField label="Height" value={element.height} onChange={v => onUpdate(element.id, { height: Math.max(10, v) })} />
-            </Box>
-          </Box>
-
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
-
-          {/* Appearance */}
-          <Box sx={{ p: 2.5 }}>
-            <Typography
-              variant="caption"
-              sx={{ color: 'text.secondary', fontWeight: 600, mb: 1.5, display: 'block' }}
-            >
-              Appearance & Fill
-            </Typography>
-
-            {element.type === 'highlight' && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.75, display: 'block' }}>
-                  Highlighter Marker Color
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  {HIGHLIGHT_SWATCHES.map(sw => (
-                    <Box
-                      key={sw}
-                      onClick={() => onUpdate(element.id, { fillColor: sw })}
-                      sx={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: '6px',
-                        bgcolor: sw,
-                        cursor: 'pointer',
-                        border: element.fillColor === sw ? '2px solid #F9FAFB' : '1px solid rgba(255,255,255,0.2)',
-                      }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-            )}
-
-            {(element.type === 'rect' ||
-              element.type === 'circle' ||
-              element.type === 'redact' ||
-              element.type === 'draw' ||
-              element.type === 'edit-text') && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>
-                  {element.type === 'draw'
-                    ? 'Stroke Color'
-                    : element.type === 'edit-text'
-                      ? 'Background Mask Color'
-                      : element.type === 'redact'
-                        ? 'Redaction Block Color'
-                        : 'Shape Color'}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  <input
-                    type="color"
-                    value={
-                      (element.type === 'draw' ? element.strokeColor : element.fillColor) ||
-                      (element.type === 'edit-text' ? '#ffffff' : element.type === 'redact' ? '#000000' : '#6366F1')
-                    }
-                    onChange={e =>
-                      onUpdate(
-                        element.id,
-                        element.type === 'draw' ? { strokeColor: e.target.value } : { fillColor: e.target.value }
-                      )
-                    }
-                    style={{
-                      width: 32,
-                      height: 32,
-                      border: 'none',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      background: 'transparent',
-                    }}
-                  />
-                  <Typography className="mono" sx={{ color: '#9CA3AF' }}>
-                    {(
-                      (element.type === 'draw' ? element.strokeColor : element.fillColor) ||
-                      (element.type === 'edit-text' ? '#ffffff' : element.type === 'redact' ? '#000000' : '#6366F1')
-                    ).toUpperCase()}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-
-            {(element.type === 'text' || element.type === 'edit-text') && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11, mb: 0.5, display: 'block' }}>
-                  Text Color
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  <input
-                    type="color"
-                    value={element.strokeColor || '#0F172A'}
-                    onChange={e => onUpdate(element.id, { strokeColor: e.target.value })}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      border: 'none',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      background: 'transparent',
-                    }}
-                  />
-                  <Typography className="mono" sx={{ color: '#9CA3AF' }}>
-                    {(element.strokeColor || '#0F172A').toUpperCase()}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-
-            {(element.type === 'rect' || element.type === 'circle' || element.type === 'draw') && (
-              <Box sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11 }}>
-                    Stroke Width
-                  </Typography>
-                  <Typography className="mono" sx={{ fontSize: 11, color: '#9CA3AF' }}>
-                    {element.strokeWidth ?? 2}px
-                  </Typography>
-                </Box>
-                <Slider
-                  min={0}
-                  max={12}
-                  step={1}
-                  value={element.strokeWidth ?? (element.type === 'draw' ? 3 : 2)}
-                  onChange={(_, v) => onUpdate(element.id, { strokeWidth: v as number })}
-                  size="small"
-                />
-              </Box>
-            )}
-
-            {element.type !== 'redact' && (
-              <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: 11 }}>
-                    Opacity
-                  </Typography>
-                  <Typography className="mono" sx={{ fontSize: 11, color: '#9CA3AF' }}>
-                    {Math.round((element.opacity ?? 1) * 100)}%
-                  </Typography>
-                </Box>
-                <Slider
-                  min={0.1}
-                  max={1}
-                  step={0.05}
-                  value={element.opacity ?? 1}
-                  onChange={(_, v) => onUpdate(element.id, { opacity: v as number })}
-                  size="small"
-                />
-              </Box>
-            )}
-          </Box>
-
-          {/* Typography (text and edit-text) */}
-          {(element.type === 'text' || element.type === 'edit-text') && (
-            <>
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
-              <Box sx={{ p: 2.5 }}>
-                <Typography
-                  variant="caption"
-                  sx={{ color: 'text.secondary', fontWeight: 600, mb: 1.5, display: 'block' }}
-                >
-                  Typography
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1.5 }}>
-                  <FormControl size="small" fullWidth>
-                    <Select
-                      value={element.fontFamily || 'Helvetica'}
-                      onChange={e => onUpdate(element.id, { fontFamily: e.target.value as string })}
-                      displayEmpty
-                    >
-                      <MenuItem value="Helvetica">Helvetica (Sans)</MenuItem>
-                      <MenuItem value="Times Roman">Times Roman (Serif)</MenuItem>
-                      <MenuItem value="Courier">Courier (Monospace)</MenuItem>
-                      <MenuItem value="Roboto">Roboto</MenuItem>
-                      <MenuItem value="Open Sans">Open Sans</MenuItem>
-                      <MenuItem value="Lato">Lato</MenuItem>
-                      <MenuItem value="Montserrat">Montserrat</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <NumericField
-                    label="Font Size (pt)"
-                    value={element.fontSize ?? 16}
-                    onChange={v => onUpdate(element.id, { fontSize: Math.max(6, v) })}
-                  />
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <ToggleButtonGroup
-                    size="small"
-                    value={element.textAlign ?? 'left'}
-                    exclusive
-                    onChange={(_, v) => {
-                      if (v) onUpdate(element.id, { textAlign: v });
-                    }}
-                  >
-                    <ToggleButton value="left">
-                      <FormatAlignLeft sx={{ fontSize: 16 }} />
-                    </ToggleButton>
-                    <ToggleButton value="center">
-                      <FormatAlignCenter sx={{ fontSize: 16 }} />
-                    </ToggleButton>
-                    <ToggleButton value="right">
-                      <FormatAlignRight sx={{ fontSize: 16 }} />
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-
-                  <ToggleButtonGroup
-                    size="small"
-                    value={[
-                      element.fontWeight === 700 || element.fontWeight === 'bold' ? 'bold' : '',
-                      element.fontStyle === 'italic' ? 'italic' : '',
-                    ].filter(Boolean)}
-                    onChange={(_, values: string[]) => {
-                      onUpdate(element.id, {
-                        fontWeight: values.includes('bold') ? 700 : 400,
-                        fontStyle: values.includes('italic') ? 'italic' : 'normal',
-                      });
-                    }}
-                  >
-                    <ToggleButton value="bold">
-                      <FormatBold sx={{ fontSize: 16 }} />
-                    </ToggleButton>
-                    <ToggleButton value="italic">
-                      <FormatItalic sx={{ fontSize: 16 }} />
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-              </Box>
-            </>
-          )}
-
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
-
-          {/* Layer Actions */}
-          <Box sx={{ p: 2.5, display: 'flex', gap: 1, mt: 'auto' }}>
-            <Button
-              variant="outlined"
-              size="small"
-              fullWidth
-              startIcon={<DuplicateIcon />}
-              onClick={() => onDuplicate(element.id)}
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              Duplicate
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              color="error"
-              fullWidth
-              startIcon={<DeleteIcon />}
-              onClick={() => onDelete(element.id)}
-              sx={{ whiteSpace: 'nowrap', borderColor: 'rgba(239,68,68,0.35)', color: '#F87171' }}
-            >
-              Delete
-            </Button>
-          </Box>
-        </>
-      )}
+    <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+      {text && <TextField label="Text content" multiline minRows={2} maxRows={5} value={element.content ?? ''} onChange={event => onUpdate(element.id, { content: event.target.value })} fullWidth />}
+      <Typography variant="h2">Position and size</Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+        <NumericField label="Horizontal position" value={element.x} onChange={x => onUpdate(element.id, { x })} />
+        <NumericField label="Vertical position" value={element.y} onChange={y => onUpdate(element.id, { y })} />
+        <NumericField label="Width" value={element.width} min={10} onChange={width => onUpdate(element.id, { width })} />
+        <NumericField label="Height" value={element.height} min={10} onChange={height => onUpdate(element.id, { height })} />
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
+        {[{ label: 'left', x: -10, y: 0, icon: <ArrowBack /> }, { label: 'up', x: 0, y: -10, icon: <ArrowUpward /> }, { label: 'down', x: 0, y: 10, icon: <ArrowDownward /> }, { label: 'right', x: 10, y: 0, icon: <ArrowForward /> }].map(move => <IconButton key={move.label} aria-label={`Move selection ${move.label}`} onClick={() => onUpdate(element.id, { x: Math.max(0, element.x + move.x), y: Math.max(0, element.y + move.y) })}>{move.icon}</IconButton>)}
+      </Box>
+      <Divider />
+      {element.type !== 'image' && <TextField label={text ? 'Text color' : element.type === 'draw' ? 'Stroke color' : 'Fill color'} type="color" value={element[colorKey] ?? (text ? '#0F172A' : '#6366F1')} onChange={event => onUpdate(element.id, { [colorKey]: event.target.value })} fullWidth />}
+      {element.type === 'edit-text' && <TextField label="Background mask color" type="color" value={element.fillColor ?? '#FFFFFF'} onChange={event => onUpdate(element.id, { fillColor: event.target.value })} fullWidth />}
+      {element.type !== 'redact' && <Box><Typography>Opacity: {Math.round((element.opacity ?? 1) * 100)}%</Typography><Slider aria-label="Item opacity" min={0.1} max={1} step={0.05} value={element.opacity ?? 1} onChange={(_, opacity) => onUpdate(element.id, { opacity: opacity as number })} /></Box>}
+      {['rect', 'circle', 'draw'].includes(element.type) && <Box><Typography>Stroke width</Typography><Slider aria-label="Item stroke width" min={0} max={12} value={element.strokeWidth ?? 2} onChange={(_, strokeWidth) => onUpdate(element.id, { strokeWidth: strokeWidth as number })} /></Box>}
+      {text && <>
+        <NumericField label="Font size" value={element.fontSize ?? 16} min={6} onChange={fontSize => onUpdate(element.id, { fontSize })} />
+        <TextField select label="Font family" value={element.fontFamily ?? 'Helvetica'} onChange={event => onUpdate(element.id, { fontFamily: event.target.value })} fullWidth>{['Helvetica', 'Times Roman', 'Courier', 'Roboto', 'Open Sans', 'Lato', 'Montserrat'].map(font => <MenuItem key={font} value={font}>{font}</MenuItem>)}</TextField>
+        <ToggleButtonGroup value={element.textAlign ?? 'left'} exclusive onChange={(_, value) => { if (value) onUpdate(element.id, { textAlign: value }); }} aria-label="Text alignment" fullWidth>{['left', 'center', 'right'].map(align => <ToggleButton key={align} value={align}>{align}</ToggleButton>)}</ToggleButtonGroup>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}><Button variant="outlined" aria-pressed={(element.fontWeight === 700 || element.fontWeight === 'bold')} onClick={() => onUpdate(element.id, { fontWeight: (element.fontWeight === 700 || element.fontWeight === 'bold') ? 400 : 700 })}>Bold</Button><Button variant="outlined" aria-pressed={element.fontStyle === 'italic'} onClick={() => onUpdate(element.id, { fontStyle: element.fontStyle === 'italic' ? 'normal' : 'italic' })}>Italic</Button></Box>
+      </>}
+      <Divider /><Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}><Button variant="outlined" onClick={() => onDuplicate(element.id)}>Duplicate item</Button><Button variant="outlined" color="error" onClick={() => onDelete(element.id)}>Delete item</Button></Box>
     </Box>
   );
 }

@@ -46,9 +46,10 @@ export default function PWAStatus() {
 
   return (
     <>
-      <Snackbar open={offlineReady || hasUpdate || registrationFailed} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
+      <Snackbar open={offlineReady || hasUpdate || registrationFailed} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} sx={{ bottom: { xs: 'calc(64px + env(safe-area-inset-bottom))', sm: 24 }, maxHeight: 'calc(100dvh - 120px)', overflow: 'auto' }}>
         <Alert
           severity={registrationFailed ? 'warning' : 'info'}
+          sx={{ flexWrap: 'wrap', '& .MuiAlert-message': { flex: '1 1 160px' }, '& .MuiAlert-action': { flexWrap: 'wrap' } }}
           onClose={dismiss}
           action={hasUpdate && !registrationFailed ? (
             <>

@@ -112,13 +112,14 @@ test('editor state survives returning to the workspace and handoffs require conf
   await navigate(page, 'Edit');
   await page.getByRole('button', { name: 'Blank A4 Canvas', exact: true }).click();
   await page.getByRole('textbox', { name: 'Document title' }).fill('Work in progress');
+  await page.getByRole('button', { name: 'Tools', exact: true }).click();
   await page.getByRole('button', { name: 'Text Block', exact: true }).click();
-  await expect(page.getByText('Double-click to edit text…', { exact: true })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Annotation text', exact: true })).toHaveValue('Your text');
   await page.getByRole('button', { name: 'Return to workspace', exact: true }).click();
   await page.keyboard.press('Delete');
   await navigate(page, 'Edit');
   await expect(page.getByRole('textbox', { name: 'Document title' })).toHaveValue('Work in progress');
-  await expect(page.getByText('Double-click to edit text…', { exact: true })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Annotation text', exact: true })).toHaveValue('Your text');
   await page.getByRole('button', { name: 'Return to workspace', exact: true }).click();
   await page.getByLabel('PDF to read').setInputFiles(await pdfFile('replacement.pdf'));
   const edit = page.getByRole('button', { name: 'Edit PDF', exact: true });
@@ -132,20 +133,24 @@ test('editor state survives returning to the workspace and handoffs require conf
   await edit.click();
   await page.getByRole('button', { name: 'Replace document', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Document title' })).toHaveValue('replacement');
-  await expect(page.getByText('Double-click to edit text…', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Annotation text', exact: true })).toHaveCount(0);
 });
 
 test('opening a new reader file does not overwrite an existing organizer session', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('PDF to read').setInputFiles(await pdfFile('organize-me.pdf'));
   await page.getByRole('button', { name: 'Organize pages', exact: true }).click();
-  await page.locator('[data-tool="organize"] input[type="checkbox"]').first().check();
+  await page.getByRole('button', { name: 'Page settings', exact: true }).click();
+  await page.getByLabel('Watermark', { exact: true }).check();
   const watermark = page.getByRole('textbox', { name: 'Watermark Text', exact: true });
   await watermark.fill('Keep this text');
+  await page.getByRole('button', { name: 'Close page settings', exact: true }).click();
   await navigate(page, 'Read');
   await page.getByLabel('PDF to read').setInputFiles(await pdfFile('different.pdf'));
   await navigate(page, 'Organize');
+  await page.getByRole('button', { name: 'Page settings', exact: true }).click();
   await expect(watermark).toHaveValue('Keep this text');
+  await page.getByRole('button', { name: 'Close page settings', exact: true }).click();
   await expect(page.getByText('organize-me.pdf', { exact: true })).toBeVisible();
 });
 

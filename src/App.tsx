@@ -4,7 +4,7 @@ import {
   Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
   useMediaQuery,
 } from '@mui/material';
-import { ThemeProvider, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import {
   DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
   InfoOutlined, Menu as MenuIcon, Close, LockOutlined,
@@ -16,7 +16,6 @@ import PDFOrganizer from './components/PDFOrganizer';
 import PDFInspector from './components/PDFInspector';
 import AdvancedEditor from './components/AdvancedEditor';
 import AppearanceControl from './components/AppearanceControl';
-import { legacyTheme } from './legacyTheme';
 
 export type ViewMode = 'view' | 'edit' | 'organize' | 'merge' | 'split' | 'inspect';
 type Session = { file: File | null; version: number };
@@ -37,7 +36,7 @@ function focusWorkspace(mode: ViewMode) {
 
 export default function App() {
   const theme = useTheme();
-  const desktop = useMediaQuery(theme.breakpoints.up('md'));
+  const desktop = useMediaQuery('(min-width:900px) and (min-height:600px)');
   const [viewMode, setViewMode] = useState<ViewMode>('view');
   const [sharedFile, setSharedFile] = useState<File | null>(null);
   const [sessions, setSessions] = useState<Partial<Record<ViewMode, Session>>>({ view: { file: null, version: 0 } });
@@ -113,7 +112,7 @@ export default function App() {
     <>
       <a className="skip-link" href={viewMode === 'edit' ? '#editor-session' : '#workspace-title'}>Skip to workspace</a>
       <Box hidden={viewMode === 'edit'} data-testid="workspace" data-theme={theme.palette.mode} sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', bgcolor: 'background.default', color: 'text.primary' }}>
-        <Box component="header" sx={{ px: { xs: 1, md: 3 }, py: 1, minHeight: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+        <Box component="header" sx={{ px: { xs: 1, md: 3 }, py: 1, minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             {!desktop && <IconButton aria-label="Open tools menu" aria-expanded={menuOpen} aria-controls={menuOpen ? 'tools-navigation' : undefined} onClick={() => { setMenuSelected(false); setMenuOpen(true); }}><MenuIcon /></IconButton>}
             <Box sx={{ color: 'primary.main', display: { xs: 'none', sm: 'grid' }, placeItems: 'center', bgcolor: 'action.selected', width: 38, height: 42, borderRadius: 2 }}><DescriptionOutlined /></Box>
@@ -128,20 +127,19 @@ export default function App() {
           ) : (
             <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} ModalProps={{ disableRestoreFocus: menuSelected }} slotProps={{ paper: { sx: { width: 280, maxWidth: 'calc(100vw - 24px)' } }, transition: { onExited: () => { if (menuSelected) focusWorkspace(viewMode); } } }}>{navigation}</Drawer>
           )}
-          <Box component="main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', p: { xs: 2, sm: 3, lg: 4 }, display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ mb: 3, flexShrink: 0 }}>
+          <Box component="main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', p: { xs: 1.5, sm: 3, lg: 4 }, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ mb: { xs: 2, sm: 3 }, flexShrink: 0 }}>
               <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: 0.75 }}>{current.title}</Typography>
               <Typography color="text.secondary">{current.description}</Typography>
             </Box>
             {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
               const session = sessions[item.mode]!;
-              const legacy = item.mode === 'organize';
               const content = item.mode === 'view' ? (
                 <PDFViewer activeFile={sharedFile} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} />
-              ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
+              ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
               return (
                 <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
-                  {legacy ? <ThemeProvider theme={legacyTheme}><Box sx={{ p: { xs: 1, sm: 2 }, borderRadius: 2, bgcolor: 'background.default', color: 'text.primary', overflow: 'auto', flex: 1 }}>{content}</Box></ThemeProvider> : content}
+                  {content}
                 </Box>
               );
             })}
@@ -149,11 +147,9 @@ export default function App() {
         </Box>
       </Box>
       {sessions.edit && (
-        <ThemeProvider theme={legacyTheme}>
-          <Box key={sessions.edit.version} component="main" id="editor-session" aria-label="Edit PDF" tabIndex={-1} hidden={viewMode !== 'edit'} sx={{ color: 'text.primary' }}>
+          <Box key={sessions.edit.version} component="main" id="editor-session" aria-label="Edit PDF" tabIndex={-1} hidden={viewMode !== 'edit'} sx={{ color: 'text.primary', minHeight: '100dvh' }}>
             <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onBack={() => navigate('view')} />
           </Box>
-        </ThemeProvider>
       )}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} aria-labelledby="replace-title" aria-describedby="replace-description" disableRestoreFocus={handoffConfirmed} slotProps={{ transition: { onExited: () => { if (handoffConfirmed) focusWorkspace(viewMode); } } }}>
         <DialogTitle id="replace-title">Replace the {handoff?.mode === 'edit' ? 'Edit' : 'Organize'} document?</DialogTitle>

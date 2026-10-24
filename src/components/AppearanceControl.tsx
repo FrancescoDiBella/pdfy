@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { useColorScheme } from '@mui/material/styles';
 import { BrightnessAutoOutlined, LightModeOutlined, DarkModeOutlined, Check } from '@mui/icons-material';
@@ -10,20 +10,22 @@ const choices = [
 ] as const;
 
 export default function AppearanceControl() {
+  const buttonId = useId();
+  const menuId = useId();
   const { mode, setMode } = useColorScheme();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const selected = choices.find(choice => choice.value === mode) ?? choices[0];
   return (
     <>
       <Button
-        id="appearance-button" color="inherit" startIcon={selected.icon}
+        id={buttonId} color="inherit" startIcon={selected.icon}
         aria-label={`Appearance: ${selected.label}`} aria-haspopup="menu"
-        aria-expanded={Boolean(anchor)} aria-controls={anchor ? 'appearance-menu' : undefined}
+        aria-expanded={Boolean(anchor)} aria-controls={anchor ? menuId : undefined}
         onClick={event => setAnchor(event.currentTarget)}
       >
         {selected.label}
       </Button>
-      <Menu id="appearance-menu" anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)} slotProps={{ list: { 'aria-labelledby': 'appearance-button' } }}>
+      <Menu id={menuId} anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)} slotProps={{ list: { 'aria-labelledby': buttonId } }}>
         {choices.map(choice => (
           <MenuItem key={choice.value} role="menuitemradio" aria-checked={choice.value === selected.value} onClick={() => { setMode(choice.value); setAnchor(null); }}>
             <ListItemIcon>{choice.icon}</ListItemIcon>

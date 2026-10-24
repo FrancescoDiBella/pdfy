@@ -25,3 +25,6 @@ test-results
 *.sln
 *.sw?
 
+
+# Isolated PR base used only for visual evidence.
+.ui-baseline/
