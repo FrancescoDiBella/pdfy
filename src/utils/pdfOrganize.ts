@@ -4,6 +4,22 @@ export interface OrganizablePage {
   rotation: number;
 }
 
+export function movePageToIndex<T>(pages: T[], fromIndex: number, toIndex: number): T[] {
+  if (
+    fromIndex < 0
+    || toIndex < 0
+    || fromIndex >= pages.length
+    || toIndex >= pages.length
+    || fromIndex === toIndex
+  ) {
+    return pages;
+  }
+  const next = [...pages];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
 export function reorderPageItems<T extends { id: string }>(
   pages: T[],
   sourceId: string,
@@ -12,10 +28,7 @@ export function reorderPageItems<T extends { id: string }>(
   const from = pages.findIndex(page => page.id === sourceId);
   const to = pages.findIndex(page => page.id === targetId);
   if (from < 0 || to < 0 || from === to) return pages;
-  const next = [...pages];
-  const [moved] = next.splice(from, 1);
-  next.splice(to, 0, moved);
-  return next;
+  return movePageToIndex(pages, from, to);
 }
 
 export function removePageById<T extends { id: string }>(

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DragEvent } from 'react';
+import type { DragEvent, PointerEvent } from 'react';
 import {
   Box,
   Button,
@@ -42,6 +42,7 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
   const fileInputRef = useRef<HTMLInputElement>(null);
   const organizeButtonRef = useRef<HTMLButtonElement>(null);
   const pendingOrganizeFileRef = useRef<File | null>(null);
+  const touchDragRef = useRef<{ pointerId: number; sourceId: string; targetId: string | null } | null>(null);
   const isBusy = isMerging || isAdding;
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
 
@@ -120,6 +121,37 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
     event.preventDefault();
     const sourceId = event.dataTransfer.getData(QUEUE_DRAG_TYPE);
     if (sourceId === draggedId) moveItem(sourceId, targetId);
+    resetDrag();
+  };
+
+  const handleTouchPointerDown = (event: PointerEvent<HTMLElement>, id: string) => {
+    if (event.pointerType === 'mouse' || busyRef.current || queue.length <= 1) return;
+    event.preventDefault();
+    touchDragRef.current = { pointerId: event.pointerId, sourceId: id, targetId: null };
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Ignore synthetic pointer events without an active OS pointer capture.
+    }
+    setDraggedId(id);
+  };
+
+  const handleTouchPointerMove = (event: PointerEvent<HTMLElement>) => {
+    const activeTouch = touchDragRef.current;
+    if (!activeTouch || activeTouch.pointerId !== event.pointerId) return;
+    const hitRow = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-merge-queue-id]');
+    const hitId = hitRow?.dataset.mergeQueueId ?? null;
+    activeTouch.targetId = hitId;
+    setDropTargetId(hitId && hitId !== activeTouch.sourceId ? hitId : null);
+  };
+
+  const handleTouchPointerEnd = (event: PointerEvent<HTMLElement>, commit: boolean) => {
+    const activeTouch = touchDragRef.current;
+    if (!activeTouch || activeTouch.pointerId !== event.pointerId) return;
+    touchDragRef.current = null;
+    if (commit && activeTouch.targetId && activeTouch.targetId !== activeTouch.sourceId) {
+      moveItem(activeTouch.sourceId, activeTouch.targetId);
+    }
     resetDrag();
   };
 
@@ -226,6 +258,7 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
               <Box
                 key={item.id}
                 component="li"
+                data-merge-queue-id={item.id}
                 onDragOver={event => {
                   if (isBusy || !draggedId || !event.dataTransfer.types.includes(QUEUE_DRAG_TYPE)) return;
                   event.preventDefault();
@@ -262,7 +295,11 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
                     setDraggedId(item.id);
                   }}
                   onDragEnd={resetDrag}
-                  sx={{ display: 'flex', cursor: isBusy ? 'default' : 'grab', p: 0.5, touchAction: 'auto' }}
+                  onPointerDown={event => handleTouchPointerDown(event, item.id)}
+                  onPointerMove={handleTouchPointerMove}
+                  onPointerUp={event => handleTouchPointerEnd(event, true)}
+                  onPointerCancel={event => handleTouchPointerEnd(event, false)}
+                  sx={{ display: 'flex', cursor: isBusy ? 'default' : 'grab', p: 0.5, touchAction: queue.length > 1 && !isBusy ? 'none' : 'auto' }}
                 >
                   <DragIcon fontSize="small" />
                 </Box>

@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
-import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
-import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined, PrintOutlined, MergeType, DragIndicator } from '@mui/icons-material';
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent } from 'react';
+import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, Menu, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined, PrintOutlined, MergeType, DragIndicator, SwapVert } from '@mui/icons-material';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { generateSamplePDF } from '../utils/pdfSamples';
 import { appendPDFsToFile } from '../utils/pdfMerge';
-import { removePageById, reorderPageItems, restorePageAtIndex, type OrganizablePage } from '../utils/pdfOrganize';
+import { movePageToIndex, removePageById, reorderPageItems, restorePageAtIndex, type OrganizablePage } from '../utils/pdfOrganize';
 import { usePDFSession, type PDFSession } from '../hooks/usePDFSession';
 import PDFSessionControls from './PDFSessionControls';
 import ToolIntro from './ToolIntro';
@@ -41,11 +41,13 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
   const [confirmReset, setConfirmReset] = useState(false);
   const [draggedPageId, setDraggedPageId] = useState<string | null>(null);
   const [dropTargetPageId, setDropTargetPageId] = useState<string | null>(null);
+  const [moveMenu, setMoveMenu] = useState<{ anchorEl: HTMLElement; pageId: string; index: number } | null>(null);
   const [deletedUndo, setDeletedUndo] = useState<{ page: OrganizablePage; index: number; pageNumber: number } | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const settingsButton = useRef<HTMLButtonElement>(null);
   const printButtonRef = useRef<HTMLButtonElement>(null);
   const addFileInputRef = useRef<HTMLInputElement>(null);
+  const touchDragRef = useRef<{ pointerId: number; sourceId: string; targetId: string | null } | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [enableWatermark, setEnableWatermark] = useState(false);
   const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
@@ -63,9 +65,19 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
   const movePage = (index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= pageConfigs.length) return;
-    const next = [...pageConfigs]; const [page] = next.splice(index, 1); next.splice(target, 0, page);
-    setPageConfigs(next); setAnnouncement(`Moved page ${index + 1} to position ${target + 1}.`);
+    const next = movePageToIndex(pageConfigs, index, target);
+    const page = pageConfigs[index];
+    setPageConfigs(next);
+    setAnnouncement(`Moved page ${index + 1} to position ${target + 1}.`);
     requestAnimationFrame(() => document.getElementById(`organizer-page-${page.id}`)?.focus());
+  };
+
+  const movePageToPosition = (fromIndex: number, toIndex: number) => {
+    const next = movePageToIndex(pageConfigs, fromIndex, toIndex);
+    setMoveMenu(null);
+    if (next === pageConfigs) return;
+    setPageConfigs(next);
+    setAnnouncement(`Moved page ${fromIndex + 1} to position ${toIndex + 1}.`);
   };
 
   const resetDrag = () => {
@@ -73,17 +85,53 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
     setDropTargetPageId(null);
   };
 
+  const commitPageReorder = (sourceId: string, targetId: string | null) => {
+    if (!targetId || sourceId === targetId) return;
+    const fromIndex = pageConfigs.findIndex(item => item.id === sourceId);
+    const next = reorderPageItems(pageConfigs, sourceId, targetId);
+    if (next !== pageConfigs) {
+      const toIndex = next.findIndex(item => item.id === sourceId);
+      setPageConfigs(next);
+      setAnnouncement(`Moved page ${fromIndex + 1} to position ${toIndex + 1}.`);
+    }
+  };
+
   const handleDropPage = (event: DragEvent, targetId: string) => {
     event.preventDefault();
     const sourceId = event.dataTransfer.getData(PAGE_DRAG_TYPE);
     if (!isBusy && sourceId && sourceId === draggedPageId) {
-      const fromIndex = pageConfigs.findIndex(item => item.id === sourceId);
-      const next = reorderPageItems(pageConfigs, sourceId, targetId);
-      if (next !== pageConfigs) {
-        const toIndex = next.findIndex(item => item.id === sourceId);
-        setPageConfigs(next);
-        setAnnouncement(`Moved page ${fromIndex + 1} to position ${toIndex + 1}.`);
-      }
+      commitPageReorder(sourceId, targetId);
+    }
+    resetDrag();
+  };
+
+  const handleTouchHandlePointerDown = (event: PointerEvent<HTMLElement>, pageId: string) => {
+    if (event.pointerType === 'mouse' || isBusy || pageConfigs.length <= 1) return;
+    event.preventDefault();
+    touchDragRef.current = { pointerId: event.pointerId, sourceId: pageId, targetId: null };
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Ignore synthetic pointer events without an active OS pointer capture.
+    }
+    setDraggedPageId(pageId);
+  };
+
+  const handleTouchHandlePointerMove = (event: PointerEvent<HTMLElement>) => {
+    const activeTouch = touchDragRef.current;
+    if (!activeTouch || activeTouch.pointerId !== event.pointerId) return;
+    const hitCard = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-organize-page-id]');
+    const hitId = hitCard?.dataset.organizePageId ?? null;
+    activeTouch.targetId = hitId;
+    setDropTargetPageId(hitId && hitId !== activeTouch.sourceId ? hitId : null);
+  };
+
+  const handleTouchHandlePointerEnd = (event: PointerEvent<HTMLElement>, commit: boolean) => {
+    const activeTouch = touchDragRef.current;
+    if (!activeTouch || activeTouch.pointerId !== event.pointerId) return;
+    touchDragRef.current = null;
+    if (commit && !isBusy) {
+      commitPageReorder(activeTouch.sourceId, activeTouch.targetId);
     }
     resetDrag();
   };
@@ -326,6 +374,7 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
           component="li"
           variant="outlined"
           key={page.id}
+          data-organize-page-id={page.id}
           onDragOver={event => {
             if (isBusy || !draggedPageId || !event.dataTransfer.types.includes(PAGE_DRAG_TYPE)) return;
             event.preventDefault();
@@ -348,9 +397,10 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
             opacity: draggedPageId === page.id ? 0.55 : 1,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, width: '100%', minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5, width: '100%', minWidth: 0 }}>
             <Box
               component="span"
+              data-testid={`organizer-drag-handle-${index + 1}`}
               draggable={!isBusy && pageConfigs.length > 1}
               aria-hidden="true"
               title={`Drag page ${index + 1} to reorder`}
@@ -361,13 +411,37 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
                 setDraggedPageId(page.id);
               }}
               onDragEnd={resetDrag}
-              sx={{ display: 'flex', cursor: isBusy || pageConfigs.length <= 1 ? 'default' : 'grab', color: 'text.secondary', touchAction: 'auto', flexShrink: 0 }}
+              onPointerDown={event => handleTouchHandlePointerDown(event, page.id)}
+              onPointerMove={handleTouchHandlePointerMove}
+              onPointerUp={event => handleTouchHandlePointerEnd(event, true)}
+              onPointerCancel={event => handleTouchHandlePointerEnd(event, false)}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 34,
+                height: 34,
+                borderRadius: 1,
+                cursor: isBusy || pageConfigs.length <= 1 ? 'default' : 'grab',
+                color: 'text.secondary',
+                touchAction: pageConfigs.length > 1 && !isBusy ? 'none' : 'auto',
+                flexShrink: 0,
+              }}
             >
               <DragIndicator fontSize="small" />
             </Box>
             <Typography component="h3" id={`organizer-page-${page.id}`} tabIndex={-1} sx={{ fontWeight: 600, flex: 1, textAlign: 'center', overflowWrap: 'anywhere' }}>
               Page {index + 1} · {page.originalIndex === -1 ? 'Blank' : `Source ${page.originalIndex + 1}`} · {page.rotation}°
             </Typography>
+            <IconButton
+              size="small"
+              aria-label={`Move page ${index + 1} to position…`}
+              disabled={pageConfigs.length <= 1 || isBusy}
+              onClick={event => setMoveMenu({ anchorEl: event.currentTarget, pageId: page.id, index })}
+              sx={{ flexShrink: 0 }}
+            >
+              <SwapVert fontSize="small" />
+            </IconButton>
           </Box>
           <Box sx={{ width: 170, height: 235, bgcolor: '#FFFFFF', overflow: 'hidden', position: 'relative', display: 'grid', placeItems: 'center' }}>
             <Box sx={{ transform: `rotate(${page.rotation}deg)` }}>{page.originalIndex === -1 ? <Box sx={{ width: 170, height: 235 }} /> : <Page pageNumber={page.originalIndex + 1} width={170} renderTextLayer={false} renderAnnotationLayer={false} />}</Box>
@@ -385,6 +459,27 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
         </Paper>)}
       </Box>
     </Document>
+    <Menu
+      open={active && !!moveMenu}
+      anchorEl={moveMenu?.anchorEl ?? null}
+      onClose={() => setMoveMenu(null)}
+      slotProps={{
+        list: {
+          'aria-label': moveMenu ? `Move page ${moveMenu.index + 1} to position` : 'Move page to position',
+        },
+      }}
+    >
+      {moveMenu && pageConfigs.map((targetPage, targetIndex) => (
+        <MenuItem
+          key={targetPage.id}
+          disabled={targetIndex === moveMenu.index}
+          selected={targetIndex === moveMenu.index}
+          onClick={() => movePageToPosition(moveMenu.index, targetIndex)}
+        >
+          Position {targetIndex + 1}{targetIndex === moveMenu.index ? ' (current)' : ''}
+        </MenuItem>
+      ))}
+    </Menu>
     <ToolPanel open={active && settings} title="Page settings" onClose={() => setSettings(false)}>
       <Box component="fieldset" disabled={isBusy} sx={{ border: 0, m: 0, p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
         <FormControlLabel control={<Switch checked={enableWatermark} onChange={event => setEnableWatermark(event.target.checked)} />} label="Watermark" />

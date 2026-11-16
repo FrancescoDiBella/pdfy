@@ -41,7 +41,23 @@ test('merges PDFs directly into Organize, appends another PDF, reorders, deletes
   await organizeTool.getByRole('button', { name: 'Move page 3 earlier', exact: true }).click();
   await expect(organizeTool.getByRole('heading', { name: /Page 2 · Source 3/ })).toBeVisible();
 
-  // Delete page 1, test one-click Undo, then delete page 2 permanently
+  // Jump page 1 directly to Position 3 via the mobile-friendly Move-to-position menu (widths become 300, 240, 200)
+  await organizeTool.getByRole('button', { name: 'Move page 1 to position…', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Position 3', exact: true }).click();
+  await expect(organizeTool.getByRole('heading', { name: /Page 3 · Source 1/ })).toBeVisible();
+
+  // Touch-drag page 1 grip onto page 2 card (widths become 240, 300, 200)
+  const handle1 = organizeTool.getByTestId('organizer-drag-handle-1');
+  const card2Box = (await organizeTool.locator('[data-organize-page-id]').nth(1).boundingBox())!;
+  const targetX = card2Box.x + card2Box.width / 2;
+  const targetY = card2Box.y + card2Box.height / 2;
+  await handle1.dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 1, clientX: targetX, clientY: targetY });
+  await handle1.dispatchEvent('pointermove', { pointerType: 'touch', pointerId: 1, clientX: targetX, clientY: targetY });
+  await handle1.dispatchEvent('pointerup', { pointerType: 'touch', pointerId: 1, clientX: targetX, clientY: targetY });
+  await expect(organizeTool.getByRole('heading', { name: /Page 1 · Source 2/ })).toBeVisible();
+  await expect(organizeTool.getByRole('heading', { name: /Page 2 · Source 3/ })).toBeVisible();
+
+  // Delete page 1, test one-click Undo, then delete page 2 permanently (leaving widths 240, 200)
   await organizeTool.getByRole('button', { name: 'Delete page 1', exact: true }).click();
   await expect(organizeTool.getByText('2 pages', { exact: true })).toBeVisible();
   const undoBanner = organizeTool.getByRole('alert').filter({ hasText: 'Removed page 1.' });
@@ -52,7 +68,7 @@ test('merges PDFs directly into Organize, appends another PDF, reorders, deletes
   await organizeTool.getByRole('button', { name: 'Delete page 2', exact: true }).click();
   await expect(organizeTool.getByText('2 pages', { exact: true })).toBeVisible();
 
-  // Append a third PDF right inside Organize (+1 page of width 380) -> widths 200, 240, 380
+  // Append a third PDF right inside Organize (+1 page of width 380) -> widths 240, 200, 380
   await organizeTool.getByLabel('Add PDF files to organize', { exact: true }).setInputFiles([
     await pdfFileWithWidths('part-c.pdf', [380]),
   ]);
@@ -63,7 +79,7 @@ test('merges PDFs directly into Organize, appends another PDF, reorders, deletes
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('organized_combined-deck.pdf');
   const exported = await PDFDocument.load(await readFile((await download.path())!));
-  expect(exported.getPages().map(p => p.getWidth())).toEqual([200, 240, 380]);
+  expect(exported.getPages().map(p => p.getWidth())).toEqual([240, 200, 380]);
 
   // Merging again asks before replacing existing Organize work and restores focus cleanly on Cancel
   await navigate(page, 'Merge');

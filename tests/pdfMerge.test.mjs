@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { PDFDocument } from 'pdf-lib';
 import { appendPDFsToFile, mergePDFs, preparePDFs, reorderPDFs } from '../src/utils/pdfMerge.ts';
-import { removePageById, reorderPageItems, restorePageAtIndex } from '../src/utils/pdfOrganize.ts';
+import { movePageToIndex, removePageById, reorderPageItems, restorePageAtIndex } from '../src/utils/pdfOrganize.ts';
 
 async function pdfFile(name, widths) {
   const doc = await PDFDocument.create();
@@ -77,6 +77,10 @@ test('pdfOrganize helpers reorder pages, block deleting the last page, and undo 
 
   const reordered = reorderPageItems(pages, 'p3', 'p1');
   assert.deepEqual(reordered.map(p => p.id), ['p3', 'p1', 'p2']);
+
+  const jumped = movePageToIndex(reordered, 0, 2);
+  assert.deepEqual(jumped.map(p => p.id), ['p1', 'p2', 'p3']);
+  assert.equal(movePageToIndex(jumped, 1, 99), jumped);
 
   const removal = removePageById(reordered, 'p1');
   assert.ok(removal);
