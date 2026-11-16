@@ -7,19 +7,20 @@ import {
 import { useTheme } from '@mui/material/styles';
 import {
   DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
-  InfoOutlined, Menu as MenuIcon, Close, LockOutlined,
+  InfoOutlined, PrintOutlined, Menu as MenuIcon, Close, LockOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import PDFMerger from './components/PDFMerger';
 import PDFSplitter from './components/PDFSplitter';
 import PDFOrganizer from './components/PDFOrganizer';
 import PDFInspector from './components/PDFInspector';
+import PDFPrinter from './components/PDFPrinter';
 import AdvancedEditor from './components/AdvancedEditor';
 import AppearanceControl from './components/AppearanceControl';
 
-export type ViewMode = 'view' | 'edit' | 'organize' | 'merge' | 'split' | 'inspect';
+export type ViewMode = 'view' | 'edit' | 'organize' | 'merge' | 'split' | 'print' | 'inspect';
 type Session = { file: File | null; version: number };
-type Handoff = { mode: 'edit' | 'organize'; file: File };
+type Handoff = { mode: 'edit' | 'organize' | 'print'; file: File };
 
 const navItems = [
   { mode: 'view', label: 'Read', title: 'Read PDF', description: 'Open a document, find your page, and take the next step.', icon: <DescriptionOutlined /> },
@@ -27,6 +28,7 @@ const navItems = [
   { mode: 'organize', label: 'Organize', title: 'Organize pages', description: 'Reorder, rotate, and watermark your pages.', icon: <DashboardCustomizeOutlined /> },
   { mode: 'merge', label: 'Merge', title: 'Merge PDFs', description: 'Bring your documents together in the right order.', icon: <MergeType /> },
   { mode: 'split', label: 'Split', title: 'Split PDF', description: 'Choose the pages you need and save them separately.', icon: <CallSplit /> },
+  { mode: 'print', label: 'Print', title: 'Print PDF', description: 'Prepare N-up handouts, booklets, and ink-saver sheets for your OS printer.', icon: <PrintOutlined /> },
   { mode: 'inspect', label: 'Info', title: 'Document info', description: 'Review and update the details stored in your PDF.', icon: <InfoOutlined /> },
 ] as const;
 
@@ -135,8 +137,8 @@ export default function App() {
             {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
               const session = sessions[item.mode]!;
               const content = item.mode === 'view' ? (
-                <PDFViewer activeFile={sharedFile} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} />
-              ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
+                <PDFViewer activeFile={sharedFile} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} />
+              ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} onOpenInPrint={file => openInTool('print', file)} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : item.mode === 'print' ? <PDFPrinter initialFile={session.file} active={viewMode === 'print'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
               return (
                 <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
                   {content}
@@ -148,11 +150,11 @@ export default function App() {
       </Box>
       {sessions.edit && (
           <Box key={sessions.edit.version} component="main" id="editor-session" aria-label="Edit PDF" tabIndex={-1} hidden={viewMode !== 'edit'} sx={{ color: 'text.primary', minHeight: '100dvh' }}>
-            <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onBack={() => navigate('view')} />
+            <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onBack={() => navigate('view')} onPrint={file => openInTool('print', file)} />
           </Box>
       )}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} aria-labelledby="replace-title" aria-describedby="replace-description" disableRestoreFocus={handoffConfirmed} slotProps={{ transition: { onExited: () => { if (handoffConfirmed) focusWorkspace(viewMode); } } }}>
-        <DialogTitle id="replace-title">Replace the {handoff?.mode === 'edit' ? 'Edit' : 'Organize'} document?</DialogTitle>
+        <DialogTitle id="replace-title">Replace the {handoff?.mode === 'edit' ? 'Edit' : handoff?.mode === 'organize' ? 'Organize' : 'Print'} document?</DialogTitle>
         <DialogContent>
           <DialogContentText id="replace-description" sx={{ overflowWrap: 'anywhere' }}>
             Opening “{handoff?.file.name}” here will discard this tool’s current session. Download any work you want to keep first. Other tools will keep their files and changes.

@@ -41,6 +41,7 @@ const DEFAULT_PAGE_GEOMETRY: PageGeometry = { x: 0, y: 0, width: A4_W * .75, hei
 
 interface Props {
   onBack: () => void;
+  onPrint?: (file: File) => void;
   active?: boolean;
   initialFile?: File | null;
 }
@@ -53,7 +54,7 @@ async function prepareEditorFile(source: File | (() => Promise<File>)) {
   return { file, bytes, pageCount: pdf.getPageCount(), sizes: Object.fromEntries(pdf.getPages().map((page, index) => [index, pageGeometry(page)])) };
 }
 
-export default function AdvancedEditor({ onBack, initialFile, active = true }: Props) {
+export default function AdvancedEditor({ onBack, onPrint, initialFile, active = true }: Props) {
   const [fileBlob, setFileBlob] = useState<Blob | null>(null);
   const [originalBytes, setOriginalBytes] = useState<Uint8Array | null>(null);
   const [history, dispatchHistory] = useReducer(reduceEditorHistory<EditorElement>, { entries: [[]], index: 0 });
@@ -482,14 +483,18 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
     return await doc.embedFont(fontEnum);
   };
 
+  const buildEditedPDFBytes = async () => {
+    if (!originalBytes) throw new Error('No PDF loaded');
+    const doc = await PDFDocument.load(originalBytes);
+    await drawEditorElements(doc, elements, resolveFont);
+    return await doc.save();
+  };
+
   const exportPDF = async () => {
     if (!originalBytes || pageOperation.current || isLoading || transformingRef.current) return;
     setIsSaving(true);
     try {
-      const doc = await PDFDocument.load(originalBytes);
-      await drawEditorElements(doc, elements, resolveFont);
-
-      const saved = await doc.save();
+      const saved = await buildEditedPDFBytes();
       const url = URL.createObjectURL(new Blob([saved as BlobPart], { type: 'application/pdf' }));
       const a = document.createElement('a');
       a.href = url;
@@ -502,6 +507,33 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
     } catch (err) {
       console.error(err);
       const message = err instanceof Error && err.message.includes('cannot encode') ? 'The selected font cannot export one of these characters. Edit the text and try again.' : 'Could not export this PDF. Your edits are still here; try again.';
+      setToast({ message, severity: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const pendingPrintFileRef = useRef<File | null>(null);
+
+  useEffect(() => {
+    if (isSaving || !pendingPrintFileRef.current) return;
+    const nextFile = pendingPrintFileRef.current;
+    pendingPrintFileRef.current = null;
+    actionsButton.current?.focus();
+    onPrint?.(nextFile);
+  }, [isSaving, onPrint]);
+
+  const printPDF = async () => {
+    if (!originalBytes || pageOperation.current || isLoading || transformingRef.current || !onPrint) return;
+    setIsSaving(true);
+    try {
+      const saved = await buildEditedPDFBytes();
+      const name = `${(docTitle || 'document').replace(/\.pdf$/i, '')}.pdf`;
+      pendingPrintFileRef.current = new File([saved as BlobPart], name, { type: 'application/pdf' });
+    } catch (err) {
+      pendingPrintFileRef.current = null;
+      console.error(err);
+      const message = err instanceof Error && err.message.includes('cannot encode') ? 'The selected font cannot print one of these characters. Edit the text and try again.' : 'Could not prepare this PDF for printing. Your edits are still here; try again.';
       setToast({ message, severity: 'error' });
     } finally {
       setIsSaving(false);
@@ -624,6 +656,7 @@ export default function AdvancedEditor({ onBack, initialFile, active = true }: P
         panel={panel}
         onPanel={next => { if (panel === next) closePanel(); else openPanel(next); }}
         onExport={exportPDF}
+        onPrint={printPDF}
         onClear={() => setConfirmAction('clear')}
         onBack={() => { if (!transformingRef.current) onBack(); }}
         busy={controlsBusy} exporting={isSaving}

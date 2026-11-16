@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress, IconButton, Tooltip, Divider, Alert } from '@mui/material';
-import { FolderOpenOutlined, ZoomIn, ZoomOut, RotateRight, ViewSidebarOutlined, EditOutlined, DashboardCustomizeOutlined, DescriptionOutlined } from '@mui/icons-material';
+import { FolderOpenOutlined, ZoomIn, ZoomOut, RotateRight, ViewSidebarOutlined, EditOutlined, DashboardCustomizeOutlined, DescriptionOutlined, PrintOutlined } from '@mui/icons-material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -17,6 +17,7 @@ interface Props {
   onFileLoaded: (file: File) => void;
   onOpenInEditor: (file: File) => void;
   onOpenInOrganizer: (file: File) => void;
+  onOpenInPrint?: (file: File) => void;
 }
 
 function ViewerPage({ viewRotation, ...props }: ComponentProps<typeof Page> & { viewRotation: number }) {
@@ -24,7 +25,7 @@ function ViewerPage({ viewRotation, ...props }: ComponentProps<typeof Page> & { 
   return <Page {...props} rotate={originalRotation === undefined ? undefined : (originalRotation + viewRotation) % 360} onLoadSuccess={page => setOriginalRotation(page.rotate)} />;
 }
 
-export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEditor, onOpenInOrganizer }: Props) {
+export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEditor, onOpenInOrganizer, onOpenInPrint }: Props) {
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -133,6 +134,7 @@ export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEdit
                 <IconButton aria-label="Rotate view clockwise" onClick={() => setRotation(value => (value + 90) % 360)}><RotateRight /></IconButton>
               </Box>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {onOpenInPrint && <Button variant="outlined" startIcon={<PrintOutlined />} onClick={() => onOpenInPrint(file)}>Print PDF</Button>}
                 <Button variant="outlined" startIcon={<DashboardCustomizeOutlined />} onClick={() => onOpenInOrganizer(file)}>Organize pages</Button>
                 <Button variant="contained" startIcon={<EditOutlined />} onClick={() => onOpenInEditor(file)}>Edit PDF</Button>
               </Box>
