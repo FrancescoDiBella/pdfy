@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DragEvent } from 'react';
+import type { DragEvent, PointerEvent } from 'react';
 import {
   Box,
   Button,
@@ -20,6 +20,7 @@ import {
   ArrowDownward as DownIcon,
   AutoFixHigh as SampleIcon,
   DragIndicator as DragIcon,
+  DashboardCustomizeOutlined as OrganizeIcon,
 } from '@mui/icons-material';
 import ToolIntro from './ToolIntro';
 import { generateSamplePDF } from '../utils/pdfSamples';
@@ -28,7 +29,7 @@ import type { QueuedPDF } from '../utils/pdfMerge';
 
 const QUEUE_DRAG_TYPE = 'application/x-pdfy-queue-item';
 
-export default function PDFMerger() {
+export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (file: File) => void }) {
   const [queue, setQueue] = useState<QueuedPDF[]>([]);
   const [outputName, setOutputName] = useState('Merged_Document');
   const [isMerging, setIsMerging] = useState(false);
@@ -39,10 +40,21 @@ export default function PDFMerger() {
   const announcementTimer = useRef<number | undefined>(undefined);
   const busyRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const organizeButtonRef = useRef<HTMLButtonElement>(null);
+  const pendingOrganizeFileRef = useRef<File | null>(null);
+  const touchDragRef = useRef<{ pointerId: number; sourceId: string; targetId: string | null } | null>(null);
   const isBusy = isMerging || isAdding;
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
 
   useEffect(() => () => window.clearTimeout(announcementTimer.current), []);
+
+  useEffect(() => {
+    if (isMerging || !pendingOrganizeFileRef.current) return;
+    const nextFile = pendingOrganizeFileRef.current;
+    pendingOrganizeFileRef.current = null;
+    organizeButtonRef.current?.focus();
+    onOpenInOrganizer?.(nextFile);
+  }, [isMerging, onOpenInOrganizer]);
 
   const clearAnnouncement = () => {
     window.clearTimeout(announcementTimer.current);
@@ -112,6 +124,37 @@ export default function PDFMerger() {
     resetDrag();
   };
 
+  const handleTouchPointerDown = (event: PointerEvent<HTMLElement>, id: string) => {
+    if (event.pointerType === 'mouse' || busyRef.current || queue.length <= 1) return;
+    event.preventDefault();
+    touchDragRef.current = { pointerId: event.pointerId, sourceId: id, targetId: null };
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Ignore synthetic pointer events without an active OS pointer capture.
+    }
+    setDraggedId(id);
+  };
+
+  const handleTouchPointerMove = (event: PointerEvent<HTMLElement>) => {
+    const activeTouch = touchDragRef.current;
+    if (!activeTouch || activeTouch.pointerId !== event.pointerId) return;
+    const hitRow = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-merge-queue-id]');
+    const hitId = hitRow?.dataset.mergeQueueId ?? null;
+    activeTouch.targetId = hitId;
+    setDropTargetId(hitId && hitId !== activeTouch.sourceId ? hitId : null);
+  };
+
+  const handleTouchPointerEnd = (event: PointerEvent<HTMLElement>, commit: boolean) => {
+    const activeTouch = touchDragRef.current;
+    if (!activeTouch || activeTouch.pointerId !== event.pointerId) return;
+    touchDragRef.current = null;
+    if (commit && activeTouch.targetId && activeTouch.targetId !== activeTouch.sourceId) {
+      moveItem(activeTouch.sourceId, activeTouch.targetId);
+    }
+    resetDrag();
+  };
+
   const removeFile = (id: string) => {
     if (busyRef.current) return;
     clearAnnouncement();
@@ -120,17 +163,22 @@ export default function PDFMerger() {
 
   const totalPages = queue.reduce((acc, item) => acc + item.pageCount, 0);
 
+  const buildMergedDocument = async () => {
+    const mergedBytes = await mergeQueue(queue);
+    const cleanName = (outputName.trim() || 'merged').replace(/\.pdf$/i, '');
+    return { mergedBytes, cleanName };
+  };
+
   const mergePDFs = async () => {
     if (queue.length < 2 || busyRef.current) return;
     busyRef.current = true;
     resetDrag();
     setIsMerging(true);
     try {
-      const mergedPdfFile = await mergeQueue(queue);
-      const blob = new Blob([mergedPdfFile as BlobPart], { type: 'application/pdf' });
+      const { mergedBytes, cleanName } = await buildMergedDocument();
+      const blob = new Blob([mergedBytes as BlobPart], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
 
-      const cleanName = (outputName.trim() || 'merged').replace(/\.pdf$/i, '');
       const link = document.createElement('a');
       link.href = url;
       link.download = `${cleanName}.pdf`;
@@ -141,6 +189,24 @@ export default function PDFMerger() {
       setToast({ message: `Download started: ${cleanName}.pdf (${totalPages} pages). Your files remain here if you need to try again.`, severity: 'success' });
     } catch (error) {
       console.error('Error merging PDFs', error);
+      setToast({ message: 'Failed to merge PDFs. Ensure none of the files are password-encrypted.', severity: 'error' });
+    } finally {
+      busyRef.current = false;
+      setIsMerging(false);
+    }
+  };
+
+  const mergeAndOrganize = async () => {
+    if (queue.length < 2 || busyRef.current || !onOpenInOrganizer) return;
+    busyRef.current = true;
+    resetDrag();
+    setIsMerging(true);
+    try {
+      const { mergedBytes, cleanName } = await buildMergedDocument();
+      pendingOrganizeFileRef.current = new File([mergedBytes as BlobPart], `${cleanName}.pdf`, { type: 'application/pdf' });
+    } catch (error) {
+      pendingOrganizeFileRef.current = null;
+      console.error('Error merging PDFs for organize', error);
       setToast({ message: 'Failed to merge PDFs. Ensure none of the files are password-encrypted.', severity: 'error' });
     } finally {
       busyRef.current = false;
@@ -166,7 +232,7 @@ export default function PDFMerger() {
         {announcement}
       </Box>
       {queue.length === 0 ? (
-        <ToolIntro icon={<MergeIcon fontSize="large" />} title="Start with two or more PDFs" description="Add your files, arrange them in order, and download one combined PDF.">
+        <ToolIntro icon={<MergeIcon fontSize="large" />} title="Start with two or more PDFs" description="Add your files, arrange them in order, and download or immediately organize every page.">
           {fileActions}
         </ToolIntro>
       ) : (
@@ -192,6 +258,7 @@ export default function PDFMerger() {
               <Box
                 key={item.id}
                 component="li"
+                data-merge-queue-id={item.id}
                 onDragOver={event => {
                   if (isBusy || !draggedId || !event.dataTransfer.types.includes(QUEUE_DRAG_TYPE)) return;
                   event.preventDefault();
@@ -228,7 +295,11 @@ export default function PDFMerger() {
                     setDraggedId(item.id);
                   }}
                   onDragEnd={resetDrag}
-                  sx={{ display: 'flex', cursor: isBusy ? 'default' : 'grab', p: 0.5, touchAction: 'auto' }}
+                  onPointerDown={event => handleTouchPointerDown(event, item.id)}
+                  onPointerMove={handleTouchPointerMove}
+                  onPointerUp={event => handleTouchPointerEnd(event, true)}
+                  onPointerCancel={event => handleTouchPointerEnd(event, false)}
+                  sx={{ display: 'flex', cursor: isBusy ? 'default' : 'grab', p: 0.5, touchAction: queue.length > 1 && !isBusy ? 'none' : 'auto' }}
                 >
                   <DragIcon fontSize="small" />
                 </Box>
@@ -270,25 +341,40 @@ export default function PDFMerger() {
             ))}
           </Box>
 
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { xs: 'stretch', sm: 'center' }, pt: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5, alignItems: { xs: 'stretch', md: 'center' }, pt: 1 }}>
             <TextField
               label="Download filename"
               size="small"
               value={outputName}
               disabled={isBusy}
               onChange={e => setOutputName(e.target.value)}
-              sx={{ flex: 1 }}
+              sx={{ flex: 1, minWidth: 0 }}
             />
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={isMerging ? <CircularProgress size={18} color="inherit" /> : <MergeIcon />}
-              disabled={queue.length < 2 || isBusy}
-              onClick={mergePDFs}
-              sx={{ py: 1.1, px: 3, whiteSpace: 'nowrap' }}
-            >
-              {isMerging ? 'Preparing PDF…' : `Download merged PDF`}
-            </Button>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              {onOpenInOrganizer && (
+                <Button
+                  ref={organizeButtonRef}
+                  variant="outlined"
+                  size="large"
+                  startIcon={isMerging ? <CircularProgress size={18} color="inherit" /> : <OrganizeIcon />}
+                  disabled={queue.length < 2 || isBusy}
+                  onClick={mergeAndOrganize}
+                  sx={{ py: 1.1, px: 2.5 }}
+                >
+                  Merge &amp; organize pages
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={isMerging ? <CircularProgress size={18} color="inherit" /> : <MergeIcon />}
+                disabled={queue.length < 2 || isBusy}
+                onClick={mergePDFs}
+                sx={{ py: 1.1, px: 3 }}
+              >
+                {isMerging ? 'Preparing PDF…' : 'Download merged PDF'}
+              </Button>
+            </Box>
           </Box>
         </Paper>
       )}

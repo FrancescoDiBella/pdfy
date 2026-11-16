@@ -42,3 +42,33 @@ export async function mergePDFs(queue: QueuedPDF[]) {
   }
   return merged.save();
 }
+
+export async function appendPDFsToFile(baseFile: File, incomingFiles: File[]) {
+  const { accepted, rejected } = await preparePDFs(incomingFiles);
+  if (accepted.length === 0) {
+    return {
+      combinedFile: baseFile,
+      previousPageCount: 0,
+      addedCount: 0,
+      acceptedNames: [] as string[],
+      rejected,
+    };
+  }
+  const combined = await PDFDocument.load(await baseFile.arrayBuffer());
+  const previousPageCount = combined.getPageCount();
+  let addedCount = 0;
+  for (const item of accepted) {
+    const source = await PDFDocument.load(await item.file.arrayBuffer());
+    const pages = await combined.copyPages(source, source.getPageIndices());
+    pages.forEach(page => combined.addPage(page));
+    addedCount += pages.length;
+  }
+  const combinedBytes = await combined.save();
+  return {
+    combinedFile: new File([combinedBytes as BlobPart], baseFile.name, { type: 'application/pdf' }),
+    previousPageCount,
+    addedCount,
+    acceptedNames: accepted.map(item => item.file.name),
+    rejected,
+  };
+}
