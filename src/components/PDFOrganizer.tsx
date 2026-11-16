@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
-import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined } from '@mui/icons-material';
+import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined, PrintOutlined } from '@mui/icons-material';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfDocumentOptions } from '../utils/pdfRendering';
@@ -18,17 +18,17 @@ async function prepare(file: File) {
   return { count: pdf.getPageCount() };
 }
 
-export default function PDFOrganizer({ initialFile, active = true }: { initialFile?: File | null; active?: boolean }) {
+export default function PDFOrganizer({ initialFile, active = true, onOpenInPrint }: { initialFile?: File | null; active?: boolean; onOpenInPrint?: (file: File) => void }) {
   const replacement = usePDFSession(prepare, initialFile);
   const [isExporting, setIsExporting] = useState(false);
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
     {!replacement.session && <ToolIntro icon={<DashboardCustomizeOutlined />} title="Put your pages in order" description="Move, rotate, copy, or remove pages. Add a watermark or page numbers when you need them."><Typography color="text.secondary">Open a PDF to get started.</Typography></ToolIntro>}
     <PDFSessionControls tool="Organize" active={active} hasSession={!!replacement.session} busy={replacement.isReading || isExporting} pendingName={replacement.pending?.file.name} error={replacement.error} onOpen={replacement.open} onSample={() => replacement.open(() => generateSamplePDF('multi-page-report'))} onCancel={replacement.cancel} onConfirm={replacement.confirm} />
-    {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><OrganizerWorkspace key={replacement.session.id} session={replacement.session} active={active} onExporting={setIsExporting} /></Box>}
+    {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><OrganizerWorkspace key={replacement.session.id} session={replacement.session} active={active} onExporting={setIsExporting} onOpenInPrint={onOpenInPrint} /></Box>}
   </Box>;
 }
 
-function OrganizerWorkspace({ session: { file, data }, active, onExporting }: { session: PDFSession<{ count: number }>; active: boolean; onExporting: (busy: boolean) => void }) {
+function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOpenInPrint }: { session: PDFSession<{ count: number }>; active: boolean; onExporting: (busy: boolean) => void; onOpenInPrint?: (file: File) => void }) {
   const initialPages = () => Array.from({ length: data.count }, (_, originalIndex) => ({ id: crypto.randomUUID(), originalIndex, rotation: 0 }));
   const [pageConfigs, setPageConfigs] = useState<PageConfig[]>(initialPages);
   const [isExporting, setIsExporting] = useState(false);
@@ -36,6 +36,7 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting }: { 
   const [confirm, setConfirm] = useState<{ type: 'delete'; id: string } | { type: 'reset' } | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const settingsButton = useRef<HTMLButtonElement>(null);
+  const printButtonRef = useRef<HTMLButtonElement>(null);
   const [announcement, setAnnouncement] = useState('');
   const [enableWatermark, setEnableWatermark] = useState(false);
   const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
@@ -59,102 +60,106 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting }: { 
   const insert = (index: number, blank: boolean) => {
     const next = [...pageConfigs]; next.splice(index + 1, 0, { ...next[index], id: crypto.randomUUID(), ...(blank ? { originalIndex: -1, rotation: 0 } : {}) }); setPageConfigs(next);
   };
+  const buildOrganizedPDFBytes = async () => {
+    const arrayBuffer = await file.arrayBuffer();
+    const srcDoc = await PDFDocument.load(arrayBuffer);
+    const outDoc = await PDFDocument.create();
+    const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontMono = await outDoc.embedFont(StandardFonts.Courier);
+
+    const hexToRgb = (hex: string) => {
+      const clean = hex.replace('#', '');
+      const r = parseInt(clean.slice(0, 2), 16) / 255 || 0;
+      const g = parseInt(clean.slice(2, 4), 16) / 255 || 0;
+      const b = parseInt(clean.slice(4, 6), 16) / 255 || 0;
+      return rgb(r, g, b);
+    };
+
+    const wmColor = hexToRgb(watermarkColor);
+
+    for (let i = 0; i < pageConfigs.length; i++) {
+      const cfg = pageConfigs[i];
+      let page;
+      if (cfg.originalIndex === -1) {
+        page = outDoc.addPage([595.28, 841.89]);
+      } else {
+        const [copied] = await outDoc.copyPages(srcDoc, [cfg.originalIndex]);
+        page = outDoc.addPage(copied);
+      }
+
+      const currentRot = page.getRotation().angle;
+      page.setRotation(degrees((currentRot + cfg.rotation) % 360));
+
+      const { width, height } = page.getSize();
+
+      // Apply Watermark if enabled
+      if (enableWatermark && watermarkText.trim()) {
+        const textWidth = fontBold.widthOfTextAtSize(watermarkText, watermarkSize);
+        if (watermarkDiagonal) {
+          page.drawText(watermarkText, {
+            x: width / 2 - (textWidth * Math.cos(Math.PI / 4)) / 2,
+            y: height / 2 - (textWidth * Math.sin(Math.PI / 4)) / 2,
+            size: watermarkSize,
+            font: fontBold,
+            color: wmColor,
+            opacity: watermarkOpacity,
+            rotate: degrees(45),
+          });
+        } else {
+          page.drawText(watermarkText, {
+            x: (width - textWidth) / 2,
+            y: height / 2,
+            size: watermarkSize,
+            font: fontBold,
+            color: wmColor,
+            opacity: watermarkOpacity,
+          });
+        }
+      }
+
+      // Apply Page Numbering if enabled
+      if (enablePageNumbers) {
+        let label: string;
+        if (pageNumberFormat === 'page-of') {
+          label = `Page ${i + 1} of ${pageConfigs.length}`;
+        } else if (pageNumberFormat === 'simple') {
+          label = `${i + 1}`;
+        } else {
+          label = `${batesPrefix}${String(i + 1).padStart(4, '0')}`;
+        }
+
+        const fontSize = 9.5;
+        const labelWidth = fontMono.widthOfTextAtSize(label, fontSize);
+        let x = (width - labelWidth) / 2;
+        let y = 28;
+
+        if (pageNumberPosition === 'bottom-right') {
+          x = width - labelWidth - 40;
+          y = 28;
+        } else if (pageNumberPosition === 'top-right') {
+          x = width - labelWidth - 40;
+          y = height - 32;
+        }
+
+        page.drawText(label, {
+          x,
+          y,
+          size: fontSize,
+          font: fontMono,
+          color: rgb(0.35, 0.39, 0.45),
+        });
+      }
+    }
+
+    return await outDoc.save();
+  };
+
   const exportOrganizedPDF = async () => {
     if (!file || pageConfigs.length === 0) return;
     setIsExporting(true);
     onExporting(true);
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const srcDoc = await PDFDocument.load(arrayBuffer);
-      const outDoc = await PDFDocument.create();
-      const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
-      const fontMono = await outDoc.embedFont(StandardFonts.Courier);
-
-      const hexToRgb = (hex: string) => {
-        const clean = hex.replace('#', '');
-        const r = parseInt(clean.slice(0, 2), 16) / 255 || 0;
-        const g = parseInt(clean.slice(2, 4), 16) / 255 || 0;
-        const b = parseInt(clean.slice(4, 6), 16) / 255 || 0;
-        return rgb(r, g, b);
-      };
-
-      const wmColor = hexToRgb(watermarkColor);
-
-      for (let i = 0; i < pageConfigs.length; i++) {
-        const cfg = pageConfigs[i];
-        let page;
-        if (cfg.originalIndex === -1) {
-          page = outDoc.addPage([595.28, 841.89]);
-        } else {
-          const [copied] = await outDoc.copyPages(srcDoc, [cfg.originalIndex]);
-          page = outDoc.addPage(copied);
-        }
-
-        const currentRot = page.getRotation().angle;
-        page.setRotation(degrees((currentRot + cfg.rotation) % 360));
-
-        const { width, height } = page.getSize();
-
-        // Apply Watermark if enabled
-        if (enableWatermark && watermarkText.trim()) {
-          const textWidth = fontBold.widthOfTextAtSize(watermarkText, watermarkSize);
-          if (watermarkDiagonal) {
-            page.drawText(watermarkText, {
-              x: width / 2 - (textWidth * Math.cos(Math.PI / 4)) / 2,
-              y: height / 2 - (textWidth * Math.sin(Math.PI / 4)) / 2,
-              size: watermarkSize,
-              font: fontBold,
-              color: wmColor,
-              opacity: watermarkOpacity,
-              rotate: degrees(45),
-            });
-          } else {
-            page.drawText(watermarkText, {
-              x: (width - textWidth) / 2,
-              y: height / 2,
-              size: watermarkSize,
-              font: fontBold,
-              color: wmColor,
-              opacity: watermarkOpacity,
-            });
-          }
-        }
-
-        // Apply Page Numbering if enabled
-        if (enablePageNumbers) {
-          let label = '';
-          if (pageNumberFormat === 'page-of') {
-            label = `Page ${i + 1} of ${pageConfigs.length}`;
-          } else if (pageNumberFormat === 'simple') {
-            label = `${i + 1}`;
-          } else {
-            label = `${batesPrefix}${String(i + 1).padStart(4, '0')}`;
-          }
-
-          const fontSize = 9.5;
-          const labelWidth = fontMono.widthOfTextAtSize(label, fontSize);
-          let x = (width - labelWidth) / 2;
-          let y = 28;
-
-          if (pageNumberPosition === 'bottom-right') {
-            x = width - labelWidth - 40;
-            y = 28;
-          } else if (pageNumberPosition === 'top-right') {
-            x = width - labelWidth - 40;
-            y = height - 32;
-          }
-
-          page.drawText(label, {
-            x,
-            y,
-            size: fontSize,
-            font: fontMono,
-            color: rgb(0.35, 0.39, 0.45),
-          });
-        }
-      }
-
-      const savedBytes = await outDoc.save();
+      const savedBytes = await buildOrganizedPDFBytes();
       const blob = new Blob([savedBytes as BlobPart], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -174,11 +179,39 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting }: { 
     }
   };
 
+  const pendingPrintFileRef = useRef<File | null>(null);
+
+  useEffect(() => {
+    if (isExporting || !pendingPrintFileRef.current) return;
+    const nextFile = pendingPrintFileRef.current;
+    pendingPrintFileRef.current = null;
+    printButtonRef.current?.focus();
+    onOpenInPrint?.(nextFile);
+  }, [isExporting, onOpenInPrint]);
+
+  const printOrganizedPDF = async () => {
+    if (!file || pageConfigs.length === 0 || !onOpenInPrint) return;
+    setIsExporting(true);
+    onExporting(true);
+    try {
+      const savedBytes = await buildOrganizedPDFBytes();
+      pendingPrintFileRef.current = new File([savedBytes as BlobPart], `organized_${file.name}`, { type: 'application/pdf' });
+    } catch (err) {
+      pendingPrintFileRef.current = null;
+      console.error('Error preparing organized PDF for print:', err);
+      setToast({ message: 'Failed to prepare organized PDF for printing.', severity: 'error' });
+    } finally {
+      setIsExporting(false);
+      onExporting(false);
+    }
+  };
+
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
     <Box><Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{file.name}</Typography><Typography color="text.secondary">{pageConfigs.length} pages</Typography></Box>
     <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: 1, position: 'sticky', top: 0, zIndex: 2 }}>
       <Button ref={settingsButton} variant="outlined" aria-expanded={settings} onClick={() => setSettings(true)}>Page settings</Button>
       <Button variant="contained" disabled={isExporting} onClick={exportOrganizedPDF}>{isExporting ? 'Preparing PDF…' : 'Download organized PDF'}</Button>
+      {onOpenInPrint && <Button ref={printButtonRef} variant="outlined" startIcon={<PrintOutlined />} disabled={isExporting} onClick={printOrganizedPDF}>Print…</Button>}
     </Paper>
     {toast && <Alert severity={toast.severity} onClose={() => setToast(null)}>{toast.message}</Alert>}
     <Typography role="status" className="sr-only">{announcement}</Typography>

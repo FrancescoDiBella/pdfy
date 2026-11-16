@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import type { RefObject } from 'react';
 import { Box, IconButton, Tooltip, Button, TextField, CircularProgress, Menu, MenuItem, Divider, Dialog, DialogTitle, DialogContent, DialogActions, ListItemIcon } from '@mui/material';
-import { ArrowBack, Undo, Redo, MoreVert, ChevronLeft, ChevronRight, ZoomIn, DownloadOutlined, WidgetsOutlined, Tune, Gesture, ApprovalOutlined, NoteAddOutlined, DeleteOutlined, ClearAll, PaletteOutlined, FolderOpenOutlined } from '@mui/icons-material';
+import { ArrowBack, Undo, Redo, MoreVert, ChevronLeft, ChevronRight, ZoomIn, DownloadOutlined, WidgetsOutlined, Tune, Gesture, ApprovalOutlined, NoteAddOutlined, DeleteOutlined, ClearAll, PaletteOutlined, FolderOpenOutlined, PrintOutlined } from '@mui/icons-material';
 import AppearanceControl from '../AppearanceControl';
 
 interface Props {
   actionsRef: RefObject<HTMLButtonElement | null>;
   docTitle: string; onTitleChange: (value: string) => void;
   onOpenPDF: () => void; onNewPDF: () => void;
-  onExport: () => void; onClear: () => void; onBack: () => void; busy: boolean; exporting: boolean;
+  onExport: () => void; onPrint: () => void; onClear: () => void; onBack: () => void; busy: boolean; exporting: boolean;
   onAddPage: () => void; onDeletePage: () => void; numPages: number;
   canUndo: boolean; canRedo: boolean; onUndo: () => void; onRedo: () => void;
   onOpenSignature: () => void; onOpenStamp: () => void;
@@ -36,6 +36,7 @@ export default function TopNavigationBar({ actionsRef, ...props }: Props) {
         <IconButton ref={actionsRef} aria-label="Document actions" aria-haspopup="menu" aria-expanded={!!anchor} disabled={props.busy} onClick={event => setAnchor(event.currentTarget)}><MoreVert /></IconButton>
       </Box>
       <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+        <MenuItem disabled={props.busy} onClick={() => action(props.onPrint)}><ListItemIcon><PrintOutlined /></ListItemIcon>Print PDF…</MenuItem>
         <MenuItem disabled={props.busy} onClick={() => action(props.onOpenPDF)}><ListItemIcon><FolderOpenOutlined /></ListItemIcon>Open another PDF</MenuItem>
         <MenuItem disabled={props.busy} onClick={() => action(props.onNewPDF)}><ListItemIcon><NoteAddOutlined /></ListItemIcon>New blank document</MenuItem>
         <Divider />

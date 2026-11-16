@@ -13,6 +13,7 @@ PDFy Studio is a powerful, local-first web application that provides a comprehen
   - Add customizable text boxes, interactive shapes (rectangles), and images.
   - Drag, drop, and resize elements anywhere on the PDF page.
   - Seamlessly export your creations into standard PDF files.
+- 🖨️ **Smart Print Studio**: Prepare N-up handouts, saddle-stitch booklets, odd/even manual duplex subsets, custom margins/scaling, and grayscale or dark-slide ink-saver layouts for any OS-known printer (`window.print()`), or download the print-ready PDF ([print guide](docs/print-feature.md)).
 - 🔒 **Privacy-First (100% Local)**: Unlike many online PDF tools, PDFy Studio processes everything client-side in your browser. No files are ever uploaded to a remote server.
 
 ## 🛠️ Tech Stack
