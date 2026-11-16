@@ -7,7 +7,7 @@ PDFy Studio is a powerful, local-first web application that provides a comprehen
 - 📄 **PDF Viewer**: Smoothly render and view PDF documents with built-in zoom controls.
 - 🔗 **PDF Merger**: Easily combine multiple PDF files into a single contiguous document.
 - ✂️ **PDF Splitter**: Visually select pages from a PDF and extract them into a new file.
-- 📝 **Form Filler**: Automatically detect interactive form fields and fill them out in a convenient sidebar.
+- 📝 **Form Filler**: Automatically detect interactive form fields (text, checkboxes, radio groups, dropdowns, option lists), preview live edits, flatten values permanently, or send directly to Print ([forms guide](docs/forms-feature.md)).
 - 🖌️ **Advanced Visual Editor**:
   - Create completely blank PDFs from scratch.
   - Add customizable text boxes, interactive shapes (rectangles), and images.

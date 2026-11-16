@@ -7,7 +7,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import {
   DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
-  InfoOutlined, PrintOutlined, PermMediaOutlined, Menu as MenuIcon, Close, LockOutlined,
+  InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, Menu as MenuIcon, Close, LockOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import PDFMerger from './components/PDFMerger';
@@ -15,17 +15,19 @@ import PDFSplitter from './components/PDFSplitter';
 import PDFOrganizer from './components/PDFOrganizer';
 import PDFInspector from './components/PDFInspector';
 import PDFPrinter from './components/PDFPrinter';
+import PDFForms from './components/PDFForms';
 import PDFConverter from './components/PDFConverter';
 import AdvancedEditor from './components/AdvancedEditor';
 import AppearanceControl from './components/AppearanceControl';
 
-export type ViewMode = 'view' | 'edit' | 'organize' | 'merge' | 'split' | 'convert' | 'print' | 'inspect';
+export type ViewMode = 'view' | 'edit' | 'forms' | 'organize' | 'merge' | 'split' | 'convert' | 'print' | 'inspect';
 type Session = { file: File | null; version: number };
 type Handoff = { mode: 'edit' | 'organize' | 'print'; file: File };
 
 const navItems = [
   { mode: 'view', label: 'Read', title: 'Read PDF', description: 'Open a document, find your page, and take the next step.', icon: <DescriptionOutlined /> },
   { mode: 'edit', label: 'Edit', title: 'Edit PDF', description: 'Add text, drawings, and signatures.', icon: <EditOutlined /> },
+  { mode: 'forms', label: 'Forms', title: 'Fill forms', description: 'Detect fillable PDF fields, enter values, and flatten copies.', icon: <AssignmentOutlined /> },
   { mode: 'organize', label: 'Organize', title: 'Organize pages', description: 'Reorder, rotate, and watermark your pages.', icon: <DashboardCustomizeOutlined /> },
   { mode: 'merge', label: 'Merge', title: 'Merge PDFs', description: 'Bring your documents together in the right order.', icon: <MergeType /> },
   { mode: 'split', label: 'Split', title: 'Split PDF', description: 'Choose the pages you need and save them separately.', icon: <CallSplit /> },
@@ -140,6 +142,8 @@ export default function App() {
               const session = sessions[item.mode]!;
               const content = item.mode === 'view' ? (
                 <PDFViewer activeFile={sharedFile} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} />
+              ) : item.mode === 'forms' ? (
+                <PDFForms initialFile={session.file} active={viewMode === 'forms'} onOpenInPrint={file => openInTool('print', file)} onOpenInEditor={file => openInTool('edit', file)} />
               ) : item.mode === 'convert' ? (
                 <PDFConverter initialFile={session.file} active={viewMode === 'convert'} onOpenInPrint={file => openInTool('print', file)} onOpenInEditor={file => openInTool('edit', file)} />
               ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} onOpenInPrint={file => openInTool('print', file)} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : item.mode === 'print' ? <PDFPrinter initialFile={session.file} active={viewMode === 'print'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
