@@ -44,11 +44,14 @@ test('merges PDFs directly into Organize, appends another PDF, reorders, deletes
   // Jump page 1 directly to Position 3 via the mobile-friendly Move-to-position menu (widths become 300, 240, 200)
   await organizeTool.getByRole('button', { name: 'Move page 1 to position…', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Position 3', exact: true }).click();
+  await expect(page.locator('.MuiPopover-root')).toHaveCount(0);
   await expect(organizeTool.getByRole('heading', { name: /Page 3 · Source 1/ })).toBeVisible();
 
   // Touch-drag page 1 grip onto page 2 card (widths become 240, 300, 200)
   const handle1 = organizeTool.getByTestId('organizer-drag-handle-1');
-  const card2Box = (await organizeTool.locator('[data-organize-page-id]').nth(1).boundingBox())!;
+  const card2 = organizeTool.locator('[data-organize-page-id]').nth(1);
+  await card2.scrollIntoViewIfNeeded();
+  const card2Box = (await card2.boundingBox())!;
   const targetX = card2Box.x + card2Box.width / 2;
   const targetY = card2Box.y + card2Box.height / 2;
   await handle1.dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 1, clientX: targetX, clientY: targetY });
