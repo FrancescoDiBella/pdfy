@@ -14,6 +14,7 @@ PDFy Studio is a powerful, local-first web application that provides a comprehen
   - Drag, drop, and resize elements anywhere on the PDF page.
   - Seamlessly export your creations into standard PDF files.
 - 🖨️ **Smart Print Studio**: Prepare N-up handouts, saddle-stitch booklets, odd/even manual duplex subsets, custom margins/scaling, and grayscale or dark-slide ink-saver layouts for any OS-known printer (`window.print()`), or download the print-ready PDF ([print guide](docs/print-feature.md)).
+- 🗜️ **Offline PDF Compressor**: Shrink heavy PDFs with Lossless object-stream cleanup or Balanced/Maximum DPI + JPEG compression, grayscale toggle, Before/After byte savings, and live visual quality preview ([compress guide](docs/compress-feature.md)).
 - 🖼️ **Images ↔ PDF Converter**: Build multi-page PDFs from PNG/JPEG/WebP photos with reorder, rotate, paper layout, and B&W scan filtering, or export PDF pages as PNG/JPEG images ([convert guide](docs/convert-feature.md)).
 - 🔒 **Privacy-First (100% Local)**: Unlike many online PDF tools, PDFy Studio processes everything client-side in your browser. No files are ever uploaded to a remote server.
 

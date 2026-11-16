@@ -7,7 +7,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import {
   DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
-  InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, Menu as MenuIcon, Close, LockOutlined,
+  InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, CompressOutlined, Menu as MenuIcon, Close, LockOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import PDFMerger from './components/PDFMerger';
@@ -17,10 +17,11 @@ import PDFInspector from './components/PDFInspector';
 import PDFPrinter from './components/PDFPrinter';
 import PDFForms from './components/PDFForms';
 import PDFConverter from './components/PDFConverter';
+import PDFCompressor from './components/PDFCompressor';
 import AdvancedEditor from './components/AdvancedEditor';
 import AppearanceControl from './components/AppearanceControl';
 
-export type ViewMode = 'view' | 'edit' | 'forms' | 'organize' | 'merge' | 'split' | 'convert' | 'print' | 'inspect';
+export type ViewMode = 'view' | 'edit' | 'forms' | 'organize' | 'merge' | 'split' | 'convert' | 'compress' | 'print' | 'inspect';
 type Session = { file: File | null; version: number };
 type Handoff = { mode: 'edit' | 'organize' | 'print'; file: File };
 
@@ -32,6 +33,7 @@ const navItems = [
   { mode: 'merge', label: 'Merge', title: 'Merge PDFs', description: 'Bring your documents together in the right order.', icon: <MergeType /> },
   { mode: 'split', label: 'Split', title: 'Split PDF', description: 'Choose the pages you need and save them separately.', icon: <CallSplit /> },
   { mode: 'convert', label: 'Convert', title: 'Convert images & PDFs', description: 'Build PDFs from photos/scans or export PDF pages as PNG and JPEG images.', icon: <PermMediaOutlined /> },
+  { mode: 'compress', label: 'Compress', title: 'Compress PDF', description: 'Shrink PDF file size offline, inspect output clarity, and compare byte savings.', icon: <CompressOutlined /> },
   { mode: 'print', label: 'Print', title: 'Print PDF', description: 'Prepare N-up handouts, booklets, and ink-saver sheets for your OS printer.', icon: <PrintOutlined /> },
   { mode: 'inspect', label: 'Info', title: 'Document info', description: 'Review and update the details stored in your PDF.', icon: <InfoOutlined /> },
 ] as const;
@@ -146,6 +148,8 @@ export default function App() {
                 <PDFForms initialFile={session.file} active={viewMode === 'forms'} onOpenInPrint={file => openInTool('print', file)} onOpenInEditor={file => openInTool('edit', file)} />
               ) : item.mode === 'convert' ? (
                 <PDFConverter initialFile={session.file} active={viewMode === 'convert'} onOpenInPrint={file => openInTool('print', file)} onOpenInEditor={file => openInTool('edit', file)} />
+              ) : item.mode === 'compress' ? (
+                <PDFCompressor initialFile={session.file} active={viewMode === 'compress'} onOpenInPrint={file => openInTool('print', file)} />
               ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} onOpenInPrint={file => openInTool('print', file)} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : item.mode === 'print' ? <PDFPrinter initialFile={session.file} active={viewMode === 'print'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
               return (
                 <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
