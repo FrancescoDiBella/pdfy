@@ -41,7 +41,7 @@ export async function drawEditorElements(doc: PDFDocument, elements: EditorEleme
         const remaining = Math.max(0, availableWidth - font.widthOfTextAtSize(line, size));
         const align = element.textAlign === 'center' ? remaining / 2 : element.textAlign === 'right' ? remaining : 0;
         const baseline = toPDFPoint(textPoint(element, { x: padding + align / scale, y: padding + (element.fontSize ?? 16) + index * lineHeight }), geometry);
-        page.drawText(line, { ...baseline, size, font, color: color(element.strokeColor || '#0F172A'), opacity, rotate: degrees(geometry.rotation - (element.textRotation ?? 0)) });
+        page.drawText(line, { ...baseline, size, font, color: color(element.strokeColor || '#1A1916'), opacity, rotate: degrees(geometry.rotation - (element.textRotation ?? 0)) });
       }
       page.pushOperators(popGraphicsState());
     } else if (element.type === 'image' && element.src) {
@@ -50,14 +50,14 @@ export async function drawEditorElements(doc: PDFDocument, elements: EditorEleme
     } else if (element.type === 'draw' && element.points) {
       for (let index = 1; index < element.points.length; index++) {
         const previous = element.points[index - 1]; const point = element.points[index];
-        page.drawLine({ start: toPDFPoint({ x: element.x + previous.x, y: element.y + previous.y }, geometry), end: toPDFPoint({ x: element.x + point.x, y: element.y + point.y }, geometry), thickness: (element.strokeWidth ?? 3) * scale, color: color(element.strokeColor || '#0F172A'), opacity });
+        page.drawLine({ start: toPDFPoint({ x: element.x + previous.x, y: element.y + previous.y }, geometry), end: toPDFPoint({ x: element.x + point.x, y: element.y + point.y }, geometry), thickness: (element.strokeWidth ?? 3) * scale, color: color(element.strokeColor || '#1A1916'), opacity });
       }
     } else if (element.type === 'circle') {
       const center = toPDFPoint({ x: element.x + element.width / 2, y: element.y + element.height / 2 }, geometry);
       const sideways = geometry.rotation === 90 || geometry.rotation === 270;
-      page.drawEllipse({ ...center, xScale: (sideways ? height : width) / 2, yScale: (sideways ? width : height) / 2, color: color(element.fillColor || '#6366F1'), borderColor: color(element.fillColor || '#6366F1'), borderWidth: (element.strokeWidth ?? 2) * scale, opacity: element.opacity ?? .35 });
+      page.drawEllipse({ ...center, xScale: (sideways ? height : width) / 2, yScale: (sideways ? width : height) / 2, color: color(element.fillColor || '#1D4E68'), borderColor: color(element.fillColor || '#1D4E68'), borderWidth: (element.strokeWidth ?? 2) * scale, opacity: element.opacity ?? .35 });
     } else {
-      const fill = color(element.fillColor || (element.type === 'highlight' ? '#FACC15' : element.type === 'redact' ? '#000000' : '#6366F1'));
+      const fill = color(element.fillColor || (element.type === 'highlight' ? '#FACC15' : element.type === 'redact' ? '#000000' : '#1D4E68'));
       page.drawRectangle({ ...bottom, width, height, rotate, color: fill, borderColor: fill, borderWidth: element.type === 'highlight' || element.type === 'redact' ? 0 : (element.strokeWidth ?? 2) * scale, opacity: element.type === 'redact' ? 1 : element.opacity ?? (element.type === 'highlight' ? .4 : .35) });
     }
   }

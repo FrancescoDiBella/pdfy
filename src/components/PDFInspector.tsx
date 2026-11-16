@@ -60,7 +60,7 @@ function InfoWorkspace({ session: { file, data }, onExporting }: { session: PDFS
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
         <Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{file.name}</Typography>
-        <Typography color="text.secondary">{(file.size / 1024).toFixed(1)} KB · {data.pages.length} pages</Typography>
+        <Typography color="text.secondary" className="tabular-nums">{(file.size / 1024).toFixed(1)} KB · {data.pages.length} pages</Typography>
       </Paper>
       {feedback && <Alert severity={feedback.severity}>{feedback.message}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 3fr) minmax(0, 2fr)' }, gap: 2, minWidth: 0 }}>
@@ -75,25 +75,156 @@ function InfoWorkspace({ session: { file, data }, onExporting }: { session: PDFS
             <Button variant="outlined" disabled={isExporting} onClick={() => download(true)}>Download without these fields</Button>
           </Box>
           <Divider />
-          <Box component="dl" sx={{ m: 0, overflowWrap: 'anywhere' }}>
-            <Typography component="dt" color="text.secondary">Created</Typography><Typography component="dd" sx={{ m: 0, mb: 1 }}>{data.creationDate}</Typography>
-            <Typography component="dt" color="text.secondary">Last modified in the source file</Typography><Typography component="dd" sx={{ m: 0 }}>{data.modificationDate}</Typography>
+          <Box
+            component="dl"
+            sx={{
+              m: 0,
+              display: 'grid',
+              gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(160px, auto) minmax(0, 1fr)' },
+              rowGap: 1.25,
+              columnGap: 2.5,
+              alignItems: 'baseline',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            <Typography component="dt" variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Created</Typography>
+            <Typography component="dd" variant="body2" className="tabular-nums" sx={{ m: 0 }}>{data.creationDate}</Typography>
+            <Typography component="dt" variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>Last modified in the source file</Typography>
+            <Typography component="dd" variant="body2" className="tabular-nums" sx={{ m: 0 }}>{data.modificationDate}</Typography>
           </Box>
         </Paper>
         <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0, alignSelf: 'start' }}>
           <Typography variant="h2" sx={{ mb: 1 }}>Page dimensions</Typography>
           <Typography color="text.secondary" sx={{ mb: 2 }}>72 points equal one inch. Sizes describe the source pages before rotation.</Typography>
-          <Box role="region" aria-label="Page dimensions" tabIndex={0} sx={{ maxHeight: 500, overflow: 'auto', pr: 1 }}>
-            {data.pages.map(page => (
-              <Box key={page.number} sx={{ py: 1.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
-                <Typography component="h3" sx={{ fontWeight: 600 }}>Page {page.number}</Typography>
-                <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)', gap: 0.5, overflowWrap: 'anywhere' }}>
-                  <Typography component="dt" color="text.secondary">Points</Typography><Typography component="dd" sx={{ m: 0 }}>{page.width.toFixed(1)} × {page.height.toFixed(1)}</Typography>
-                  <Typography component="dt" color="text.secondary">Millimeters</Typography><Typography component="dd" sx={{ m: 0 }}>{(page.width * 25.4 / 72).toFixed(1)} × {(page.height * 25.4 / 72).toFixed(1)}</Typography>
-                  <Typography component="dt" color="text.secondary">Rotation</Typography><Typography component="dd" sx={{ m: 0 }}>{page.rotation}°</Typography>
-                </Box>
-              </Box>
-            ))}
+          <Box
+            role="region"
+            aria-label="Page dimensions"
+            tabIndex={0}
+            className="pdfy-scroll-region"
+            sx={{
+              maxHeight: 500,
+              maxWidth: '100%',
+              overflow: 'auto',
+              containerType: 'inline-size',
+            }}
+          >
+            <Box
+              component="table"
+              sx={{
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: 0,
+                fontVariantNumeric: 'tabular-nums',
+                fontSize: '0.875rem',
+                '& thead th': {
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                  bgcolor: 'background.paper',
+                  color: 'text.secondary',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  textAlign: 'left',
+                  py: 1,
+                  px: 1,
+                  borderBottom: '2px solid',
+                  borderColor: 'divider',
+                  whiteSpace: 'nowrap',
+                },
+                '& thead th:not(:first-of-type), & tbody td': {
+                  textAlign: 'right',
+                },
+                '& tbody th': {
+                  textAlign: 'left',
+                  fontWeight: 650,
+                  color: 'text.primary',
+                  py: 1.25,
+                  px: 1,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  whiteSpace: 'nowrap',
+                },
+                '& tbody td': {
+                  color: 'text.primary',
+                  py: 1.25,
+                  px: 1,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  whiteSpace: 'nowrap',
+                },
+                '& tbody tr:last-child th, & tbody tr:last-child td': {
+                  borderBottom: 0,
+                },
+                '& tbody tr:hover': {
+                  bgcolor: 'action.hover',
+                },
+                '@container (width < 340px)': {
+                  '&, & thead, & tbody, & tr, & th, & td': {
+                    display: 'block',
+                  },
+                  '& thead': {
+                    display: 'none',
+                  },
+                  '& tbody tr': {
+                    py: 1.25,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                  },
+                  '& tbody tr:last-child': {
+                    borderBottom: 0,
+                  },
+                  '& tbody th': {
+                    borderBottom: 0,
+                    py: 0,
+                    px: 0,
+                    pb: 0.75,
+                    fontSize: '0.9375rem',
+                  },
+                  '& tbody td': {
+                    borderBottom: 0,
+                    py: 0.25,
+                    px: 0,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 1.5,
+                    textAlign: 'right',
+                  },
+                  '& tbody td::before': {
+                    color: 'text.secondary',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                  },
+                  '& tbody td:nth-of-type(1)::before': {
+                    content: '"Points"',
+                  },
+                  '& tbody td:nth-of-type(2)::before': {
+                    content: '"Millimeters"',
+                  },
+                  '& tbody td:nth-of-type(3)::before': {
+                    content: '"Rotation"',
+                  },
+                },
+              }}
+            >
+              <thead>
+                <tr>
+                  <th scope="col">Page</th>
+                  <th scope="col">Points</th>
+                  <th scope="col">Millimeters</th>
+                  <th scope="col">Rotation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.pages.map(page => (
+                  <tr key={page.number}>
+                    <th scope="row">Page {page.number}</th>
+                    <td>{page.width.toFixed(1)} × {page.height.toFixed(1)}</td>
+                    <td>{(page.width * 25.4 / 72).toFixed(1)} × {(page.height * 25.4 / 72).toFixed(1)}</td>
+                    <td>{page.rotation}°</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Box>
           </Box>
         </Paper>
       </Box>

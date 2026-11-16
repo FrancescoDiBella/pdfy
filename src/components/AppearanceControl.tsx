@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { useColorScheme } from '@mui/material/styles';
-import { BrightnessAutoOutlined, LightModeOutlined, DarkModeOutlined, Check } from '@mui/icons-material';
+import { BrightnessAutoOutlined, LightModeOutlined, DarkModeOutlined, Check, ExpandMore } from '@mui/icons-material';
 
 const choices = [
   { value: 'system', label: 'System', icon: <BrightnessAutoOutlined fontSize="small" /> },
@@ -18,10 +18,18 @@ export default function AppearanceControl() {
   return (
     <>
       <Button
-        id={buttonId} color="inherit" startIcon={selected.icon}
-        aria-label={`Appearance: ${selected.label}`} aria-haspopup="menu"
-        aria-expanded={Boolean(anchor)} aria-controls={anchor ? menuId : undefined}
+        id={buttonId}
+        variant="outlined"
+        size="small"
+        color="inherit"
+        startIcon={selected.icon}
+        endIcon={<ExpandMore fontSize="small" />}
+        aria-label={`Appearance: ${selected.label}`}
+        aria-haspopup="menu"
+        aria-expanded={Boolean(anchor)}
+        aria-controls={anchor ? menuId : undefined}
         onClick={event => setAnchor(event.currentTarget)}
+        sx={{ borderColor: 'divider', color: 'text.primary', borderRadius: 99 }}
       >
         {selected.label}
       </Button>

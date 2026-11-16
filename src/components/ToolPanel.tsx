@@ -10,13 +10,27 @@ export default function ToolPanel({ open, title, onClose, children, disableResto
   return (
     <Drawer anchor={wide ? 'right' : 'bottom'} open={open} onClose={onClose} ModalProps={{ disableRestoreFocus }} slotProps={{ transition: { onExited: onClosed }, paper: {
       role: 'dialog', 'aria-label': title, 'aria-modal': true,
-      sx: { width: wide ? 360 : '100%', maxWidth: '100%', height, maxHeight: height, top: viewport.top + viewport.height - height, bottom: 'auto', borderRadius: wide ? 0 : '20px 20px 0 0', bgcolor: 'background.paper', color: 'text.primary', pb: 'env(safe-area-inset-bottom)' },
+      sx: {
+        width: wide ? 360 : '100%',
+        maxWidth: '100%',
+        height,
+        maxHeight: height,
+        top: viewport.top + viewport.height - height,
+        bottom: 'auto',
+        borderRadius: wide ? 0 : '20px 20px 0 0',
+        borderLeft: wide ? 1 : 0,
+        borderTop: wide ? 0 : 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        color: 'text.primary',
+        pb: 'env(safe-area-inset-bottom)',
+      },
     } }}>
       <Box sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}>
         <Typography variant="h2">{title}</Typography>
         <IconButton autoFocus aria-label={`Close ${title.toLowerCase()}`} onClick={onClose}><Close /></IconButton>
       </Box>
-      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', overscrollBehavior: 'contain' }}>{children}</Box>
+      <Box className="pdfy-scroll-region" sx={{ flex: 1, minHeight: 0, overflow: 'auto', overscrollBehavior: 'contain' }}>{children}</Box>
     </Drawer>
   );
 }

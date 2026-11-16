@@ -1,6 +1,6 @@
 import { useId, useRef } from 'react';
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
-import { FolderOpenOutlined, AutoFixHigh } from '@mui/icons-material';
+import { FolderOpenOutlined, ArticleOutlined } from '@mui/icons-material';
 
 interface Props {
   tool: string;
@@ -24,7 +24,7 @@ export default function PDFSessionControls({ tool, active, hasSession, busy, pen
   const descriptionId = useId();
   return (
     <>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
         <Button ref={openButton} variant="contained" startIcon={<FolderOpenOutlined />} disabled={busy} onClick={() => input.current?.click()}>
           {busy ? 'Please wait…' : hasSession ? 'Open another PDF' : 'Open PDF'}
         </Button>
@@ -37,7 +37,7 @@ export default function PDFSessionControls({ tool, active, hasSession, busy, pen
             onOpen(file);
           }
         }} />
-        <Button variant="outlined" startIcon={<AutoFixHigh />} disabled={busy} onClick={event => {
+        <Button variant="outlined" startIcon={<ArticleOutlined />} disabled={busy} onClick={event => {
           trigger.current = event.currentTarget;
           confirmed.current = false;
           onSample();

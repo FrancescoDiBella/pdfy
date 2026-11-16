@@ -131,7 +131,7 @@ export function resolveSelectedPages(
   }
 
   if (options.reverseOrder) {
-    pages = [...pages].reverse();
+    pages = pages.toReversed();
   }
   return pages;
 }

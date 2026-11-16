@@ -40,7 +40,7 @@ function SplitWorkspace({ session: { file, data }, onExporting }: { session: PDF
   const { pageCount } = data;
 
   const select = (pages: number[]) => {
-    const next = [...pages].sort((a, b) => a - b);
+    const next = pages.toSorted((a, b) => a - b);
     setSelected(next);
     setRange(next.map(index => index + 1).join(', '));
     setRangeError('');
@@ -94,7 +94,7 @@ function SplitWorkspace({ session: { file, data }, onExporting }: { session: PDF
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
         <Box>
           <Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{file.name}</Typography>
-          <Typography role="status" color="text.secondary">{selected.length} of {pageCount} pages selected</Typography>
+          <Typography role="status" color="text.secondary" className="tabular-nums">{selected.length} of {pageCount} pages selected</Typography>
         </Box>
         <TextField label="Page range" placeholder="1-3, 5" value={range} onChange={event => changeRange(event.target.value)} error={!!rangeError} helperText={rangeError || 'Use page numbers or ranges, such as 1-3, 5.'} fullWidth disabled={isExporting} />
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -108,15 +108,55 @@ function SplitWorkspace({ session: { file, data }, onExporting }: { session: PDF
         </Box>
       </Paper>
       {feedback && <Alert severity={feedback.severity}>{feedback.message}</Alert>}
-      <Box sx={{ p: { xs: 1, sm: 2 }, border: 1, borderColor: 'divider', bgcolor: 'action.hover', borderRadius: 2, '& .split-pages': { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 2 } }}>
+      <Box className="pdfy-workbench-mat pdfy-scroll-region" sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, '& .split-pages': { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 2 } }}>
         <Document file={file} options={pdfDocumentOptions} className="split-pages" loading={<CircularProgress aria-label="Loading page previews" />} error={<Alert severity="warning">Previews could not be displayed. You can still select pages by number and download them.</Alert>}>
-          {Array.from({ length: pageCount }, (_, index) => (
-            <Box key={index} component="button" type="button" aria-label={`Page ${index + 1}`} aria-pressed={selected.includes(index)} disabled={isExporting} onClick={() => select(selected.includes(index) ? selected.filter(page => page !== index) : [...selected, index])}
-              sx={{ minWidth: 0, p: 1.5, border: 2, borderColor: selected.includes(index) ? 'primary.main' : 'divider', borderRadius: 2, bgcolor: selected.includes(index) ? 'action.selected' : 'background.paper', color: 'text.primary', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-              <Typography component="span" sx={{ fontWeight: 600 }}>Page {index + 1} · {selected.includes(index) ? 'Selected' : 'Not selected'}</Typography>
-              <Box component="span" aria-hidden="true" sx={{ bgcolor: '#FFFFFF', maxWidth: '100%', overflow: 'hidden' }}><Page pageNumber={index + 1} width={160} renderTextLayer={false} renderAnnotationLayer={false} /></Box>
-            </Box>
-          ))}
+          {Array.from({ length: pageCount }, (_, index) => {
+            const isSelected = selected.includes(index);
+            return (
+              <Box
+                key={index}
+                component="button"
+                type="button"
+                aria-label={`Page ${index + 1}`}
+                aria-pressed={isSelected}
+                disabled={isExporting}
+                onClick={() => select(isSelected ? selected.filter(page => page !== index) : [...selected, index])}
+                className="pdfy-page-tile pdfy-card-interactive"
+                sx={{
+                  minWidth: 0,
+                  p: 1.5,
+                  border: 2,
+                  borderColor: isSelected ? 'primary.main' : 'divider',
+                  borderRadius: 2,
+                  bgcolor: 'background.paper',
+                  boxShadow: isSelected ? theme => `0 0 0 1px ${theme.palette.primary.main}` : 'none',
+                  color: 'text.primary',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 1,
+                }}
+              >
+                <Typography component="span" className="tabular-nums" sx={{ fontWeight: 600, fontSize: '0.875rem', color: isSelected ? 'primary.main' : 'text.primary' }}>
+                  Page {index + 1} · {isSelected ? 'Selected' : 'Not selected'}
+                </Typography>
+                <Box
+                  component="span"
+                  aria-hidden="true"
+                  sx={{
+                    bgcolor: '#FFFFFF',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.14)',
+                    '& .react-pdf__Page__canvas': { display: 'block', maxWidth: '100%', height: 'auto !important' },
+                  }}
+                >
+                  <Page pageNumber={index + 1} width={160} renderTextLayer={false} renderAnnotationLayer={false} />
+                </Box>
+              </Box>
+            );
+          })}
         </Document>
       </Box>
     </>

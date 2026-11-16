@@ -22,7 +22,7 @@ import {
   AddPhotoAlternateOutlined,
   ArrowDownward,
   ArrowUpward,
-  AutoFixHigh,
+  ArticleOutlined,
   DeleteOutlined,
   DownloadOutlined,
   DragIndicator,
@@ -72,26 +72,26 @@ async function createSampleImageFile(): Promise<File> {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas unavailable.');
 
-  ctx.fillStyle = '#F7F8FC';
+  ctx.fillStyle = '#F6F3EC';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = '#1E2440';
+  ctx.fillStyle = '#1A1916';
   ctx.fillRect(0, 0, canvas.width, 130);
 
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = '#FFFEFA';
   ctx.font = 'bold 34px sans-serif';
   ctx.fillText('SAMPLE FIELD RECEIPT', 48, 72);
-  ctx.fillStyle = '#B8BEDD';
+  ctx.fillStyle = '#CFC7B6';
   ctx.font = '20px sans-serif';
   ctx.fillText('Offline Camera Scan · Generated Locally', 48, 106);
 
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = '#FFFEFA';
   ctx.fillRect(48, 175, canvas.width - 96, 680);
-  ctx.strokeStyle = '#CBD5E1';
+  ctx.strokeStyle = '#CFC7B6';
   ctx.lineWidth = 2;
   ctx.strokeRect(48, 175, canvas.width - 96, 680);
 
-  ctx.fillStyle = '#202336';
+  ctx.fillStyle = '#1A1916';
   ctx.font = 'bold 24px sans-serif';
   ctx.fillText('Checklist Itemized Summary', 80, 232);
 
@@ -102,14 +102,14 @@ async function createSampleImageFile(): Promise<File> {
     '04. Ready for Edit, Organize, or OS Print ...... OK',
   ];
   ctx.font = '20px monospace';
-  ctx.fillStyle = '#334155';
+  ctx.fillStyle = '#1D4E68';
   lines.forEach((line, idx) => {
     ctx.fillText(line, 80, 305 + idx * 54);
   });
 
-  ctx.fillStyle = '#5145CD';
+  ctx.fillStyle = '#B43C18';
   ctx.fillRect(80, 560, 220, 64);
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = '#FFFEFA';
   ctx.font = 'bold 22px sans-serif';
   ctx.fillText('VERIFIED SCAN', 108, 600);
 
@@ -380,7 +380,7 @@ function ImagesToPDFTab({
         />
         <Button
           variant="outlined"
-          startIcon={<AutoFixHigh />}
+          startIcon={<ArticleOutlined />}
           disabled={isBusy}
           onClick={() => void addImages(async () => [await createSampleImageFile()])}
         >
@@ -407,7 +407,7 @@ function ImagesToPDFTab({
         >
           <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-              <Typography variant="h2">Image queue ({items.length})</Typography>
+              <Typography variant="h2" className="tabular-nums">Image queue ({items.length})</Typography>
               <Typography variant="body2" color="text.secondary">Drag or use arrows to reorder pages</Typography>
             </Box>
 
@@ -417,6 +417,7 @@ function ImagesToPDFTab({
                   key={item.id}
                   component="li"
                   variant="outlined"
+                  className="pdfy-page-tile pdfy-card-interactive"
                   draggable={!isBusy}
                   onDragStart={event => handleDragStart(event, item.id)}
                   onDragOver={event => {
@@ -433,19 +434,18 @@ function ImagesToPDFTab({
                     flexWrap: 'wrap',
                     gap: 1.5,
                     minWidth: 0,
-                    borderColor: dropTargetId === item.id ? 'primary.main' : 'divider',
+                    borderColor: dropTargetId === item.id ? 'primary.main' : undefined,
                     bgcolor: draggedId === item.id ? 'action.selected' : 'background.paper',
                   }}
                 >
                   <DragIndicator sx={{ color: 'text.secondary', display: { xs: 'none', sm: 'block' } }} />
                   <Box
+                    className="pdfy-workbench-mat"
                     sx={{
                       width: 64,
                       height: 64,
                       borderRadius: 1,
-                      border: 1,
-                      borderColor: 'divider',
-                      bgcolor: '#FFFFFF',
+                      p: 0.5,
                       display: 'grid',
                       placeItems: 'center',
                       overflow: 'hidden',
@@ -457,19 +457,21 @@ function ImagesToPDFTab({
                       src={item.previewUrl}
                       alt={`Preview of ${item.name}`}
                       sx={{
+                        display: 'block',
                         maxWidth: '100%',
                         maxHeight: '100%',
                         objectFit: 'contain',
+                        bgcolor: '#FFFFFF',
                         transform: `rotate(${item.rotation}deg)`,
                         filter: scanFilter === 'document-bw' ? 'grayscale(100%) contrast(140%)' : 'none',
                       }}
                     />
                   </Box>
                   <Box sx={{ flex: '1 1 140px', minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
+                    <Typography className="tabular-nums" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
                       {index + 1}. {item.name}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" className="tabular-nums">
                       {item.width} × {item.height} px · {item.rotation}°
                     </Typography>
                   </Box>
@@ -768,7 +770,7 @@ function PDFToImagesWorkspace({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{file.name}</Typography>
-            <Typography role="status" color="text.secondary">
+            <Typography role="status" color="text.secondary" className="tabular-nums">
               {data.pageCount} source {data.pageCount === 1 ? 'page' : 'pages'} · {rangeValidation.count} selected to render
             </Typography>
           </Box>
@@ -777,6 +779,7 @@ function PDFToImagesWorkspace({
             startIcon={isRendering ? <CircularProgress size={18} color="inherit" /> : <ImageOutlined />}
             disabled={isRendering || !!rangeValidation.error}
             onClick={handleRender}
+            sx={{ minWidth: { sm: 215 } }}
           >
             {isRendering ? progressText : 'Render page images'}
           </Button>
@@ -792,7 +795,7 @@ function PDFToImagesWorkspace({
               value={rangeMode}
               onChange={(_, val) => { if (val) setRangeMode(val); }}
             >
-              <ToggleButton value="all">All pages ({data.pageCount})</ToggleButton>
+              <ToggleButton value="all" className="tabular-nums">All pages ({data.pageCount})</ToggleButton>
               <ToggleButton value="custom">Custom range</ToggleButton>
             </ToggleButtonGroup>
             {rangeMode === 'custom' && (
@@ -837,7 +840,7 @@ function PDFToImagesWorkspace({
 
         {format === 'image/jpeg' && (
           <Box sx={{ maxWidth: 340 }}>
-            <Typography variant="body2">JPEG quality: {jpegQuality}%</Typography>
+            <Typography variant="body2" className="tabular-nums">JPEG quality: {jpegQuality}%</Typography>
             <Slider
               aria-label="JPEG quality"
               min={50}
@@ -858,21 +861,33 @@ function PDFToImagesWorkspace({
       {rendered.length > 0 && (
         <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-            <Typography variant="h3">Rendered images ({rendered.length})</Typography>
+            <Typography variant="h3" className="tabular-nums">Rendered images ({rendered.length})</Typography>
             {rendered.length > 1 && (
-              <Button variant="outlined" startIcon={<DownloadOutlined />} onClick={downloadAll}>
+              <Button variant="outlined" startIcon={<DownloadOutlined />} onClick={downloadAll} className="tabular-nums">
                 Download all ({rendered.length})
               </Button>
             )}
           </Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))', gap: 2 }}>
             {rendered.map(item => (
-              <Paper key={item.filename} variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
-                <Box sx={{ bgcolor: '#FFFFFF', borderRadius: 1, border: 1, borderColor: 'divider', overflow: 'hidden', display: 'grid', placeItems: 'center', height: 180 }}>
-                  <Box component="img" src={item.previewUrl} alt={`Page ${item.pageNumber}`} sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              <Paper key={item.filename} variant="outlined" className="pdfy-page-tile pdfy-card-interactive" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                <Box className="pdfy-workbench-mat" sx={{ borderRadius: 1, overflow: 'hidden', display: 'grid', placeItems: 'center', height: 180, p: 1 }}>
+                  <Box
+                    component="img"
+                    src={item.previewUrl}
+                    alt={`Page ${item.pageNumber}`}
+                    sx={{
+                      display: 'block',
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      bgcolor: '#FFFFFF',
+                      boxShadow: '0 2px 8px rgba(26, 25, 22, 0.14)',
+                    }}
+                  />
                 </Box>
-                <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>Page {item.pageNumber}</Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography className="tabular-nums" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>Page {item.pageNumber}</Typography>
+                <Typography variant="caption" color="text.secondary" className="tabular-nums">
                   {item.width} × {item.height} px · {(item.blob.size / 1024).toFixed(1)} KB
                 </Typography>
                 <Button variant="outlined" size="small" startIcon={<DownloadOutlined />} onClick={() => downloadImage(item)}>

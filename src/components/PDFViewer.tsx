@@ -107,7 +107,7 @@ export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEdit
               ['Download', 'Save your work before you leave.'],
             ].map(([title, description], index) => (
               <Box component="li" key={title} sx={{ display: 'flex', gap: 1.5 }}>
-                <Typography aria-hidden="true" sx={{ color: 'primary.main', fontWeight: 700 }}>{index + 1}.</Typography>
+                <Typography aria-hidden="true" className="tabular-nums" sx={{ color: 'primary.main', fontWeight: 700 }}>{index + 1}.</Typography>
                 <Box><Typography variant="body2" sx={{ fontWeight: 700 }}>{title}</Typography><Typography variant="body2" color="text.secondary">{description}</Typography></Box>
               </Box>
             ))}
@@ -120,7 +120,7 @@ export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEdit
               <DescriptionOutlined color="primary" />
               <Box sx={{ flex: 1, minWidth: 150, overflowWrap: 'anywhere' }}>
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>{file.name}</Typography>
-                <Typography variant="caption" color="text.secondary">{numPages} {numPages === 1 ? 'page' : 'pages'} · View changes do not modify the file</Typography>
+                <Typography variant="caption" color="text.secondary" className="tabular-nums">{numPages} {numPages === 1 ? 'page' : 'pages'} · View changes do not modify the file</Typography>
               </Box>
               <Button variant="outlined" disabled={isOpening} startIcon={<FolderOpenOutlined />} onClick={() => fileInput.current?.click()}>Open another PDF</Button>
             </Box>
@@ -129,7 +129,7 @@ export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEdit
               <Box role="group" aria-label="View controls" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Tooltip title="Page thumbnails"><IconButton aria-label="Page thumbnails" aria-pressed={showThumbnails} onClick={() => setShowThumbnails(value => !value)} color={showThumbnails ? 'primary' : 'default'}><ViewSidebarOutlined /></IconButton></Tooltip>
                 <IconButton aria-label="Zoom out" disabled={scale <= 0.5} onClick={() => setScale(value => Math.max(0.5, value - 0.25))}><ZoomOut /></IconButton>
-                <Button aria-label={`${Math.round(scale * 100)}% zoom, fit page width`} onClick={() => setScale(1)} sx={{ minWidth: 60, px: 1 }}>{Math.round(scale * 100)}%</Button>
+                <Button aria-label={`${Math.round(scale * 100)}% zoom, fit page width`} onClick={() => setScale(1)} className="tabular-nums" sx={{ minWidth: 60, px: 1 }}>{Math.round(scale * 100)}%</Button>
                 <IconButton aria-label="Zoom in" disabled={scale >= 2.5} onClick={() => setScale(value => Math.min(2.5, value + 0.25))}><ZoomIn /></IconButton>
                 <IconButton aria-label="Rotate view clockwise" onClick={() => setRotation(value => (value + 90) % 360)}><RotateRight /></IconButton>
               </Box>
@@ -142,20 +142,20 @@ export default function PDFViewer({ activeFile: file, onFileLoaded, onOpenInEdit
           </Paper>
           <Box sx={{ flex: 1, minHeight: 320, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
             {showThumbnails && (
-              <Paper variant="outlined" sx={{ width: { xs: '100%', sm: 160 }, flexShrink: 0, overflow: 'auto', maxHeight: { xs: 200, sm: 600 }, p: 1.5 }}>
+              <Paper variant="outlined" className="pdfy-scroll-region" sx={{ width: { xs: '100%', sm: 160 }, flexShrink: 0, overflow: 'auto', maxHeight: { xs: 200, sm: 600 }, p: 1.5 }}>
                 <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} loading="" error="" className="reader-thumbnails">
                   <Box sx={{ display: 'flex', flexDirection: { xs: 'row', sm: 'column' }, gap: 1.5 }}>
                     {Array.from({ length: numPages }, (_, index) => (
                       <Box component="button" key={index} aria-label={`Go to page ${index + 1}`} aria-current={activePage === index + 1 ? 'page' : undefined} onClick={() => scrollToPage(index + 1)} sx={{ p: 0.5, borderRadius: 1.5, border: '2px solid', borderColor: activePage === index + 1 ? 'primary.main' : 'divider', bgcolor: 'background.paper', color: 'text.primary', cursor: 'pointer', flexShrink: 0 }}>
                         <ViewerPage pageNumber={index + 1} width={110} viewRotation={rotation} renderTextLayer={false} renderAnnotationLayer={false} />
-                        <Typography variant="caption" component="span">Page {index + 1}</Typography>
+                        <Typography variant="caption" component="span" className="tabular-nums">Page {index + 1}</Typography>
                       </Box>
                     ))}
                   </Box>
                 </Document>
               </Paper>
             )}
-            <Box ref={viewport} role="region" aria-label="PDF pages" tabIndex={0} sx={{ flex: 1, minWidth: 0, overflow: 'auto', maxHeight: '70dvh', minHeight: 320, p: 2, borderRadius: 2, bgcolor: 'action.hover', border: 1, borderColor: 'divider' }}>
+            <Box ref={viewport} role="region" aria-label="PDF pages" tabIndex={0} className="pdfy-workbench-mat pdfy-scroll-region" sx={{ flex: 1, minWidth: 0, overflow: 'auto', maxHeight: '70dvh', minHeight: 320, p: 2, borderRadius: 2 }}>
               <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} onLoadSuccess={({ numPages: count }) => setNumPages(count)} onLoadError={() => setError('This PDF could not be displayed. Try opening another PDF.')} loading={<CircularProgress aria-label="Loading PDF pages" />} error="" >
                 {Array.from({ length: numPages }, (_, index) => (
                   <Box id={`viewer-page-${index + 1}`} tabIndex={-1} aria-label={`Page ${index + 1}`} key={index} onClick={() => setActivePage(index + 1)} sx={{ mb: 3, mx: 'auto', width: 'max-content', boxShadow: '0 4px 20px rgba(0,0,0,0.14)', bgcolor: '#FFFFFF' }}>

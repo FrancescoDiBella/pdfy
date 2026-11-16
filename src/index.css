@@ -1,14 +1,115 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+:root {
+  color-scheme: light dark;
+  --pdfy-paper: #FFFEFA;
+  --pdfy-canvas: #F6F3EC;
+  --pdfy-mat-bg: #EAE4D7;
+  --pdfy-mat-dot: #CFC7B6;
+  --pdfy-border: #CFC7B6;
+  --pdfy-accent: #B43C18;
+  --pdfy-ink: #1A1916;
+  --pdfy-ink-muted: #544E43;
+  --pdfy-scrollbar-track: #ECE7DC;
+  --pdfy-scrollbar-thumb: #767063;
+  accent-color: var(--pdfy-accent);
+  scrollbar-color: var(--pdfy-scrollbar-thumb) var(--pdfy-scrollbar-track);
 }
 
-html, body, #root { height: 100%; }
-body { margin: 0; -webkit-font-smoothing: antialiased; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-.editor-document { width: max-content; min-width: 100%; }
-[hidden] { display: none !important; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pdfy-paper: #1D1B18;
+    --pdfy-canvas: #131210;
+    --pdfy-mat-bg: #0F0E0C;
+    --pdfy-mat-dot: #2E2B24;
+    --pdfy-border: #464137;
+    --pdfy-accent: #F08B5E;
+    --pdfy-ink: #F4EFE6;
+    --pdfy-ink-muted: #BFB7A8;
+    --pdfy-scrollbar-track: #181613;
+    --pdfy-scrollbar-thumb: #8E8677;
+  }
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --pdfy-paper: #FFFEFA;
+  --pdfy-canvas: #F6F3EC;
+  --pdfy-mat-bg: #EAE4D7;
+  --pdfy-mat-dot: #CFC7B6;
+  --pdfy-border: #CFC7B6;
+  --pdfy-accent: #B43C18;
+  --pdfy-ink: #1A1916;
+  --pdfy-ink-muted: #544E43;
+  --pdfy-scrollbar-track: #ECE7DC;
+  --pdfy-scrollbar-thumb: #767063;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --pdfy-paper: #1D1B18;
+  --pdfy-canvas: #131210;
+  --pdfy-mat-bg: #0F0E0C;
+  --pdfy-mat-dot: #2E2B24;
+  --pdfy-border: #464137;
+  --pdfy-accent: #F08B5E;
+  --pdfy-ink: #F4EFE6;
+  --pdfy-ink-muted: #BFB7A8;
+  --pdfy-scrollbar-track: #181613;
+  --pdfy-scrollbar-thumb: #8E8677;
+}
+
+html, body, #root {
+  box-sizing: border-box;
+  height: 100%;
+}
+
+html *,
+html *::before,
+html *::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+::selection {
+  background-color: var(--pdfy-accent);
+  color: var(--pdfy-paper);
+}
+
+@supports (color: color-mix(in oklab, white, black)) {
+  ::selection {
+    background-color: color-mix(in oklab, var(--pdfy-accent) 24%, transparent);
+    color: var(--pdfy-ink);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.editor-document {
+  width: max-content;
+  min-width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
 
 .skip-link {
   position: fixed;
@@ -18,11 +119,16 @@ body { margin: 0; -webkit-font-smoothing: antialiased; }
   transform: translateY(-180%);
   padding: 12px 20px;
   border-radius: 8px;
-  background: #FFFFFF;
-  color: #30268C;
+  border: 2px solid var(--pdfy-accent);
+  background: var(--pdfy-paper);
+  color: var(--pdfy-ink);
   font-weight: 600;
+  text-decoration: none;
 }
-.skip-link:focus { transform: none; }
+
+.skip-link:focus {
+  transform: none;
+}
 
 .pdf-grid-document .react-pdf__Document {
   display: grid;
@@ -30,17 +136,71 @@ body { margin: 0; -webkit-font-smoothing: antialiased; }
   gap: 20px;
 }
 
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+.mono,
+.tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
+.mono {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* Recessed cutting-mat surface exclusively for active document/preview frames */
+.pdfy-workbench-mat {
+  background-color: var(--pdfy-mat-bg);
+  background-image: radial-gradient(circle, var(--pdfy-mat-dot) 1px, transparent 1px);
+  background-size: 18px 18px;
+  border: 1px solid var(--pdfy-border);
+  overscroll-behavior: contain;
+}
+
+.pdfy-scroll-region {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.pdfy-page-tile {
+  content-visibility: auto;
+  contain-intrinsic-size: 240px 320px;
+}
+
+.pdfy-page-tile:focus-visible,
+.pdfy-card-interactive:hover:not(:disabled) {
+  border-color: var(--pdfy-accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pdfy-panel-enter {
+    transition: opacity 160ms cubic-bezier(0.2, 0, 0, 1), translate 160ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  @starting-style {
+    .pdfy-panel-enter {
+      opacity: 0;
+      translate: 0 6px;
+    }
+  }
+  .pdfy-card-interactive {
+    transition: border-color 140ms cubic-bezier(0.2, 0, 0, 1), box-shadow 140ms cubic-bezier(0.2, 0, 0, 1), translate 140ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .pdfy-card-interactive:hover:not(:disabled) {
+    translate: 0 -1px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .pdfy-workbench-mat {
+    background-image: none;
+    border-color: CanvasText;
+  }
+  :focus-visible {
+    outline: 3px solid Highlight !important;
+    outline-offset: 3px;
   }
 }
 
