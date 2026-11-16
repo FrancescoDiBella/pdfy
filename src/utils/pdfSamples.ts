@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { buildSampleFillableFormBytes } from './pdfForms';
 
-export type SampleTemplateId = 'executive-brief' | 'service-invoice' | 'multi-page-report';
+export type SampleTemplateId = 'executive-brief' | 'service-invoice' | 'multi-page-report' | 'application-form';
 
 export interface SampleTemplateInfo {
   id: SampleTemplateId;
@@ -32,9 +33,21 @@ export const SAMPLE_TEMPLATES: SampleTemplateInfo[] = [
     pages: 4,
     filename: 'Quarterly_Operations_Dossier.pdf',
   },
+  {
+    id: 'application-form',
+    title: 'Workspace Access Request Form',
+    subtitle: 'Interactive fillable PDF form with text, dropdown, radio, and checkbox fields',
+    pages: 1,
+    filename: 'Workspace_Access_Request_Form.pdf',
+  },
 ];
 
 export async function generateSamplePDF(templateId: SampleTemplateId = 'executive-brief'): Promise<File> {
+  if (templateId === 'application-form') {
+    const info = SAMPLE_TEMPLATES.find(t => t.id === 'application-form')!;
+    const bytes = await buildSampleFillableFormBytes();
+    return new File([bytes as BlobPart], info.filename, { type: 'application/pdf' });
+  }
   const doc = await PDFDocument.create();
   const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
