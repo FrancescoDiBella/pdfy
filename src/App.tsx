@@ -7,7 +7,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import {
   DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
-  InfoOutlined, PrintOutlined, Menu as MenuIcon, Close, LockOutlined,
+  InfoOutlined, PrintOutlined, CompressOutlined, Menu as MenuIcon, Close, LockOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import PDFMerger from './components/PDFMerger';
@@ -15,10 +15,11 @@ import PDFSplitter from './components/PDFSplitter';
 import PDFOrganizer from './components/PDFOrganizer';
 import PDFInspector from './components/PDFInspector';
 import PDFPrinter from './components/PDFPrinter';
+import PDFCompressor from './components/PDFCompressor';
 import AdvancedEditor from './components/AdvancedEditor';
 import AppearanceControl from './components/AppearanceControl';
 
-export type ViewMode = 'view' | 'edit' | 'organize' | 'merge' | 'split' | 'print' | 'inspect';
+export type ViewMode = 'view' | 'edit' | 'organize' | 'merge' | 'split' | 'compress' | 'print' | 'inspect';
 type Session = { file: File | null; version: number };
 type Handoff = { mode: 'edit' | 'organize' | 'print'; file: File };
 
@@ -28,6 +29,7 @@ const navItems = [
   { mode: 'organize', label: 'Organize', title: 'Organize pages', description: 'Reorder, rotate, and watermark your pages.', icon: <DashboardCustomizeOutlined /> },
   { mode: 'merge', label: 'Merge', title: 'Merge PDFs', description: 'Bring your documents together in the right order.', icon: <MergeType /> },
   { mode: 'split', label: 'Split', title: 'Split PDF', description: 'Choose the pages you need and save them separately.', icon: <CallSplit /> },
+  { mode: 'compress', label: 'Compress', title: 'Compress PDF', description: 'Shrink PDF file size offline, inspect output clarity, and compare byte savings.', icon: <CompressOutlined /> },
   { mode: 'print', label: 'Print', title: 'Print PDF', description: 'Prepare N-up handouts, booklets, and ink-saver sheets for your OS printer.', icon: <PrintOutlined /> },
   { mode: 'inspect', label: 'Info', title: 'Document info', description: 'Review and update the details stored in your PDF.', icon: <InfoOutlined /> },
 ] as const;
@@ -138,6 +140,8 @@ export default function App() {
               const session = sessions[item.mode]!;
               const content = item.mode === 'view' ? (
                 <PDFViewer activeFile={sharedFile} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} />
+              ) : item.mode === 'compress' ? (
+                <PDFCompressor initialFile={session.file} active={viewMode === 'compress'} onOpenInPrint={file => openInTool('print', file)} />
               ) : item.mode === 'merge' ? <PDFMerger /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} onOpenInPrint={file => openInTool('print', file)} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : item.mode === 'print' ? <PDFPrinter initialFile={session.file} active={viewMode === 'print'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
               return (
                 <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
