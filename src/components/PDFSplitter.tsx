@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Paper, TextField, Typography } from '@mui/material';
 import { CallSplit, DownloadOutlined } from '@mui/icons-material';
 import { PDFDocument } from 'pdf-lib';
@@ -18,9 +18,22 @@ async function prepare(file: File) {
   return { pageCount: pdf.getPageCount() };
 }
 
-export default function PDFSplitter({ active = true }: { active?: boolean }) {
-  const replacement = usePDFSession(prepare);
+export default function PDFSplitter({
+  initialFile,
+  active = true,
+  onSessionChange,
+}: {
+  initialFile?: File | null;
+  active?: boolean;
+  onSessionChange?: (active: boolean) => void;
+}) {
+  const replacement = usePDFSession(prepare, initialFile);
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    onSessionChange?.(!!replacement.session);
+  }, [replacement.session, onSessionChange]);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       {!replacement.session && <ToolIntro icon={<CallSplit />} title="Keep the pages you need" description="Open a PDF, choose pages, and download them together or as separate files."><Typography color="text.secondary">Your original file stays unchanged.</Typography></ToolIntro>}

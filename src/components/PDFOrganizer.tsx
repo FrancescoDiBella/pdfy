@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, Menu, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Tooltip } from '@mui/material';
-import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined, PrintOutlined, MergeType, DragIndicator, SwapVert } from '@mui/icons-material';
+import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined, PrintOutlined, CompressOutlined, EditOutlined, MergeType, DragIndicator, SwapVert } from '@mui/icons-material';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfDocumentOptions } from '../utils/pdfRendering';
@@ -20,17 +20,50 @@ async function prepare(file: File) {
   return { count: pdf.getPageCount() };
 }
 
-export default function PDFOrganizer({ initialFile, active = true, onOpenInPrint }: { initialFile?: File | null; active?: boolean; onOpenInPrint?: (file: File) => void }) {
+export default function PDFOrganizer({
+  initialFile,
+  active = true,
+  onSessionChange,
+  onOpenInPrint,
+  onOpenInCompress,
+  onOpenInEditor,
+}: {
+  initialFile?: File | null;
+  active?: boolean;
+  onSessionChange?: (active: boolean) => void;
+  onOpenInPrint?: (file: File) => void;
+  onOpenInCompress?: (file: File) => void;
+  onOpenInEditor?: (file: File) => void;
+}) {
   const replacement = usePDFSession(prepare, initialFile);
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    onSessionChange?.(!!replacement.session);
+  }, [replacement.session, onSessionChange]);
+
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
     {!replacement.session && <ToolIntro icon={<DashboardCustomizeOutlined />} title="Put your pages in order" description="Move, rotate, copy, add another PDF, or remove pages. Add a watermark or page numbers when you need them."><Typography color="text.secondary">Open a PDF to get started, or merge multiple PDFs first.</Typography></ToolIntro>}
     <PDFSessionControls tool="Organize" active={active} hasSession={!!replacement.session} busy={replacement.isReading || isExporting} pendingName={replacement.pending?.file.name} error={replacement.error} onOpen={replacement.open} onSample={() => replacement.open(() => generateSamplePDF('multi-page-report'))} onCancel={replacement.cancel} onConfirm={replacement.confirm} />
-    {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><OrganizerWorkspace key={replacement.session.id} session={replacement.session} active={active} onExporting={setIsExporting} onOpenInPrint={onOpenInPrint} /></Box>}
+    {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><OrganizerWorkspace key={replacement.session.id} session={replacement.session} active={active} onExporting={setIsExporting} onOpenInPrint={onOpenInPrint} onOpenInCompress={onOpenInCompress} onOpenInEditor={onOpenInEditor} /></Box>}
   </Box>;
 }
 
-function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOpenInPrint }: { session: PDFSession<{ count: number }>; active: boolean; onExporting: (busy: boolean) => void; onOpenInPrint?: (file: File) => void }) {
+function OrganizerWorkspace({
+  session: { file, data },
+  active,
+  onExporting,
+  onOpenInPrint,
+  onOpenInCompress,
+  onOpenInEditor,
+}: {
+  session: PDFSession<{ count: number }>;
+  active: boolean;
+  onExporting: (busy: boolean) => void;
+  onOpenInPrint?: (file: File) => void;
+  onOpenInCompress?: (file: File) => void;
+  onOpenInEditor?: (file: File) => void;
+}) {
   const [workingFile, setWorkingFile] = useState(file);
   const [sourcePageCount, setSourcePageCount] = useState(data.count);
   const buildInitialPages = (count: number): OrganizablePage[] => Array.from({ length: count }, (_, originalIndex) => ({ id: crypto.randomUUID(), originalIndex, rotation: 0 }));
@@ -46,6 +79,8 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
   const trigger = useRef<HTMLButtonElement | null>(null);
   const settingsButton = useRef<HTMLButtonElement>(null);
   const printButtonRef = useRef<HTMLButtonElement>(null);
+  const compressButtonRef = useRef<HTMLButtonElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
   const addFileInputRef = useRef<HTMLInputElement>(null);
   const touchDragRef = useRef<{ pointerId: number; sourceId: string; targetId: string | null } | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -319,27 +354,39 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
     }
   };
 
-  const pendingPrintFileRef = useRef<File | null>(null);
+  const pendingHandoffRef = useRef<{ target: 'print' | 'compress' | 'edit'; file: File } | null>(null);
 
   useEffect(() => {
-    if (isExporting || !pendingPrintFileRef.current) return;
-    const nextFile = pendingPrintFileRef.current;
-    pendingPrintFileRef.current = null;
-    printButtonRef.current?.focus();
-    onOpenInPrint?.(nextFile);
-  }, [isExporting, onOpenInPrint]);
+    if (isExporting || !pendingHandoffRef.current) return;
+    const next = pendingHandoffRef.current;
+    pendingHandoffRef.current = null;
+    if (next.target === 'print') {
+      printButtonRef.current?.focus();
+      onOpenInPrint?.(next.file);
+    } else if (next.target === 'compress') {
+      compressButtonRef.current?.focus();
+      onOpenInCompress?.(next.file);
+    } else {
+      editButtonRef.current?.focus();
+      onOpenInEditor?.(next.file);
+    }
+  }, [isExporting, onOpenInPrint, onOpenInCompress, onOpenInEditor]);
 
-  const printOrganizedPDF = async () => {
-    if (!workingFile || pageConfigs.length === 0 || !onOpenInPrint) return;
+  const handoffOrganizedPDF = async (target: 'print' | 'compress' | 'edit') => {
+    const callback = target === 'print' ? onOpenInPrint : target === 'compress' ? onOpenInCompress : onOpenInEditor;
+    if (!workingFile || pageConfigs.length === 0 || !callback) return;
     setIsExporting(true);
     onExporting(true);
     try {
       const savedBytes = await buildOrganizedPDFBytes();
-      pendingPrintFileRef.current = new File([savedBytes as BlobPart], `organized_${workingFile.name}`, { type: 'application/pdf' });
+      pendingHandoffRef.current = {
+        target,
+        file: new File([savedBytes as BlobPart], `organized_${workingFile.name}`, { type: 'application/pdf' }),
+      };
     } catch (err) {
-      pendingPrintFileRef.current = null;
-      console.error('Error preparing organized PDF for print:', err);
-      setToast({ message: 'Failed to prepare organized PDF for printing.', severity: 'error' });
+      pendingHandoffRef.current = null;
+      console.error(`Error preparing organized PDF for ${target}:`, err);
+      setToast({ message: `Failed to prepare organized PDF for ${target}.`, severity: 'error' });
     } finally {
       setIsExporting(false);
       onExporting(false);
@@ -355,7 +402,9 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
       <input ref={addFileInputRef} aria-label="Add PDF files to organize" type="file" hidden multiple accept="application/pdf,.pdf" disabled={isBusy} onChange={handleAddPDFs} />
       <Button ref={settingsButton} variant="outlined" aria-expanded={settings} disabled={isBusy} onClick={() => setSettings(true)}>Page settings</Button>
       <Button variant="contained" disabled={isBusy} onClick={exportOrganizedPDF}>{isExporting ? 'Preparing PDF…' : 'Download organized PDF'}</Button>
-      {onOpenInPrint && <Button ref={printButtonRef} variant="outlined" startIcon={<PrintOutlined />} disabled={isBusy} onClick={printOrganizedPDF}>Print…</Button>}
+      {onOpenInPrint && <Button ref={printButtonRef} variant="outlined" startIcon={<PrintOutlined />} disabled={isBusy} onClick={() => void handoffOrganizedPDF('print')}>Print…</Button>}
+      {onOpenInCompress && <Button ref={compressButtonRef} variant="outlined" startIcon={<CompressOutlined />} disabled={isBusy} onClick={() => void handoffOrganizedPDF('compress')}>Compress…</Button>}
+      {onOpenInEditor && <Button ref={editButtonRef} variant="outlined" startIcon={<EditOutlined />} disabled={isBusy} onClick={() => void handoffOrganizedPDF('edit')}>Edit…</Button>}
     </Paper>
     {deletedUndo && (
       <Alert

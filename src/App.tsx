@@ -1,16 +1,17 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
+  Alert, Box, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-  CircularProgress, useMediaQuery,
+  CircularProgress, Snackbar, useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
   DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
-  InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, CompressOutlined, Menu as MenuIcon, Close, LockOutlined,
+  InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, CompressOutlined, Menu as MenuIcon, Close, LockOutlined, CloudUploadOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import AppearanceControl from './components/AppearanceControl';
+import { preparePDFs } from './utils/pdfMerge';
 
 const PDFMerger = lazy(() => import('./components/PDFMerger'));
 const PDFSplitter = lazy(() => import('./components/PDFSplitter'));
@@ -24,7 +25,26 @@ const AdvancedEditor = lazy(() => import('./components/AdvancedEditor'));
 
 export type ViewMode = 'view' | 'edit' | 'forms' | 'organize' | 'merge' | 'split' | 'convert' | 'compress' | 'print' | 'inspect';
 type Session = { file: File | null; version: number };
-type Handoff = { mode: 'edit' | 'organize' | 'print'; file: File };
+type HandoffMode = 'view' | 'edit' | 'forms' | 'organize' | 'split' | 'compress' | 'print' | 'inspect';
+type Handoff = { mode: HandoffMode; file: File };
+
+interface LaunchParamsLike {
+  files?: Array<{ getFile: () => Promise<File> }>;
+}
+
+interface WindowWithLaunchQueue extends Window {
+  launchQueue?: {
+    setConsumer: (consumer: (launchParams: LaunchParamsLike) => void | Promise<void>) => void;
+  };
+}
+
+function isPdfCandidate(file: File): boolean {
+  return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+}
+
+function hasDraggedFiles(event: DragEvent): boolean {
+  return Array.from(event.dataTransfer?.types ?? []).includes('Files');
+}
 
 const navItems = [
   { mode: 'view', group: 'Workspace', label: 'Read', title: 'Read PDF', description: 'Open a document, find your page, and take the next step.', icon: <DescriptionOutlined /> },
@@ -68,20 +88,43 @@ export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('view');
   const [sharedFile, setSharedFile] = useState<File | null>(null);
   const [sessions, setSessions] = useState<Partial<Record<ViewMode, Session>>>({ view: { file: null, version: 0 } });
+  const [activeDocs, setActiveDocs] = useState<Partial<Record<ViewMode, boolean>>>({});
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuSelected, setMenuSelected] = useState(false);
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [handoffConfirmed, setHandoffConfirmed] = useState(false);
+  const [fileDragActive, setFileDragActive] = useState(false);
+  const [dropNotice, setDropNotice] = useState<{ severity: 'error' | 'warning' | 'info'; message: string } | null>(null);
+  const dragDepthRef = useRef(0);
+  const mergeDropHandlerRef = useRef<((files: File[]) => void) | null>(null);
   const current = navItems.find(item => item.mode === viewMode)!;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme.palette.mode;
   }, [theme.palette.mode]);
 
-  const navigate = (mode: ViewMode) => {
+  const setToolActive = useCallback((mode: ViewMode, active: boolean) => {
+    setActiveDocs(prev => (prev[mode] === active ? prev : { ...prev, [mode]: active }));
+  }, []);
+
+  const sessionHandlers = useMemo(() => ({
+    edit: (active: boolean) => setToolActive('edit', active),
+    forms: (active: boolean) => setToolActive('forms', active),
+    organize: (active: boolean) => setToolActive('organize', active),
+    split: (active: boolean) => setToolActive('split', active),
+    compress: (active: boolean) => setToolActive('compress', active),
+    print: (active: boolean) => setToolActive('print', active),
+    inspect: (active: boolean) => setToolActive('inspect', active),
+  }), [setToolActive]);
+
+  const registerMergeDropHandler = useCallback((handler: ((files: File[]) => void) | null) => {
+    mergeDropHandlerRef.current = handler;
+  }, []);
+
+  const navigate = useCallback((mode: ViewMode) => {
     // Each tool owns a stable input snapshot. Navigation must not replace its work.
-    setSessions(previous => previous[mode] ? previous : { ...previous, [mode]: { file: sharedFile, version: 0 } });
+    setSessions(previous => previous[mode] ? previous : { ...previous, [mode]: { file: mode === 'split' ? null : sharedFile, version: 0 } });
     setViewMode(mode);
     if (menuOpen && !desktop) {
       setMenuSelected(true);
@@ -90,26 +133,159 @@ export default function App() {
       setMenuOpen(false);
       requestAnimationFrame(() => focusWorkspace(mode));
     }
-  };
+  }, [sharedFile, menuOpen, desktop]);
 
-  const openInTool = (mode: Handoff['mode'], file: File) => {
-    if (sessions[mode]) {
+  const openInTool = useCallback((mode: HandoffMode, file: File) => {
+    const hasActiveDoc = mode === 'view' ? !!sharedFile : !!activeDocs[mode];
+    if (hasActiveDoc) {
       setHandoff({ mode, file });
       setHandoffConfirmed(false);
       setConfirmOpen(true);
     } else {
-      setSessions(previous => ({ ...previous, [mode]: { file, version: 0 } }));
+      if (mode === 'view') {
+        setSharedFile(file);
+      }
+      setSessions(previous => ({
+        ...previous,
+        [mode]: { file, version: (previous[mode]?.version ?? 0) + 1 },
+      }));
       navigate(mode);
     }
-  };
+  }, [sharedFile, activeDocs, navigate]);
+
+  const openInToolRef = useRef(openInTool);
+  const viewModeRef = useRef(viewMode);
+  useEffect(() => {
+    openInToolRef.current = openInTool;
+    viewModeRef.current = viewMode;
+  });
+
+  useEffect(() => {
+    const onDragEnter = (event: DragEvent) => {
+      if (!hasDraggedFiles(event)) return;
+      event.preventDefault();
+      dragDepthRef.current += 1;
+      setFileDragActive(true);
+    };
+
+    const onDragOver = (event: DragEvent) => {
+      if (!hasDraggedFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'copy';
+      }
+      setFileDragActive(true);
+    };
+
+    const onDragLeave = (event: DragEvent) => {
+      if (!hasDraggedFiles(event)) return;
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current === 0) {
+        setFileDragActive(false);
+      }
+    };
+
+    const onWindowBlurOrDragEnd = () => {
+      dragDepthRef.current = 0;
+      setFileDragActive(false);
+    };
+
+    const onDrop = async (event: DragEvent) => {
+      if (!hasDraggedFiles(event)) return;
+      event.preventDefault();
+      dragDepthRef.current = 0;
+      setFileDragActive(false);
+      const droppedFiles = Array.from(event.dataTransfer?.files ?? []);
+      if (!droppedFiles.length) return;
+      const pdfFiles = droppedFiles.filter(isPdfCandidate);
+      if (!pdfFiles.length) {
+        setDropNotice({ severity: 'warning', message: 'Drop a PDF file (.pdf) to open it in PDFy.' });
+        return;
+      }
+
+      if (viewModeRef.current === 'merge' && mergeDropHandlerRef.current) {
+        mergeDropHandlerRef.current(pdfFiles);
+        return;
+      }
+
+      const candidate = pdfFiles[0];
+      const { accepted } = await preparePDFs([candidate]);
+      if (!accepted.length) {
+        setDropNotice({
+          severity: 'error',
+          message: `Could not open “${candidate.name}”. Choose a readable PDF with at least one page and no password protection.`,
+        });
+        return;
+      }
+
+      const targetMode: HandoffMode = viewModeRef.current === 'convert' || viewModeRef.current === 'merge'
+        ? 'view'
+        : viewModeRef.current;
+      openInToolRef.current(targetMode, accepted[0].file);
+    };
+
+    window.addEventListener('dragenter', onDragEnter);
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('dragleave', onDragLeave);
+    window.addEventListener('dragend', onWindowBlurOrDragEnd);
+    window.addEventListener('blur', onWindowBlurOrDragEnd);
+    window.addEventListener('drop', onDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', onDragEnter);
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('dragleave', onDragLeave);
+      window.removeEventListener('dragend', onWindowBlurOrDragEnd);
+      window.removeEventListener('blur', onWindowBlurOrDragEnd);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, []);
+
+  useEffect(() => {
+    const win = window as WindowWithLaunchQueue;
+    if (!win.launchQueue?.setConsumer) return;
+    win.launchQueue.setConsumer(async launchParams => {
+      const handles = launchParams.files;
+      if (!handles?.length) return;
+      try {
+        const files = await Promise.all(handles.map(handle => handle.getFile()));
+        const pdfCandidate = files.find(isPdfCandidate);
+        if (!pdfCandidate) {
+          setDropNotice({ severity: 'warning', message: 'The opened file is not a PDF document.' });
+          return;
+        }
+        const { accepted } = await preparePDFs([pdfCandidate]);
+        if (!accepted.length) {
+          setDropNotice({
+            severity: 'error',
+            message: `Could not open “${pdfCandidate.name}”. Choose a readable PDF with at least one page and no password protection.`,
+          });
+          return;
+        }
+        openInToolRef.current('view', accepted[0].file);
+      } catch {
+        setDropNotice({ severity: 'error', message: 'Could not open the launched PDF file.' });
+      }
+    });
+  }, []);
 
   const replaceSession = () => {
     if (!handoff) return;
+    if (handoff.mode === 'view') {
+      setSharedFile(handoff.file);
+    }
     setSessions(previous => ({ ...previous, [handoff.mode]: { file: handoff.file, version: (previous[handoff.mode]?.version ?? 0) + 1 } }));
     setHandoffConfirmed(true);
     setConfirmOpen(false);
     navigate(handoff.mode);
   };
+
+  const handoffLabel = navItems.find(item => item.mode === handoff?.mode)?.label ?? 'tool';
+  const dropTargetMessage = viewMode === 'merge'
+    ? 'Drop PDF(s) to add to Merge'
+    : viewMode === 'convert'
+      ? 'Drop PDF to open in Read'
+      : `Drop PDF to open in ${current.label}`;
 
   const navigation = (
     <Box className="pdfy-scroll-region" sx={{ p: 1.75, height: '100%', display: 'flex', flexDirection: 'column', gap: 1.5, overflowY: 'auto' }}>
@@ -208,14 +384,24 @@ export default function App() {
               {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
                 const session = sessions[item.mode]!;
                 const content = item.mode === 'view' ? (
-                  <PDFViewer activeFile={sharedFile} active={viewMode === 'view'} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} />
+                  <PDFViewer activeFile={sharedFile} active={viewMode === 'view'} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} />
                 ) : item.mode === 'forms' ? (
-                  <PDFForms initialFile={session.file} active={viewMode === 'forms'} onOpenInPrint={file => openInTool('print', file)} onOpenInEditor={file => openInTool('edit', file)} />
+                  <PDFForms initialFile={session.file} active={viewMode === 'forms'} onSessionChange={sessionHandlers.forms} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} onOpenInEditor={file => openInTool('edit', file)} />
                 ) : item.mode === 'convert' ? (
                   <PDFConverter initialFile={session.file} active={viewMode === 'convert'} onOpenInPrint={file => openInTool('print', file)} onOpenInEditor={file => openInTool('edit', file)} />
                 ) : item.mode === 'compress' ? (
-                  <PDFCompressor initialFile={session.file} active={viewMode === 'compress'} onOpenInPrint={file => openInTool('print', file)} />
-                ) : item.mode === 'merge' ? <PDFMerger onOpenInOrganizer={file => openInTool('organize', file)} /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} onOpenInPrint={file => openInTool('print', file)} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : item.mode === 'print' ? <PDFPrinter initialFile={session.file} active={viewMode === 'print'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
+                  <PDFCompressor initialFile={session.file} active={viewMode === 'compress'} onSessionChange={sessionHandlers.compress} onOpenInPrint={file => openInTool('print', file)} onOpenInOrganizer={file => openInTool('organize', file)} />
+                ) : item.mode === 'merge' ? (
+                  <PDFMerger onOpenInOrganizer={file => openInTool('organize', file)} onRegisterDropHandler={registerMergeDropHandler} />
+                ) : item.mode === 'organize' ? (
+                  <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} onSessionChange={sessionHandlers.organize} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} onOpenInEditor={file => openInTool('edit', file)} />
+                ) : item.mode === 'split' ? (
+                  <PDFSplitter initialFile={session.file} active={viewMode === 'split'} onSessionChange={sessionHandlers.split} />
+                ) : item.mode === 'print' ? (
+                  <PDFPrinter initialFile={session.file} active={viewMode === 'print'} onSessionChange={sessionHandlers.print} />
+                ) : (
+                  <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} onSessionChange={sessionHandlers.inspect} />
+                );
                 return (
                   <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
                     <Suspense fallback={<Box sx={{ py: 6, display: 'grid', placeItems: 'center' }}><CircularProgress aria-label={`Loading ${item.label}`} /></Box>}>
@@ -231,12 +417,67 @@ export default function App() {
       {sessions.edit && (
           <Box key={sessions.edit.version} component="main" id="editor-session" aria-label="Edit PDF" tabIndex={-1} hidden={viewMode !== 'edit'} sx={{ color: 'text.primary', minHeight: '100dvh' }}>
             <Suspense fallback={<Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}><CircularProgress aria-label="Loading Edit PDF" /></Box>}>
-              <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onBack={() => navigate('view')} onPrint={file => openInTool('print', file)} />
+              <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onSessionChange={sessionHandlers.edit} onBack={() => navigate('view')} onPrint={file => openInTool('print', file)} onCompress={file => openInTool('compress', file)} onOrganize={file => openInTool('organize', file)} />
             </Suspense>
           </Box>
       )}
+      {fileDragActive && (
+        <Box
+          aria-hidden="true"
+          data-testid="global-pdf-drop-overlay"
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: t => t.zIndex.modal + 2,
+            pointerEvents: 'none',
+            display: 'grid',
+            placeItems: 'center',
+            p: 3,
+            bgcolor: 'color-mix(in oklab, var(--pdfy-paper) 82%, transparent)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <Box
+            sx={{
+              px: 4,
+              py: 3.5,
+              borderRadius: 3,
+              border: '2px dashed',
+              borderColor: 'primary.main',
+              bgcolor: 'background.paper',
+              boxShadow: 6,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1.5,
+              textAlign: 'center',
+              maxWidth: 420,
+            }}
+          >
+            <CloudUploadOutlined color="primary" sx={{ fontSize: 40 }} />
+            <Typography variant="h2" sx={{ fontSize: '1.25rem' }}>
+              {dropTargetMessage}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Processed 100% locally in your browser.
+            </Typography>
+          </Box>
+        </Box>
+      )}
+      <Snackbar
+        open={!!dropNotice}
+        autoHideDuration={5000}
+        onClose={() => setDropNotice(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {dropNotice ? (
+          <Alert severity={dropNotice.severity} onClose={() => setDropNotice(null)} sx={{ overflowWrap: 'anywhere' }}>
+            {dropNotice.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} aria-labelledby="replace-title" aria-describedby="replace-description" disableRestoreFocus={handoffConfirmed} slotProps={{ transition: { onExited: () => { if (handoffConfirmed) focusWorkspace(viewMode); } } }}>
-        <DialogTitle id="replace-title">Replace the {handoff?.mode === 'edit' ? 'Edit' : handoff?.mode === 'organize' ? 'Organize' : 'Print'} document?</DialogTitle>
+        <DialogTitle id="replace-title">Replace the {handoffLabel} document?</DialogTitle>
         <DialogContent>
           <DialogContentText id="replace-description" sx={{ overflowWrap: 'anywhere' }}>
             Opening “{handoff?.file.name}” here will discard this tool’s current session. Download any work you want to keep first. Other tools will keep their files and changes.

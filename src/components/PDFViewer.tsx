@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import {
   FolderOpenOutlined, ZoomIn, ZoomOut, RotateRight, ViewSidebarOutlined, EditOutlined,
-  DashboardCustomizeOutlined, DescriptionOutlined, PrintOutlined, SearchOutlined, TocOutlined,
+  DashboardCustomizeOutlined, DescriptionOutlined, PrintOutlined, CompressOutlined, SearchOutlined, TocOutlined,
   KeyboardArrowUp, KeyboardArrowDown, Close, ContentCopy, DownloadOutlined,
 } from '@mui/icons-material';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -36,6 +36,7 @@ interface Props {
   onOpenInEditor: (file: File) => void;
   onOpenInOrganizer: (file: File) => void;
   onOpenInPrint?: (file: File) => void;
+  onOpenInCompress?: (file: File) => void;
 }
 
 function ViewerPage({ viewRotation, ...props }: ComponentProps<typeof Page> & { viewRotation: number }) {
@@ -50,7 +51,7 @@ function clearReaderHighlights() {
   registry?.delete('pdfy-search-active');
 }
 
-export default function PDFViewer({ activeFile: file, active = true, onFileLoaded, onOpenInEditor, onOpenInOrganizer, onOpenInPrint }: Props) {
+export default function PDFViewer({ activeFile: file, active = true, onFileLoaded, onOpenInEditor, onOpenInOrganizer, onOpenInPrint, onOpenInCompress }: Props) {
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -415,6 +416,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                 <Button variant="outlined" size="small" startIcon={<ContentCopy />} disabled={isExtractingText || !fullPlainText} onClick={() => void handleCopyText()}>Copy text</Button>
                 <Button variant="outlined" size="small" startIcon={<DownloadOutlined />} disabled={isExtractingText || !fullPlainText} onClick={handleDownloadText}>Download .txt</Button>
                 {onOpenInPrint && <Button variant="outlined" startIcon={<PrintOutlined />} onClick={() => onOpenInPrint(file)}>Print PDF</Button>}
+                {onOpenInCompress && <Button variant="outlined" startIcon={<CompressOutlined />} onClick={() => onOpenInCompress(file)}>Compress PDF</Button>}
                 <Button variant="outlined" startIcon={<DashboardCustomizeOutlined />} onClick={() => onOpenInOrganizer(file)}>Organize pages</Button>
                 <Button variant="contained" startIcon={<EditOutlined />} onClick={() => onOpenInEditor(file)}>Edit PDF</Button>
               </Box>

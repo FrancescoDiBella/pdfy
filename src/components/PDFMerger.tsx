@@ -29,7 +29,13 @@ import type { QueuedPDF } from '../utils/pdfMerge';
 
 const QUEUE_DRAG_TYPE = 'application/x-pdfy-queue-item';
 
-export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (file: File) => void }) {
+export default function PDFMerger({
+  onOpenInOrganizer,
+  onRegisterDropHandler,
+}: {
+  onOpenInOrganizer?: (file: File) => void;
+  onRegisterDropHandler?: (handler: ((files: File[]) => void) | null) => void;
+}) {
   const [queue, setQueue] = useState<QueuedPDF[]>([]);
   const [outputName, setOutputName] = useState('Merged_Document');
   const [isMerging, setIsMerging] = useState(false);
@@ -43,10 +49,19 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
   const organizeButtonRef = useRef<HTMLButtonElement>(null);
   const pendingOrganizeFileRef = useRef<File | null>(null);
   const touchDragRef = useRef<{ pointerId: number; sourceId: string; targetId: string | null } | null>(null);
+  const addFilesRef = useRef<(getFiles: () => Promise<File[]>) => Promise<void>>(async () => {});
   const isBusy = isMerging || isAdding;
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
 
   useEffect(() => () => window.clearTimeout(announcementTimer.current), []);
+
+  useEffect(() => {
+    if (!onRegisterDropHandler) return;
+    onRegisterDropHandler((files: File[]) => {
+      void addFilesRef.current(async () => files);
+    });
+    return () => onRegisterDropHandler(null);
+  }, [onRegisterDropHandler]);
 
   useEffect(() => {
     if (isMerging || !pendingOrganizeFileRef.current) return;
@@ -73,7 +88,7 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
     if (rejected.length) {
       setToast({ message: `Could not add ${rejected.join(', ')}. Use readable, unencrypted PDFs.`, severity: 'error' });
     } else if (accepted.length) {
-      setToast({ message: `Added ${accepted.length} PDF files to the merge queue.`, severity: 'info' });
+      setToast({ message: `Added ${accepted.length} ${accepted.length === 1 ? 'PDF file' : 'PDF files'} to the merge queue.`, severity: 'info' });
     }
   };
 
@@ -91,6 +106,10 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
       setIsAdding(false);
     }
   };
+
+  useEffect(() => {
+    addFilesRef.current = addFiles;
+  });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);

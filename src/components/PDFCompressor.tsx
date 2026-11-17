@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CompressOutlined,
+  DashboardCustomizeOutlined,
   DownloadOutlined,
   PrintOutlined,
   TuneOutlined,
@@ -54,14 +55,22 @@ async function prepare(file: File): Promise<PreparedCompressSession> {
 export default function PDFCompressor({
   initialFile,
   active = true,
+  onSessionChange,
   onOpenInPrint,
+  onOpenInOrganizer,
 }: {
   initialFile?: File | null;
   active?: boolean;
+  onSessionChange?: (active: boolean) => void;
   onOpenInPrint?: (file: File) => void;
+  onOpenInOrganizer?: (file: File) => void;
 }) {
   const replacement = usePDFSession(prepare, initialFile);
   const [isWorking, setIsWorking] = useState(false);
+
+  useEffect(() => {
+    onSessionChange?.(!!replacement.session);
+  }, [replacement.session, onSessionChange]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -99,6 +108,7 @@ export default function PDFCompressor({
             session={replacement.session}
             onBusyChange={setIsWorking}
             onOpenInPrint={onOpenInPrint}
+            onOpenInOrganizer={onOpenInOrganizer}
           />
         </Box>
       )}
@@ -110,10 +120,12 @@ function CompressWorkspace({
   session: { file, data },
   onBusyChange,
   onOpenInPrint,
+  onOpenInOrganizer,
 }: {
   session: PDFSession<PreparedCompressSession>;
   onBusyChange: (busy: boolean) => void;
   onOpenInPrint?: (file: File) => void;
+  onOpenInOrganizer?: (file: File) => void;
 }) {
   const { bytes, analysis } = data;
   const [options, setOptions] = useState<CompressOptions>(DEFAULT_COMPRESS_OPTIONS);
@@ -125,6 +137,7 @@ function CompressWorkspace({
 
   const previewRef = useRef<HTMLDivElement>(null);
   const printButtonRef = useRef<HTMLButtonElement>(null);
+  const organizeButtonRef = useRef<HTMLButtonElement>(null);
 
   const isCompressing = progressText !== null;
 
@@ -222,6 +235,12 @@ function CompressWorkspace({
     if (!compressedResult || !onOpenInPrint || isCompressing) return;
     printButtonRef.current?.focus();
     onOpenInPrint(new File([compressedResult.bytes as BlobPart], `compressed_${file.name}`, { type: 'application/pdf' }));
+  };
+
+  const handleOrganize = () => {
+    if (!compressedResult || !onOpenInOrganizer || isCompressing) return;
+    organizeButtonRef.current?.focus();
+    onOpenInOrganizer(new File([compressedResult.bytes as BlobPart], `compressed_${file.name}`, { type: 'application/pdf' }));
   };
 
   const pageDisplayWidth = Math.max(140, Math.min(520, previewWidth - 32));
@@ -411,6 +430,11 @@ function CompressWorkspace({
                 {onOpenInPrint && (
                   <Button ref={printButtonRef} variant="outlined" startIcon={<PrintOutlined />} disabled={isCompressing} onClick={handlePrint}>
                     Print…
+                  </Button>
+                )}
+                {onOpenInOrganizer && (
+                  <Button ref={organizeButtonRef} variant="outlined" startIcon={<DashboardCustomizeOutlined />} disabled={isCompressing} onClick={handleOrganize}>
+                    Organize…
                   </Button>
                 )}
               </Box>

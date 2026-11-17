@@ -38,6 +38,12 @@ export default defineConfig({
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        file_handlers: [
+          {
+            action: './',
+            accept: { 'application/pdf': ['.pdf'] },
+          },
+        ],
       },
       workbox: {
         // Cache application assets only. Documents stay in memory, never in CacheStorage.

@@ -24,6 +24,7 @@ import {
   AssignmentOutlined,
   ChevronLeft,
   ChevronRight,
+  CompressOutlined,
   DownloadOutlined,
   EditOutlined,
   PrintOutlined,
@@ -61,16 +62,24 @@ async function prepare(file: File): Promise<PreparedFormSession> {
 export default function PDFForms({
   initialFile,
   active = true,
+  onSessionChange,
   onOpenInPrint,
+  onOpenInCompress,
   onOpenInEditor,
 }: {
   initialFile?: File | null;
   active?: boolean;
+  onSessionChange?: (active: boolean) => void;
   onOpenInPrint?: (file: File) => void;
+  onOpenInCompress?: (file: File) => void;
   onOpenInEditor?: (file: File) => void;
 }) {
   const replacement = usePDFSession(prepare, initialFile);
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    onSessionChange?.(!!replacement.session);
+  }, [replacement.session, onSessionChange]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -108,6 +117,7 @@ export default function PDFForms({
             session={replacement.session}
             onExporting={setIsExporting}
             onOpenInPrint={onOpenInPrint}
+            onOpenInCompress={onOpenInCompress}
             onOpenInEditor={onOpenInEditor}
           />
         </Box>
@@ -120,11 +130,13 @@ function FormsWorkspace({
   session: { file, data },
   onExporting,
   onOpenInPrint,
+  onOpenInCompress,
   onOpenInEditor,
 }: {
   session: PDFSession<PreparedFormSession>;
   onExporting: (busy: boolean) => void;
   onOpenInPrint?: (file: File) => void;
+  onOpenInCompress?: (file: File) => void;
   onOpenInEditor?: (file: File) => void;
 }) {
   const { bytes, inspection } = data;
@@ -142,7 +154,8 @@ function FormsWorkspace({
   const previewRef = useRef<HTMLDivElement>(null);
   const previewSeq = useRef(0);
   const printButtonRef = useRef<HTMLButtonElement>(null);
-  const pendingPrintFileRef = useRef<File | null>(null);
+  const compressButtonRef = useRef<HTMLButtonElement>(null);
+  const pendingHandoffRef = useRef<{ target: 'print' | 'compress'; file: File } | null>(null);
 
   const valuesKey = useMemo(() => JSON.stringify(values), [values]);
   const activePreviewError = previewErrorState?.key === valuesKey ? previewErrorState.message : null;
@@ -184,12 +197,17 @@ function FormsWorkspace({
   }, [bytes, inspection.fields.length, values, valuesKey]);
 
   useEffect(() => {
-    if (isExporting || !pendingPrintFileRef.current) return;
-    const nextFile = pendingPrintFileRef.current;
-    pendingPrintFileRef.current = null;
-    printButtonRef.current?.focus();
-    onOpenInPrint?.(nextFile);
-  }, [isExporting, onOpenInPrint]);
+    if (isExporting || !pendingHandoffRef.current) return;
+    const next = pendingHandoffRef.current;
+    pendingHandoffRef.current = null;
+    if (next.target === 'print') {
+      printButtonRef.current?.focus();
+      onOpenInPrint?.(next.file);
+    } else {
+      compressButtonRef.current?.focus();
+      onOpenInCompress?.(next.file);
+    }
+  }, [isExporting, onOpenInPrint, onOpenInCompress]);
 
   const filteredFields = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -239,19 +257,23 @@ function FormsWorkspace({
     }
   };
 
-  const handleSendToPrint = async () => {
-    if (isExporting || !onOpenInPrint || !!activePreviewError) return;
+  const handleSendTo = async (target: 'print' | 'compress') => {
+    const callback = target === 'print' ? onOpenInPrint : onOpenInCompress;
+    if (isExporting || !callback || !!activePreviewError) return;
     setIsExporting(true);
     onExporting(true);
     setFeedback(null);
     try {
       const output = await applyPDFFormValues(bytes, values, { flatten: true });
-      pendingPrintFileRef.current = new File([output as BlobPart], `filled_${file.name}`, { type: 'application/pdf' });
+      pendingHandoffRef.current = {
+        target,
+        file: new File([output as BlobPart], `filled_${file.name}`, { type: 'application/pdf' }),
+      };
     } catch (err) {
-      pendingPrintFileRef.current = null;
+      pendingHandoffRef.current = null;
       setFeedback({
         severity: 'error',
-        message: err instanceof Error ? err.message : 'Could not prepare this form for printing.',
+        message: err instanceof Error ? err.message : `Could not prepare this form for ${target}.`,
       });
     } finally {
       setIsExporting(false);
@@ -291,9 +313,20 @@ function FormsWorkspace({
                   variant="outlined"
                   startIcon={<PrintOutlined />}
                   disabled={isExporting || !!activePreviewError}
-                  onClick={handleSendToPrint}
+                  onClick={() => void handleSendTo('print')}
                 >
                   Print…
+                </Button>
+              )}
+              {onOpenInCompress && (
+                <Button
+                  ref={compressButtonRef}
+                  variant="outlined"
+                  startIcon={<CompressOutlined />}
+                  disabled={isExporting || !!activePreviewError}
+                  onClick={() => void handleSendTo('compress')}
+                >
+                  Compress…
                 </Button>
               )}
             </Box>
