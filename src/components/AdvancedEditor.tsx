@@ -90,7 +90,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
 
   // Brush controls
   const isDrawMode = mode === 'draw';
-  const [drawColor, setDrawColor] = useState('#0F172A');
+  const [drawColor, setDrawColor] = useState('#1A1916');
   const [drawWidth, setDrawWidth] = useState(3);
   const [drawOpacity, setDrawOpacity] = useState(1);
 
@@ -204,7 +204,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
     const element: EditorElement = {
       id: crypto.randomUUID(), type, ...placeInView(width, height), pageIndex: currentPageIndex,
       content: type === 'text' ? 'Your text' : undefined, fontSize: 16, fontFamily: 'Helvetica', fontWeight: 400, textAlign: 'left',
-      fillColor: type === 'highlight' ? '#FACC15' : type === 'redact' ? '#000000' : '#6366F1', strokeColor: '#0F172A',
+      fillColor: type === 'highlight' ? '#FACC15' : type === 'redact' ? '#000000' : '#1D4E68', strokeColor: '#1A1916',
       strokeWidth: type === 'highlight' || type === 'redact' ? 0 : 2, opacity: type === 'highlight' ? .4 : type === 'rect' || type === 'circle' ? .35 : 1,
     };
     pushElements(previous => [...previous, element]); setSelectedId(element.id); setMode('select'); setResizing(false);
@@ -688,6 +688,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
           {...panEvents}
           inert={busy}
           role="region" aria-label="Editor document viewport"
+          className="pdfy-workbench-mat pdfy-scroll-region"
           onClick={() => { if (mode === 'select') { setSelectedId(null); setResizing(false); } }}
           sx={{
             flex: 1,
@@ -695,7 +696,8 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
             display: 'flex',
             minWidth: 0, minHeight: 0, overscrollBehavior: 'contain', pointerEvents: busy ? 'none' : 'auto',
             p: { xs: 1.5, sm: 3 },
-            bgcolor: 'action.hover', touchAction: 'pan-x pan-y pinch-zoom', cursor: mode === 'pan' ? transforming ? 'grabbing' : 'grab' : 'default',
+            border: 0,
+            touchAction: 'pan-x pan-y pinch-zoom', cursor: mode === 'pan' ? transforming ? 'grabbing' : 'grab' : 'default',
           }}
         >
           <Document
@@ -703,7 +705,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
             file={fileBlob}
             className="editor-document"
             onLoadSuccess={onDocumentLoadSuccess}
-            loading={<CircularProgress sx={{ color: '#6366F1' }} />}
+            loading={<CircularProgress color="primary" />}
           >
             <Box
               ref={pageRef}
@@ -721,7 +723,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
                 mx: 'auto', flexShrink: 0,
                 width: canvasWidth,
                 height: canvasHeight,
-                boxShadow: '0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.3)',
+                boxShadow: '0 12px 32px rgba(26, 25, 22, 0.24), 0 0 0 1px var(--pdfy-border)',
                 borderRadius: '4px',
                 overflow: 'hidden',
                 bgcolor: '#FFFFFF',
@@ -787,7 +789,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
 
                       if (isEdited) return null;
 
-                      return <Box component="button" type="button" key={idx} aria-label={`Edit text: ${item.str.slice(0, 80)}`} onClick={event => { event.stopPropagation(); editPDFText(item); }} sx={{ position: 'absolute', left, top, width: Math.max(width, 24), height: Math.max(height, 24), border: '1px dashed #6366F1', bgcolor: 'rgba(99,102,241,0.08)', cursor: 'text', p: 0 }} />;
+                      return <Box component="button" type="button" key={idx} aria-label={`Edit text: ${item.str.slice(0, 80)}`} onClick={event => { event.stopPropagation(); editPDFText(item); }} sx={{ position: 'absolute', left, top, width: Math.max(width, 24), height: Math.max(height, 24), border: '1px dashed var(--pdfy-accent)', bgcolor: 'color-mix(in oklab, var(--pdfy-accent) 10%, transparent)', cursor: 'text', p: 0 }} />;
                     })}
                 </Box>
               )}
@@ -805,7 +807,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
                     const isShape = el.type === 'rect' || el.type === 'circle' || el.type === 'highlight' || el.type === 'redact';
                     const fillHex =
                       el.fillColor ||
-                      (el.type === 'highlight' ? '#FACC15' : el.type === 'redact' ? '#000000' : '#6366F1');
+                      (el.type === 'highlight' ? '#FACC15' : el.type === 'redact' ? '#000000' : '#1D4E68');
                     const op = el.type === 'redact' ? 1 : el.opacity ?? (el.type === 'highlight' ? 0.4 : 0.35);
 
                     return (
@@ -826,7 +828,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
                               position: 'absolute', left: layout.x * zoom, top: layout.y * zoom, width: layout.width * zoom, height: layout.height * zoom, transform: `rotate(${layout.rotation}deg)`, transformOrigin: 'top left',
                               background: 'transparent',
                               border: 'none',
-                              color: el.strokeColor || '#0F172A',
+                              color: el.strokeColor || '#1A1916',
                               opacity: el.opacity ?? 1,
                               resize: 'none',
                               outline: 'none',
@@ -886,7 +888,7 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
                                   : '')
                               }
                               fill="none" vectorEffect="non-scaling-stroke"
-                              stroke={el.strokeColor || '#0F172A'}
+                              stroke={el.strokeColor || '#1A1916'}
                               strokeWidth={(el.strokeWidth || 3) * zoom}
                               strokeLinecap="round"
                               strokeLinejoin="round"

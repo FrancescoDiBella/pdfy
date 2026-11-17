@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent } from 'react';
-import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, Menu, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, Menu, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Tooltip } from '@mui/material';
 import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined, PrintOutlined, MergeType, DragIndicator, SwapVert } from '@mui/icons-material';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -347,7 +347,7 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
   };
 
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-    <Box><Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{workingFile.name}</Typography><Typography color="text.secondary">{pageConfigs.length} pages</Typography></Box>
+    <Box><Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{workingFile.name}</Typography><Typography color="text.secondary" className="tabular-nums">{pageConfigs.length} pages</Typography></Box>
     <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: 1, position: 'sticky', top: 0, zIndex: 2 }}>
       <Button variant="outlined" startIcon={isAddingPDFs ? <CircularProgress size={16} color="inherit" /> : <MergeType />} disabled={isBusy} onClick={() => addFileInputRef.current?.click()}>
         {isAddingPDFs ? 'Adding PDF…' : 'Add PDF…'}
@@ -375,6 +375,7 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
           variant="outlined"
           key={page.id}
           data-organize-page-id={page.id}
+          className="pdfy-page-tile pdfy-card-interactive"
           onDragOver={event => {
             if (isBusy || !draggedPageId || !event.dataTransfer.types.includes(PAGE_DRAG_TYPE)) return;
             event.preventDefault();
@@ -430,31 +431,102 @@ function OrganizerWorkspace({ session: { file, data }, active, onExporting, onOp
             >
               <DragIndicator fontSize="small" />
             </Box>
-            <Typography component="h3" id={`organizer-page-${page.id}`} tabIndex={-1} sx={{ fontWeight: 600, flex: 1, textAlign: 'center', overflowWrap: 'anywhere' }}>
+            <Typography component="h3" id={`organizer-page-${page.id}`} tabIndex={-1} className="tabular-nums" sx={{ fontWeight: 600, fontSize: '0.875rem', flex: 1, textAlign: 'center', overflowWrap: 'anywhere' }}>
               Page {index + 1} · {page.originalIndex === -1 ? 'Blank' : `Source ${page.originalIndex + 1}`} · {page.rotation}°
             </Typography>
-            <IconButton
-              size="small"
-              aria-label={`Move page ${index + 1} to position…`}
-              disabled={pageConfigs.length <= 1 || isBusy}
-              onClick={event => setMoveMenu({ anchorEl: event.currentTarget, pageId: page.id, index })}
-              sx={{ flexShrink: 0 }}
-            >
-              <SwapVert fontSize="small" />
-            </IconButton>
+            <Tooltip title="Move to position" describeChild>
+              <Box component="span" sx={{ display: 'inline-flex', flexShrink: 0 }}>
+                <IconButton
+                  size="small"
+                  aria-label={`Move page ${index + 1} to position…`}
+                  disabled={pageConfigs.length <= 1 || isBusy}
+                  onClick={event => setMoveMenu({ anchorEl: event.currentTarget, pageId: page.id, index })}
+                >
+                  <SwapVert fontSize="small" />
+                </IconButton>
+              </Box>
+            </Tooltip>
           </Box>
-          <Box sx={{ width: 170, height: 235, bgcolor: '#FFFFFF', overflow: 'hidden', position: 'relative', display: 'grid', placeItems: 'center' }}>
-            <Box sx={{ transform: `rotate(${page.rotation}deg)` }}>{page.originalIndex === -1 ? <Box sx={{ width: 170, height: 235 }} /> : <Page pageNumber={page.originalIndex + 1} width={170} renderTextLayer={false} renderAnnotationLayer={false} />}</Box>
-            {enableWatermark && <Typography sx={{ position: 'absolute', color: watermarkColor, opacity: watermarkOpacity, transform: watermarkDiagonal ? 'rotate(-45deg)' : 'none', fontWeight: 700, fontSize: Math.max(10, watermarkSize * 0.28), textAlign: 'center', overflowWrap: 'anywhere' }}>{watermarkText}</Typography>}
-            {enablePageNumbers && <Typography sx={{ position: 'absolute', fontSize: 9, color: '#444444', bgcolor: '#FFFFFF', bottom: pageNumberPosition.startsWith('bottom') ? 5 : 'auto', top: pageNumberPosition.startsWith('top') ? 5 : 'auto', right: pageNumberPosition.endsWith('right') ? 5 : 'auto' }}>{pageNumberFormat === 'page-of' ? `Page ${index + 1} of ${pageConfigs.length}` : pageNumberFormat === 'simple' ? index + 1 : `${batesPrefix}${String(index + 1).padStart(4, '0')}`}</Typography>}
+          <Box
+            className="pdfy-workbench-mat"
+            sx={{
+              width: '100%',
+              maxWidth: 224,
+              aspectRatio: '1 / 1',
+              borderRadius: 1.5,
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 12,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: `rotate(${page.rotation}deg)`,
+                '@media (prefers-reduced-motion: no-preference)': {
+                  transition: 'transform 160ms cubic-bezier(0.2, 0, 0, 1)',
+                },
+                '& .react-pdf__Page': {
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent !important',
+                },
+                '& .react-pdf__Page__canvas': {
+                  maxWidth: '100% !important',
+                  maxHeight: '100% !important',
+                  width: 'auto !important',
+                  height: 'auto !important',
+                  objectFit: 'contain',
+                  display: 'block',
+                  bgcolor: '#FFFFFF',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.16)',
+                },
+              }}
+            >
+              {page.originalIndex === -1 ? (
+                <Box sx={{ height: '100%', maxWidth: '100%', aspectRatio: '210 / 297', bgcolor: '#FFFFFF', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.16)' }} />
+              ) : (
+                <Page pageNumber={page.originalIndex + 1} width={180} renderTextLayer={false} renderAnnotationLayer={false} />
+              )}
+            </Box>
+            {enableWatermark && <Typography sx={{ position: 'absolute', pointerEvents: 'none', color: watermarkColor, opacity: watermarkOpacity, transform: watermarkDiagonal ? 'rotate(-45deg)' : 'none', fontWeight: 700, fontSize: Math.max(10, watermarkSize * 0.28), textAlign: 'center', overflowWrap: 'anywhere' }}>{watermarkText}</Typography>}
+            {enablePageNumbers && (
+              <Typography
+                className="tabular-nums"
+                sx={{
+                  position: 'absolute',
+                  pointerEvents: 'none',
+                  fontSize: 9,
+                  color: '#444444',
+                  bgcolor: '#FFFFFF',
+                  px: 0.5,
+                  borderRadius: 0.5,
+                  bottom: pageNumberPosition.startsWith('bottom') ? 5 : 'auto',
+                  top: pageNumberPosition.startsWith('top') ? 5 : 'auto',
+                  right: pageNumberPosition.endsWith('right') ? 5 : 'auto',
+                  left: pageNumberPosition.endsWith('right') ? 'auto' : '50%',
+                  transform: pageNumberPosition.endsWith('right') ? 'none' : 'translateX(-50%)',
+                }}
+              >
+                {pageNumberFormat === 'page-of' ? `Page ${index + 1} of ${pageConfigs.length}` : pageNumberFormat === 'simple' ? index + 1 : `${batesPrefix}${String(index + 1).padStart(4, '0')}`}
+              </Typography>
+            )}
           </Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(44px, 1fr))', gap: 1, width: '100%' }}>
-            <IconButton aria-label={`Move page ${index + 1} earlier`} disabled={index === 0 || isBusy} onClick={() => movePage(index, -1)}><ArrowBack /></IconButton>
-            <IconButton aria-label={`Rotate page ${index + 1}`} disabled={isBusy} onClick={() => rotatePage(page.id, 90)}><RotateRight /></IconButton>
-            <IconButton aria-label={`Move page ${index + 1} later`} disabled={index === pageConfigs.length - 1 || isBusy} onClick={() => movePage(index, 1)}><ArrowForward /></IconButton>
-            <IconButton aria-label={`Duplicate page ${index + 1}`} disabled={isBusy} onClick={() => insert(index, false)}><ContentCopy /></IconButton>
-            <IconButton aria-label={`Add blank after page ${index + 1}`} disabled={isBusy} onClick={() => insert(index, true)}><AddBoxOutlined /></IconButton>
-            <IconButton aria-label={`Delete page ${index + 1}`} disabled={pageConfigs.length <= 1 || isBusy} onClick={() => deletePage(index, page)}><DeleteOutlined /></IconButton>
+            <Tooltip title="Move earlier" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Move page ${index + 1} earlier`} disabled={index === 0 || isBusy} onClick={() => movePage(index, -1)}><ArrowBack /></IconButton></Box></Tooltip>
+            <Tooltip title="Rotate 90° clockwise" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Rotate page ${index + 1}`} disabled={isBusy} onClick={() => rotatePage(page.id, 90)}><RotateRight /></IconButton></Box></Tooltip>
+            <Tooltip title="Move later" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Move page ${index + 1} later`} disabled={index === pageConfigs.length - 1 || isBusy} onClick={() => movePage(index, 1)}><ArrowForward /></IconButton></Box></Tooltip>
+            <Tooltip title="Duplicate page" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Duplicate page ${index + 1}`} disabled={isBusy} onClick={() => insert(index, false)}><ContentCopy /></IconButton></Box></Tooltip>
+            <Tooltip title="Add blank page after" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Add blank after page ${index + 1}`} disabled={isBusy} onClick={() => insert(index, true)}><AddBoxOutlined /></IconButton></Box></Tooltip>
+            <Tooltip title="Delete page" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Delete page ${index + 1}`} disabled={pageConfigs.length <= 1 || isBusy} onClick={() => deletePage(index, page)}><DeleteOutlined /></IconButton></Box></Tooltip>
           </Box>
         </Paper>)}
       </Box>

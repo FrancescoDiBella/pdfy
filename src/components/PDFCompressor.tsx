@@ -14,12 +14,12 @@ import {
   Typography,
 } from '@mui/material';
 import {
-  AutoFixHigh,
   ChevronLeft,
   ChevronRight,
   CompressOutlined,
   DownloadOutlined,
   PrintOutlined,
+  TuneOutlined,
 } from '@mui/icons-material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { usePDFSession, type PDFSession } from '../hooks/usePDFSession';
@@ -236,7 +236,7 @@ function CompressWorkspace({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{file.name}</Typography>
-            <Typography role="status" color="text.secondary">
+            <Typography role="status" color="text.secondary" className="tabular-nums">
               {formatByteSize(analysis.originalBytes)} · {analysis.pageCount} {analysis.pageCount === 1 ? 'page' : 'pages'} ({formatByteSize(analysis.averageBytesPerPage)}/page)
               {analysis.formFieldCount > 0 ? ` · ${analysis.formFieldCount} form field(s)` : ''}
             </Typography>
@@ -247,6 +247,7 @@ function CompressWorkspace({
             startIcon={isCompressing ? <CircularProgress size={18} color="inherit" /> : <CompressOutlined />}
             disabled={isCompressing}
             onClick={handleCompress}
+            sx={{ minWidth: { sm: 250 } }}
           >
             {isCompressing ? progressText : compressedResult ? 'Re-optimize PDF' : 'Compress PDF'}
           </Button>
@@ -270,7 +271,7 @@ function CompressWorkspace({
       >
         <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoFixHigh color="primary" fontSize="small" />
+            <TuneOutlined color="primary" fontSize="small" />
             <Typography variant="h3">Optimization presets</Typography>
           </Box>
 
@@ -296,7 +297,7 @@ function CompressWorkspace({
             <>
               <Divider />
               <Box>
-                <Typography variant="body2">Resolution: {options.dpi} DPI</Typography>
+                <Typography variant="body2" className="tabular-nums">Resolution: {options.dpi} DPI</Typography>
                 <Slider
                   aria-label="Target resolution DPI"
                   min={72}
@@ -308,7 +309,7 @@ function CompressWorkspace({
                 />
               </Box>
               <Box>
-                <Typography variant="body2">JPEG quality: {Math.round(options.jpegQuality * 100)}%</Typography>
+                <Typography variant="body2" className="tabular-nums">JPEG quality: {Math.round(options.jpegQuality * 100)}%</Typography>
                 <Slider
                   aria-label="Compression JPEG quality"
                   min={35}
@@ -357,18 +358,16 @@ function CompressWorkspace({
           )}
         </Paper>
 
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, position: { lg: 'sticky' }, top: { lg: 16 } }}>
           <Typography variant="h3">Size comparison & output preview</Typography>
 
           {!compressedResult ? (
             <Box
+              className="pdfy-workbench-mat"
               sx={{
                 minHeight: 260,
                 p: 3,
                 borderRadius: 2,
-                bgcolor: 'action.hover',
-                border: 1,
-                borderColor: 'divider',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -386,10 +385,10 @@ function CompressWorkspace({
               {savings && (
                 <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                    <Typography variant="body2">
+                    <Typography variant="body2" className="tabular-nums">
                       Original: <strong>{formatByteSize(savings.originalBytes)}</strong>
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" className="tabular-nums">
                       Output: <strong>{formatByteSize(savings.compressedBytes)}</strong> ({savings.shrank ? `${savings.percentSaved}% saved` : `+${Math.abs(savings.percentSaved)}%`})
                     </Typography>
                   </Box>
@@ -399,14 +398,14 @@ function CompressWorkspace({
                     color={savings.shrank ? 'primary' : 'warning'}
                     aria-label={`Compressed output is ${ratioPercent}% of original file size`}
                   />
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" className="tabular-nums">
                     Profile: {compressedResult.optionsLabel}
                   </Typography>
                 </Paper>
               )}
 
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                <Button variant="contained" startIcon={<DownloadOutlined />} disabled={isCompressing} onClick={handleDownload}>
+                <Button variant="contained" startIcon={<DownloadOutlined />} disabled={isCompressing} onClick={handleDownload} sx={{ minWidth: { sm: 225 } }}>
                   Download compressed PDF
                 </Button>
                 {onOpenInPrint && (
@@ -423,7 +422,7 @@ function CompressWorkspace({
                     <IconButton aria-label="Previous compressed page" disabled={safePage <= 1} onClick={() => setPreviewPage(p => Math.max(1, p - 1))}>
                       <ChevronLeft />
                     </IconButton>
-                    <Typography role="status" variant="body2" sx={{ minWidth: 84, textAlign: 'center' }}>
+                    <Typography role="status" variant="body2" className="tabular-nums" sx={{ minWidth: 84, textAlign: 'center', fontWeight: 600 }}>
                       Page {safePage} of {analysis.pageCount}
                     </Typography>
                     <IconButton aria-label="Next compressed page" disabled={safePage >= analysis.pageCount} onClick={() => setPreviewPage(p => Math.min(analysis.pageCount, p + 1))}>
@@ -438,16 +437,14 @@ function CompressWorkspace({
                 role="region"
                 aria-label="Compressed PDF preview"
                 tabIndex={0}
+                className="pdfy-workbench-mat pdfy-scroll-region"
                 sx={{
                   minHeight: 300,
                   p: 2,
                   borderRadius: 2,
-                  bgcolor: 'action.hover',
-                  border: 1,
-                  borderColor: 'divider',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  alignItems: 'safe center',
+                  justifyContent: 'safe center',
                   overflow: 'auto',
                 }}
               >
@@ -459,7 +456,7 @@ function CompressWorkspace({
                     lineHeight: 0,
                     maxWidth: '100%',
                     overflow: 'hidden',
-                    '& .react-pdf__Page__canvas': { maxWidth: '100% !important', height: 'auto !important' },
+                    '& .react-pdf__Page__canvas': { display: 'block', maxWidth: '100% !important', height: 'auto !important' },
                   }}
                 >
                   <Document

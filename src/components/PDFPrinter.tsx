@@ -4,7 +4,7 @@ import {
   MenuItem, Paper, Slider, Switch, TextField, ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material';
 import {
-  PrintOutlined, DownloadOutlined, ChevronLeft, ChevronRight, AutoAwesomeOutlined,
+  PrintOutlined, DownloadOutlined, ChevronLeft, ChevronRight, TuneOutlined,
 } from '@mui/icons-material';
 import { PDFDocument } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -288,7 +288,7 @@ function PrintWorkspace({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{file.name}</Typography>
-            <Typography role="status" color="text.secondary">
+            <Typography role="status" color="text.secondary" className="tabular-nums">
               {data.pageCount} source {data.pageCount === 1 ? 'page' : 'pages'}
               {composed ? ` · ${composed.sheetCount} output ${composed.sheetCount === 1 ? 'sheet' : 'sheets'} (${composed.orientation})` : ''}
             </Typography>
@@ -300,6 +300,7 @@ function PrintWorkspace({
               startIcon={isActionBusy ? <CircularProgress size={18} color="inherit" /> : <PrintOutlined />}
               disabled={isActionBusy || !!rangeValidation.error}
               onClick={handlePrintWithOS}
+              sx={{ minWidth: { sm: 245 } }}
             >
               {isActionBusy ? actionProgress : 'Print with OS printer…'}
             </Button>
@@ -308,6 +309,7 @@ function PrintWorkspace({
               startIcon={<DownloadOutlined />}
               disabled={isActionBusy || !!rangeValidation.error}
               onClick={handleDownloadPrintPDF}
+              sx={{ minWidth: { sm: 225 } }}
             >
               Download print-ready PDF
             </Button>
@@ -335,7 +337,7 @@ function PrintWorkspace({
         <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 2.5, minWidth: 0 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-              <AutoAwesomeOutlined fontSize="small" color="primary" />
+              <TuneOutlined fontSize="small" color="primary" />
               <Typography variant="h3">Smart presets</Typography>
             </Box>
             <Box role="group" aria-label="Print presets" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -372,7 +374,7 @@ function PrintWorkspace({
               disabled={isActionBusy}
               onChange={(_, value) => { if (value) updateOptions({ rangeMode: value }); }}
             >
-              <ToggleButton value="all">All pages ({data.pageCount})</ToggleButton>
+              <ToggleButton value="all" className="tabular-nums">All pages ({data.pageCount})</ToggleButton>
               <ToggleButton value="custom">Custom range</ToggleButton>
             </ToggleButtonGroup>
 
@@ -524,7 +526,7 @@ function PrintWorkspace({
 
             {options.scaleMode === 'custom' && (
               <Box sx={{ px: 1 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
+                <Typography variant="body2" color="text.secondary" gutterBottom className="tabular-nums">
                   Custom scale: {options.customScalePercent}%
                 </Typography>
                 <Slider
@@ -582,7 +584,7 @@ function PrintWorkspace({
         </Paper>
 
         {/* Live Print Sheet Preview */}
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, position: { lg: 'sticky' }, top: { lg: 16 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="h3">Live print preview</Typography>
             {composed && (
@@ -594,7 +596,7 @@ function PrintWorkspace({
                 >
                   <ChevronLeft />
                 </IconButton>
-                <Typography role="status" variant="body2" sx={{ minWidth: 92, textAlign: 'center', fontWeight: 600 }}>
+                <Typography role="status" variant="body2" className="tabular-nums" sx={{ minWidth: 92, textAlign: 'center', fontWeight: 600 }}>
                   Sheet {safeSheet} of {composed.sheetCount}
                 </Typography>
                 <IconButton
@@ -613,16 +615,16 @@ function PrintWorkspace({
             role="region"
             aria-label="Print sheet preview"
             tabIndex={0}
+            className="pdfy-workbench-mat pdfy-scroll-region"
             sx={{
               minHeight: 340,
+              aspectRatio: { lg: '1 / 1' },
+              maxHeight: { lg: 'calc(100dvh - 180px)' },
               p: 2,
               borderRadius: 2,
-              bgcolor: 'action.hover',
-              border: 1,
-              borderColor: 'divider',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: 'safe center',
+              justifyContent: 'safe center',
               overflow: 'auto',
             }}
           >
@@ -632,18 +634,23 @@ function PrintWorkspace({
               </Typography>
             ) : activeError ? (
               <Alert severity="error">{activeError}</Alert>
-            ) : isComposing || !previewBlob ? (
+            ) : isComposing || !previewBlob || !composed ? (
               <CircularProgress aria-label="Composing print preview" />
             ) : (
               <Box
                 data-testid="print-preview-sheet"
                 sx={{
+                  width: pageDisplayWidth,
+                  aspectRatio: `${composed.sheetWidth} / ${composed.sheetHeight}`,
                   bgcolor: '#FFFFFF',
                   boxShadow: '0 6px 24px rgba(0,0,0,0.16)',
                   lineHeight: 0,
                   maxWidth: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   overflow: 'hidden',
-                  '& .react-pdf__Page__canvas': { maxWidth: '100% !important', height: 'auto !important' },
+                  '& .react-pdf__Page__canvas': { display: 'block', maxWidth: '100% !important', height: 'auto !important' },
                   filter: previewFilterForColor(options.colorMode),
                 }}
               >
@@ -655,7 +662,7 @@ function PrintWorkspace({
           </Box>
 
           {composed && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" className="tabular-nums">
               Sheet size: {Math.round(composed.sheetWidth)} × {Math.round(composed.sheetHeight)} pt ({Math.round(composed.sheetWidth * 25.4 / 72)} × {Math.round(composed.sheetHeight * 25.4 / 72)} mm) · Color: {options.colorMode === 'color' ? 'Original' : options.colorMode === 'grayscale' ? 'Grayscale' : 'Invert dark slides'}
             </Typography>
           )}

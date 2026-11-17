@@ -21,7 +21,7 @@ import {
   Approval as StampIcon,
   DeleteOutlined as ClearIcon,
   FileUploadOutlined as UploadIcon,
-  AutoFixHigh as MagicIcon,
+  TuneOutlined as FilterToolIcon,
 } from '@mui/icons-material';
 import { useVisibleViewport } from '../../hooks/useVisibleViewport';
 
@@ -35,26 +35,26 @@ interface Props {
 }
 
 const INK_COLORS = [
-  { label: 'Midnight Ink', value: '#0F172A' },
+  { label: 'Warm Ink', value: '#1A1916' },
   { label: 'Fountain Blue', value: '#1D4ED8' },
   { label: 'Executive Crimson', value: '#B91C1C' },
 ];
 
 const SCAN_INK_MODES = [
   { label: 'Fountain Blue', value: '#1D4ED8' },
-  { label: 'Midnight Black', value: '#0F172A' },
-  { label: 'Archival Charcoal', value: '#334155' },
+  { label: 'Warm Ink', value: '#1A1916' },
+  { label: 'Archival Charcoal', value: '#3D3A34' },
   { label: 'Executive Crimson', value: '#B91C1C' },
   { label: 'Original Scan Hue', value: 'original' },
 ];
 
 const STAMP_PRESETS = [
-  { label: 'APPROVED', sub: 'VERIFIED & SIGNED', color: '#10B981' },
-  { label: 'CONFIDENTIAL', sub: 'RESTRICTED ACCESS', color: '#EF4444' },
-  { label: 'FINAL COPY', sub: 'ARCHIVE RECORD', color: '#6366F1' },
-  { label: 'DRAFT', sub: 'FOR REVIEW ONLY', color: '#F59E0B' },
-  { label: 'VOID', sub: 'CANCELLED DOCUMENT', color: '#DC2626' },
-  { label: 'PAID', sub: 'REMITTANCE RECEIVED', color: '#059669' },
+  { label: 'APPROVED', sub: 'VERIFIED & SIGNED', color: '#047857' },
+  { label: 'CONFIDENTIAL', sub: 'RESTRICTED ACCESS', color: '#B91C1C' },
+  { label: 'FINAL COPY', sub: 'ARCHIVE RECORD', color: '#1D4E68' },
+  { label: 'DRAFT', sub: 'FOR REVIEW ONLY', color: '#92400E' },
+  { label: 'VOID', sub: 'CANCELLED DOCUMENT', color: '#991B1B' },
+  { label: 'PAID', sub: 'REMITTANCE RECEIVED', color: '#065F46' },
 ];
 
 /**
@@ -76,7 +76,7 @@ function createSamplePaperScanDataUrl(): string {
   ctx.fillRect(0, 0, c.width, c.height);
 
   // Faint ruled notebook line on the paper scan
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+  ctx.strokeStyle = 'rgba(118, 112, 99, 0.35)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(20, 165);
@@ -85,7 +85,7 @@ function createSamplePaperScanDataUrl(): string {
 
   // Simulated natural pen strokes with varying pressure
   ctx.save();
-  ctx.strokeStyle = '#1E293B';
+  ctx.strokeStyle = '#1A1916';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
@@ -188,9 +188,9 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
       const data = imgData.data;
 
       // Parse target ink color if recoloring
-      let targetR = 15,
-        targetG = 23,
-        targetB = 42;
+      let targetR = 26,
+        targetG = 25,
+        targetB = 22;
       const useCustomHue = scanInkColor !== 'original';
       if (useCustomHue) {
         const clean = scanInkColor.replace('#', '');
@@ -537,7 +537,8 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                       borderRadius: '50%',
                       bgcolor: c.value,
                       mr: 0.75,
-                      border: '1px solid rgba(255,255,255,0.4)',
+                      border: '1px solid',
+                      borderColor: 'divider',
                     }}
                   />
                   {c.label}
@@ -557,7 +558,8 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
             sx={{
               bgcolor: '#F9FAFB',
               borderRadius: 2,
-              border: '1px solid rgba(255,255,255,0.15)',
+              border: 1,
+              borderColor: 'divider',
               overflow: 'hidden',
               position: 'relative',
             }}
@@ -578,13 +580,13 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                 bottom: 36,
                 left: 32,
                 right: 32,
-                borderBottom: '1px dashed #CBD5E1',
+                borderBottom: '1px dashed #A69F91',
                 pointerEvents: 'none',
               }}
             />
             <Typography
               variant="caption"
-              sx={{ position: 'absolute', bottom: 12, left: 32, color: '#475569', pointerEvents: 'none' }}
+              sx={{ position: 'absolute', bottom: 12, left: 32, color: '#4B463C', pointerEvents: 'none' }}
             >
               Sign here with your finger, pen, or mouse
             </Typography>
@@ -603,6 +605,8 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
             <Box
               sx={{
                 bgcolor: '#F9FAFB',
+                border: 1,
+                borderColor: 'divider',
                 borderRadius: 2,
                 p: 3,
                 minHeight: 140,
@@ -648,7 +652,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                   <Button
                     variant="outlined"
                     size="small"
-                    startIcon={<MagicIcon sx={{ fontSize: 15 }} />}
+                    startIcon={<FilterToolIcon sx={{ fontSize: 15 }} />}
                     onClick={() => setUploadedSrc(createSamplePaperScanDataUrl())}
                     sx={{ whiteSpace: 'nowrap' }}
                   >
@@ -676,7 +680,8 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                 sx={{
                   height: 205,
                   borderRadius: 2,
-                  border: '1px solid rgba(255,255,255,0.14)',
+                  border: 1,
+                  borderColor: 'divider',
                   overflow: 'hidden',
                   position: 'relative',
                   display: 'flex',
@@ -685,7 +690,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                   p: 2,
                   background:
                     previewPaperMode === 'paper'
-                      ? 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)'
+                      ? 'linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%)'
                       : 'repeating-conic-gradient(#CBD5E1 0% 25%, #F8FAFC 0% 50%) 50% / 16px 16px',
                 }}
               >
@@ -697,7 +702,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                         bottom: 42,
                         left: 36,
                         right: 36,
-                        borderBottom: '1px solid #94A3B8',
+                        borderBottom: '1px solid #8C8577',
                         pointerEvents: 'none',
                       }}
                     />
@@ -707,8 +712,8 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                         position: 'absolute',
                         bottom: 22,
                         left: 36,
-                        fontSize: 9.5,
-                        color: '#64748B',
+                        fontSize: 10,
+                        color: '#4B463C',
                         pointerEvents: 'none',
                       }}
                     >
@@ -727,11 +732,11 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                       maxHeight: '145px',
                       objectFit: 'contain',
                       zIndex: 2,
-                      filter: previewPaperMode === 'paper' ? 'drop-shadow(0 0.5px 0.4px rgba(15,23,42,0.18))' : 'none',
+                      filter: previewPaperMode === 'paper' ? 'drop-shadow(0 0.5px 0.4px rgba(26,25,22,0.18))' : 'none',
                     }}
                   />
                 ) : (
-                  <Typography variant="body2" sx={{ color: '#64748B' }}>
+                  <Typography variant="body2" sx={{ color: '#1A1916', fontWeight: 500 }}>
                     Upload a PNG or photo of your signature
                   </Typography>
                 )}
@@ -747,8 +752,9 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                     px: 1.5,
                     py: 1,
                     borderRadius: 1.5,
-                    bgcolor: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.07)',
+                    bgcolor: 'action.hover',
+                    border: 1,
+                    borderColor: 'divider',
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -761,7 +767,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                         height: 30,
                         objectFit: 'cover',
                         borderRadius: 4,
-                        border: '1px solid rgba(255,255,255,0.2)',
+                        border: '1px solid var(--pdfy-border)',
                       }}
                     />
                     <Box>
@@ -783,7 +789,8 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                 p: 2,
                 borderRadius: 2,
                 bgcolor: 'action.hover',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                border: 1,
+                borderColor: 'divider',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1.75,
@@ -817,7 +824,8 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                               borderRadius: '50%',
                               bgcolor: mode.value,
                               mr: 0.6,
-                              border: '1px solid rgba(255,255,255,0.45)',
+                              border: '1px solid',
+                              borderColor: 'divider',
                             }}
                           />
                         )}
@@ -839,6 +847,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                   </Typography>
                 </Box>
                 <Slider
+                  aria-label="Paper Background Cutoff"
                   size="small"
                   min={90}
                   max={245}
@@ -859,6 +868,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                   </Typography>
                 </Box>
                 <Slider
+                  aria-label="Stroke Contrast and Ink Density"
                   size="small"
                   min={1.0}
                   max={4.0}
@@ -902,7 +912,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                       onChange={e => setRemoveBackground(e.target.checked)}
                     />
                   }
-                  label={<Typography variant="caption" sx={{ color: '#D1D5DB' }}>Strip paper background to transparent</Typography>}
+                  label={<Typography variant="caption" sx={{ color: 'text.primary' }}>Strip paper background to transparent</Typography>}
                 />
                 <FormControlLabel
                   control={
@@ -913,7 +923,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
                       onChange={e => setAutoCropInk(e.target.checked)}
                     />
                   }
-                  label={<Typography variant="caption" sx={{ color: '#D1D5DB' }}>Auto-trim whitespace around strokes</Typography>}
+                  label={<Typography variant="caption" sx={{ color: 'text.primary' }}>Auto-trim whitespace around strokes</Typography>}
                 />
               </Box>
             </Box>
@@ -923,7 +933,7 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
         {/* ─── TAB 4: OFFICIAL VECTOR STAMP ─── */}
         {tab === 'stamp' && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1 }}>
               {STAMP_PRESETS.map(st => (
                 <Button
                   key={st.label}
@@ -939,6 +949,8 @@ function SignatureStudio({ open, initialTab = 'draw', onClose, onInsertImage }: 
             <Box
               sx={{
                 bgcolor: '#F9FAFB',
+                border: 1,
+                borderColor: 'divider',
                 borderRadius: 2,
                 p: 3,
                 display: 'flex',

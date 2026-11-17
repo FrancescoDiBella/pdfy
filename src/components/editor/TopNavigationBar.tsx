@@ -35,7 +35,7 @@ export default function TopNavigationBar({ actionsRef, ...props }: Props) {
         <Tooltip title="Redo annotation"><span><IconButton aria-label="Redo" disabled={!props.canRedo || props.busy} onClick={props.onRedo}><Redo /></IconButton></span></Tooltip>
         <IconButton ref={actionsRef} aria-label="Document actions" aria-haspopup="menu" aria-expanded={!!anchor} disabled={props.busy} onClick={event => setAnchor(event.currentTarget)}><MoreVert /></IconButton>
       </Box>
-      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)} slotProps={{ paper: { variant: 'outlined', sx: { borderColor: 'divider' } }, list: { sx: { '& .MuiMenuItem-root': { minHeight: 44 } } } }}>
         <MenuItem disabled={props.busy} onClick={() => action(props.onPrint)}><ListItemIcon><PrintOutlined /></ListItemIcon>Print PDF…</MenuItem>
         <MenuItem disabled={props.busy} onClick={() => action(props.onOpenPDF)}><ListItemIcon><FolderOpenOutlined /></ListItemIcon>Open another PDF</MenuItem>
         <MenuItem disabled={props.busy} onClick={() => action(props.onNewPDF)}><ListItemIcon><NoteAddOutlined /></ListItemIcon>New blank document</MenuItem>
@@ -66,12 +66,13 @@ export function EditorViewControls(props: ViewProps) {
   return (
     <Box component="footer" aria-label="Document view" sx={{ flexShrink: 0, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider', px: 1, py: 0.5, pb: 'max(4px, env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center', gap: 0.25 }}>
       <IconButton aria-label="Previous page" disabled={props.busy || props.currentPageIndex === 0} onClick={props.onPrevPage}><ChevronLeft /></IconButton>
-      <Box role="status" sx={{ minWidth: 64, textAlign: 'center', fontSize: 14 }}>Page {props.currentPageIndex + 1} / {props.numPages}</Box>
+      <Box role="status" className="tabular-nums" sx={{ minWidth: 64, textAlign: 'center', fontSize: 14, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>Page {props.currentPageIndex + 1} / {props.numPages}</Box>
       <IconButton aria-label="Next page" disabled={props.busy || props.currentPageIndex >= props.numPages - 1} onClick={props.onNextPage}><ChevronRight /></IconButton>
       <Box sx={{ flex: 1 }} />
-      <Button aria-label={`${Math.round(props.zoom * 100)}% zoom, fit width`} disabled={props.busy} onClick={props.onFitWidth} sx={{ minWidth: 0, px: 1 }}>Fit width</Button>
+      <Box component="span" className="tabular-nums" sx={{ display: 'none', '@media (min-width: 380px)': { display: 'inline' }, fontSize: 13, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', mr: 0.5 }}>{Math.round(props.zoom * 100)}%</Box>
+      <Button aria-label={`${Math.round(props.zoom * 100)}% zoom, fit width`} disabled={props.busy} onClick={props.onFitWidth} sx={{ minWidth: 0, px: 1.25 }}>Fit width</Button>
       <IconButton disabled={props.busy} aria-label="Zoom options" aria-haspopup="menu" aria-expanded={!!anchor} onClick={event => setAnchor(event.currentTarget)}><ZoomIn /></IconButton>
-      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)} slotProps={{ paper: { variant: 'outlined', sx: { borderColor: 'divider' } }, list: { sx: { '& .MuiMenuItem-root': { minHeight: 44 } } } }}>
         <MenuItem onClick={() => { props.onZoomIn(); setAnchor(null); }}>Zoom in</MenuItem>
         <MenuItem onClick={() => { props.onZoomOut(); setAnchor(null); }}>Zoom out</MenuItem>
         <MenuItem onClick={() => { props.onFitWidth(); setAnchor(null); }}>Fit width</MenuItem>

@@ -18,7 +18,7 @@ import {
   MergeType as MergeIcon,
   ArrowUpward as UpIcon,
   ArrowDownward as DownIcon,
-  AutoFixHigh as SampleIcon,
+  ArticleOutlined as SampleIcon,
   DragIndicator as DragIcon,
   DashboardCustomizeOutlined as OrganizeIcon,
 } from '@mui/icons-material';
@@ -242,8 +242,8 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
       {queue.length > 0 && (
         <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
-            <Typography variant="h2" sx={{ fontSize: 16 }}>
-              Your files ({queue.length} files · <span className="mono">{totalPages}</span> pages)
+            <Typography variant="h2" className="tabular-nums" sx={{ fontSize: 16 }}>
+              Your files ({queue.length} files · <span className="mono tabular-nums">{totalPages}</span> pages)
             </Typography>
             <Button size="small" variant="text" disabled={isBusy} onClick={() => { clearAnnouncement(); setQueue([]); resetDrag(); }} sx={{ color: 'text.secondary' }}>
               Clear files
@@ -253,12 +253,13 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
           <Typography id="merge-order-help" variant="body2" color="text.secondary">
             Drag a handle onto another document to change its position, or use the Move up and Move down buttons.
           </Typography>
-          <Box component="ol" aria-label="Merge order" aria-describedby="merge-order-help" sx={{ display: 'flex', flexDirection: 'column', gap: 1, listStyle: 'none', m: 0, p: 0 }}>
+          <Box component="ol" aria-label="Merge order" aria-describedby="merge-order-help" sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, listStyle: 'none', m: 0, p: 0 }}>
             {queue.map((item, idx) => (
               <Box
                 key={item.id}
                 component="li"
                 data-merge-queue-id={item.id}
+                className="pdfy-card-interactive"
                 onDragOver={event => {
                   if (isBusy || !draggedId || !event.dataTransfer.types.includes(QUEUE_DRAG_TYPE)) return;
                   event.preventDefault();
@@ -271,15 +272,16 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
                 onDrop={event => handleDrop(event, item.id)}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '24px 1fr', sm: '24px 28px minmax(0, 1fr) auto' },
+                  gridTemplateColumns: { xs: '28px 1fr', sm: '28px 32px minmax(0, 1fr) auto' },
                   alignItems: 'center',
-                  gap: 1,
-                  px: 1,
+                  gap: { xs: 1, sm: 1.5 },
+                  px: 1.5,
                   py: 1.25,
-                  borderRadius: 1.5,
-                  bgcolor: 'action.hover',
-                  border: '2px solid',
-                  borderColor: dropTargetId === item.id && draggedId !== item.id ? 'primary.light' : 'transparent',
+                  borderRadius: 2,
+                  bgcolor: 'background.default',
+                  border: '1px solid',
+                  borderColor: dropTargetId === item.id && draggedId !== item.id ? 'primary.main' : 'divider',
+                  boxShadow: dropTargetId === item.id && draggedId !== item.id ? theme => `0 0 0 2px ${theme.palette.primary.main}` : 'none',
                   opacity: draggedId === item.id ? 0.55 : 1,
                 }}
               >
@@ -299,11 +301,11 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
                   onPointerMove={handleTouchPointerMove}
                   onPointerUp={event => handleTouchPointerEnd(event, true)}
                   onPointerCancel={event => handleTouchPointerEnd(event, false)}
-                  sx={{ display: 'flex', cursor: isBusy ? 'default' : 'grab', p: 0.5, touchAction: queue.length > 1 && !isBusy ? 'none' : 'auto' }}
+                  sx={{ display: 'flex', color: 'text.secondary', cursor: isBusy ? 'default' : 'grab', p: 0.5, touchAction: queue.length > 1 && !isBusy ? 'none' : 'auto' }}
                 >
                   <DragIcon fontSize="small" />
                 </Box>
-                <Typography className="mono" sx={{ display: { xs: 'none', sm: 'block' }, fontSize: 13, color: 'primary.main', fontWeight: 600, minWidth: 24 }}>
+                <Typography className="mono tabular-nums" sx={{ display: { xs: 'none', sm: 'block' }, fontSize: 13, color: 'primary.main', fontWeight: 600, minWidth: 24 }}>
                   {String(idx + 1).padStart(2, '0')}
                 </Typography>
 
@@ -311,7 +313,7 @@ export default function PDFMerger({ onOpenInOrganizer }: { onOpenInOrganizer?: (
                   <Typography sx={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>
                     {item.file.name}
                   </Typography>
-                  <Typography className="mono" sx={{ fontSize: 12, color: 'text.secondary' }}>
+                  <Typography className="mono tabular-nums" sx={{ fontSize: 12, color: 'text.secondary' }}>
                     {item.pageCount} {item.pageCount === 1 ? 'page' : 'pages'} · {(item.file.size / 1024).toFixed(1)} KB
                   </Typography>
                 </Box>

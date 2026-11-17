@@ -269,7 +269,7 @@ function FormsWorkspace({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>{file.name}</Typography>
-            <Typography role="status" color="text.secondary">
+            <Typography role="status" color="text.secondary" className="tabular-nums">
               {inspection.pageCount} {inspection.pageCount === 1 ? 'page' : 'pages'} · {inspection.fields.length} interactive {inspection.fields.length === 1 ? 'field' : 'fields'}
               {inspection.unsupportedCount > 0 ? ` · ${inspection.unsupportedCount} non-fillable widget(s)` : ''}
             </Typography>
@@ -281,6 +281,7 @@ function FormsWorkspace({
                 startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <DownloadOutlined />}
                 disabled={isExporting || !!activePreviewError}
                 onClick={handleDownload}
+                sx={{ minWidth: { sm: 215 } }}
               >
                 {flattenOnExport ? 'Download flattened PDF' : 'Download filled PDF'}
               </Button>
@@ -404,7 +405,7 @@ function FormsWorkspace({
                   >
                     <ChevronLeft />
                   </IconButton>
-                  <Typography role="status" variant="body2" sx={{ minWidth: 84, textAlign: 'center', fontWeight: 600 }}>
+                  <Typography role="status" variant="body2" className="tabular-nums" sx={{ minWidth: 84, textAlign: 'center', fontWeight: 600 }}>
                     Page {safePage} of {inspection.pageCount}
                   </Typography>
                   <IconButton
@@ -423,16 +424,14 @@ function FormsWorkspace({
               role="region"
               aria-label="Filled form preview"
               tabIndex={0}
+              className="pdfy-workbench-mat pdfy-scroll-region"
               sx={{
                 minHeight: 340,
                 p: 2,
                 borderRadius: 2,
-                bgcolor: 'action.hover',
-                border: 1,
-                borderColor: 'divider',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                alignItems: 'safe center',
+                justifyContent: 'safe center',
                 overflow: 'auto',
               }}
             >
@@ -449,7 +448,7 @@ function FormsWorkspace({
                     lineHeight: 0,
                     maxWidth: '100%',
                     overflow: 'hidden',
-                    '& .react-pdf__Page__canvas': { maxWidth: '100% !important', height: 'auto !important' },
+                    '& .react-pdf__Page__canvas': { display: 'block', maxWidth: '100% !important', height: 'auto !important' },
                   }}
                 >
                   <Document
