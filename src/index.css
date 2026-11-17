@@ -90,6 +90,25 @@ p {
   }
 }
 
+::highlight(pdfy-search-matches) {
+  background-color: rgba(250, 204, 21, 0.42);
+  color: transparent;
+}
+
+::highlight(pdfy-search-active) {
+  background-color: rgba(180, 60, 24, 0.36);
+  color: transparent;
+  text-decoration: underline 2px solid #B43C18;
+}
+
+.pdfy-search-snippet-mark {
+  background-color: var(--pdfy-accent);
+  color: var(--pdfy-paper);
+  padding: 0 3px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
