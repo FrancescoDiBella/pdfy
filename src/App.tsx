@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import {
   Box, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-  useMediaQuery,
+  CircularProgress, useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -10,16 +10,17 @@ import {
   InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, CompressOutlined, Menu as MenuIcon, Close, LockOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
-import PDFMerger from './components/PDFMerger';
-import PDFSplitter from './components/PDFSplitter';
-import PDFOrganizer from './components/PDFOrganizer';
-import PDFInspector from './components/PDFInspector';
-import PDFPrinter from './components/PDFPrinter';
-import PDFForms from './components/PDFForms';
-import PDFConverter from './components/PDFConverter';
-import PDFCompressor from './components/PDFCompressor';
-import AdvancedEditor from './components/AdvancedEditor';
 import AppearanceControl from './components/AppearanceControl';
+
+const PDFMerger = lazy(() => import('./components/PDFMerger'));
+const PDFSplitter = lazy(() => import('./components/PDFSplitter'));
+const PDFOrganizer = lazy(() => import('./components/PDFOrganizer'));
+const PDFInspector = lazy(() => import('./components/PDFInspector'));
+const PDFPrinter = lazy(() => import('./components/PDFPrinter'));
+const PDFForms = lazy(() => import('./components/PDFForms'));
+const PDFConverter = lazy(() => import('./components/PDFConverter'));
+const PDFCompressor = lazy(() => import('./components/PDFCompressor'));
+const AdvancedEditor = lazy(() => import('./components/AdvancedEditor'));
 
 export type ViewMode = 'view' | 'edit' | 'forms' | 'organize' | 'merge' | 'split' | 'convert' | 'compress' | 'print' | 'inspect';
 type Session = { file: File | null; version: number };
@@ -217,7 +218,9 @@ export default function App() {
                 ) : item.mode === 'merge' ? <PDFMerger onOpenInOrganizer={file => openInTool('organize', file)} /> : item.mode === 'organize' ? <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} onOpenInPrint={file => openInTool('print', file)} /> : item.mode === 'split' ? <PDFSplitter active={viewMode === 'split'} /> : item.mode === 'print' ? <PDFPrinter initialFile={session.file} active={viewMode === 'print'} /> : <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} />;
                 return (
                   <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
-                    {content}
+                    <Suspense fallback={<Box sx={{ py: 6, display: 'grid', placeItems: 'center' }}><CircularProgress aria-label={`Loading ${item.label}`} /></Box>}>
+                      {content}
+                    </Suspense>
                   </Box>
                 );
               })}
@@ -227,7 +230,9 @@ export default function App() {
       </Box>
       {sessions.edit && (
           <Box key={sessions.edit.version} component="main" id="editor-session" aria-label="Edit PDF" tabIndex={-1} hidden={viewMode !== 'edit'} sx={{ color: 'text.primary', minHeight: '100dvh' }}>
-            <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onBack={() => navigate('view')} onPrint={file => openInTool('print', file)} />
+            <Suspense fallback={<Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}><CircularProgress aria-label="Loading Edit PDF" /></Box>}>
+              <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onBack={() => navigate('view')} onPrint={file => openInTool('print', file)} />
+            </Suspense>
           </Box>
       )}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} aria-labelledby="replace-title" aria-describedby="replace-description" disableRestoreFocus={handoffConfirmed} slotProps={{ transition: { onExited: () => { if (handoffConfirmed) focusWorkspace(viewMode); } } }}>
