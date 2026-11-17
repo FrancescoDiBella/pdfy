@@ -193,7 +193,7 @@ export function extractInitialFormValues(fields: FormFieldDescriptor[]): FormFie
 export async function buildSampleFillableFormBytes(): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle('Workspace Membership & Request Form');
-  doc.setAuthor('PDFy Studio');
+  doc.setAuthor('PDFy');
   doc.setSubject('Interactive Fillable AcroForm Sample');
 
   const page = doc.addPage([595.28, 841.89]);
@@ -201,20 +201,20 @@ export async function buildSampleFillableFormBytes(): Promise<Uint8Array> {
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
 
-  page.drawRectangle({ x: 0, y: height - 96, width, height: 96, color: rgb(0.11, 0.14, 0.24) });
+  page.drawRectangle({ x: 0, y: height - 96, width, height: 96, color: rgb(0.102, 0.098, 0.086) });
   page.drawText('WORKSPACE ACCESS REQUEST FORM', {
     x: 48,
     y: height - 52,
     size: 16,
     font: fontBold,
-    color: rgb(1, 1, 1),
+    color: rgb(0.965, 0.953, 0.925),
   });
   page.drawText('Interactive offline AcroForm sample · Fill fields directly or flatten for distribution', {
     x: 48,
     y: height - 74,
     size: 10,
     font: fontRegular,
-    color: rgb(0.76, 0.8, 0.9),
+    color: rgb(0.749, 0.718, 0.659),
   });
 
   const form = doc.getForm();

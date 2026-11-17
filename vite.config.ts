@@ -25,7 +25,7 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'pwa-192.png', 'pwa-512.png', 'pwa-maskable-512.png'],
       manifest: {
         id: './',
-        name: 'PDFy Studio',
+        name: 'PDFy',
         short_name: 'PDFy',
         description: 'View, edit and organize PDFs locally on your device.',
         start_url: './',
@@ -53,6 +53,19 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: 'vendor-pdfjs', test: /node_modules\/(pdfjs-dist|react-pdf)\// },
+            { name: 'vendor-pdflib', test: /node_modules\/pdf-lib\// },
+            { name: 'vendor-mui', test: /node_modules\/(@mui|@emotion)\// },
+          ],
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',
