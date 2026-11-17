@@ -208,7 +208,7 @@ export default function App() {
               {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
                 const session = sessions[item.mode]!;
                 const content = item.mode === 'view' ? (
-                  <PDFViewer activeFile={sharedFile} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} />
+                  <PDFViewer activeFile={sharedFile} active={viewMode === 'view'} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} />
                 ) : item.mode === 'forms' ? (
                   <PDFForms initialFile={session.file} active={viewMode === 'forms'} onOpenInPrint={file => openInTool('print', file)} onOpenInEditor={file => openInTool('edit', file)} />
                 ) : item.mode === 'convert' ? (
