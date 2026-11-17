@@ -38,16 +38,9 @@ interface Props {
   onOpenInPrint?: (file: File) => void;
 }
 
-function ViewerPage({ viewRotation, onTextRendered, ...props }: ComponentProps<typeof Page> & { viewRotation: number; onTextRendered?: () => void }) {
+function ViewerPage({ viewRotation, ...props }: ComponentProps<typeof Page> & { viewRotation: number }) {
   const [originalRotation, setOriginalRotation] = useState<number>();
-  return (
-    <Page
-      {...props}
-      rotate={originalRotation === undefined ? undefined : (originalRotation + viewRotation) % 360}
-      onLoadSuccess={page => setOriginalRotation(page.rotate)}
-      onRenderTextLayerSuccess={onTextRendered}
-    />
-  );
+  return <Page {...props} rotate={originalRotation === undefined ? undefined : (originalRotation + viewRotation) % 360} onLoadSuccess={page => setOriginalRotation(page.rotate)} />;
 }
 
 function clearReaderHighlights() {
@@ -73,7 +66,6 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const [extractingForFile, setExtractingForFile] = useState<File | null>(null);
   const [docData, setDocData] = useState<{ file: File; pages: ExtractedPageText[]; outline: FlattenedOutlineItem[] } | null>(null);
-  const [textLayerRevision, setTextLayerRevision] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
 
   const extractedPages = useMemo(() => (docData?.file === file ? docData.pages : []), [docData, file]);
@@ -160,83 +152,91 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
 
   // Keep highlights synced via the CSS Custom Highlight API across rendered text layers.
   useEffect(() => {
-    clearReaderHighlights();
-    const query = searchQuery.trim();
-    const HighlightCtor = typeof globalThis !== 'undefined' ? (globalThis as unknown as { Highlight?: new (...ranges: Range[]) => { priority?: number } }).Highlight : undefined;
-    const registry = typeof CSS !== 'undefined' && 'highlights' in CSS ? (CSS as unknown as { highlights?: Map<string, unknown> }).highlights : undefined;
-    if (!searchOpen || !query || !HighlightCtor || !registry || !viewport.current) return;
+    const syncHighlights = () => {
+      clearReaderHighlights();
+      const query = searchQuery.trim();
+      const HighlightCtor = typeof globalThis !== 'undefined' ? (globalThis as unknown as { Highlight?: new (...ranges: Range[]) => { priority?: number } }).Highlight : undefined;
+      const registry = typeof CSS !== 'undefined' && 'highlights' in CSS ? (CSS as unknown as { highlights?: Map<string, unknown> }).highlights : undefined;
+      if (!searchOpen || !query || !HighlightCtor || !registry || !viewport.current) return;
 
-    const lowerQuery = query.toLowerCase();
-    const allRanges: Range[] = [];
-    const activeRanges: Range[] = [];
+      const lowerQuery = query.toLowerCase();
+      const allRanges: Range[] = [];
+      const activeRanges: Range[] = [];
 
-    for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
-      const pageEl = document.getElementById(`viewer-page-${pageNumber}`);
-      const textLayer = pageEl?.querySelector('.react-pdf__Page__textContent');
-      if (!textLayer) continue;
+      for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
+        const pageEl = document.getElementById(`viewer-page-${pageNumber}`);
+        const textLayer = pageEl?.querySelector('.react-pdf__Page__textContent');
+        if (!textLayer) continue;
 
-      const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
-      let node: Node | null = walker.nextNode();
-      const textNodes: Text[] = [];
-      let fullText = '';
-      const starts: number[] = [];
+        const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+        let node: Node | null = walker.nextNode();
+        const textNodes: Text[] = [];
+        let fullText = '';
+        const starts: number[] = [];
 
-      while (node) {
-        if (node instanceof Text && node.data.length > 0) {
-          starts.push(fullText.length);
-          textNodes.push(node);
-          fullText += node.data;
+        while (node) {
+          if (node instanceof Text && node.data.length > 0) {
+            starts.push(fullText.length);
+            textNodes.push(node);
+            fullText += node.data;
+          }
+          node = walker.nextNode();
         }
-        node = walker.nextNode();
+
+        if (!fullText) continue;
+        const lowerText = fullText.toLowerCase();
+        let searchPos = 0;
+
+        const findNodeOffset = (charOffset: number): { node: Text; offset: number } | null => {
+          for (let i = 0; i < textNodes.length; i++) {
+            const start = starts[i];
+            const end = start + textNodes[i].data.length;
+            if (charOffset >= start && charOffset <= end) {
+              return { node: textNodes[i], offset: charOffset - start };
+            }
+          }
+          return null;
+        };
+
+        let matchIndexInDomPage = 0;
+        while (searchPos <= lowerText.length - lowerQuery.length) {
+          const idx = lowerText.indexOf(lowerQuery, searchPos);
+          if (idx === -1) break;
+          const startPos = findNodeOffset(idx);
+          const endPos = findNodeOffset(idx + lowerQuery.length);
+          if (startPos && endPos) {
+            const range = new Range();
+            range.setStart(startPos.node, startPos.offset);
+            range.setEnd(endPos.node, endPos.offset);
+            if (activeMatch && activeMatch.pageNumber === pageNumber && matchIndexInDomPage === activeMatch.matchIndexInPage) {
+              activeRanges.push(range);
+            } else {
+              allRanges.push(range);
+            }
+          }
+          matchIndexInDomPage += 1;
+          searchPos = idx + Math.max(1, lowerQuery.length);
+        }
       }
 
-      if (!fullText) continue;
-      const lowerText = fullText.toLowerCase();
-      let searchPos = 0;
-
-      const findNodeOffset = (charOffset: number): { node: Text; offset: number } | null => {
-        for (let i = 0; i < textNodes.length; i++) {
-          const start = starts[i];
-          const end = start + textNodes[i].data.length;
-          if (charOffset >= start && charOffset <= end) {
-            return { node: textNodes[i], offset: charOffset - start };
-          }
-        }
-        return null;
-      };
-
-      let matchIndexInDomPage = 0;
-      while (searchPos <= lowerText.length - lowerQuery.length) {
-        const idx = lowerText.indexOf(lowerQuery, searchPos);
-        if (idx === -1) break;
-        const startPos = findNodeOffset(idx);
-        const endPos = findNodeOffset(idx + lowerQuery.length);
-        if (startPos && endPos) {
-          const range = new Range();
-          range.setStart(startPos.node, startPos.offset);
-          range.setEnd(endPos.node, endPos.offset);
-          if (activeMatch && activeMatch.pageNumber === pageNumber && matchIndexInDomPage === activeMatch.matchIndexInPage) {
-            activeRanges.push(range);
-          } else {
-            allRanges.push(range);
-          }
-        }
-        matchIndexInDomPage += 1;
-        searchPos = idx + Math.max(1, lowerQuery.length);
+      if (allRanges.length > 0) {
+        const matchesHighlight = new HighlightCtor(...allRanges);
+        matchesHighlight.priority = 0;
+        registry.set('pdfy-search-matches', matchesHighlight);
       }
-    }
+      if (activeRanges.length > 0) {
+        const activeHighlight = new HighlightCtor(...activeRanges);
+        activeHighlight.priority = 1;
+        registry.set('pdfy-search-active', activeHighlight);
+      }
+    };
 
-    if (allRanges.length > 0) {
-      const matchesHighlight = new HighlightCtor(...allRanges);
-      matchesHighlight.priority = 0;
-      registry.set('pdfy-search-matches', matchesHighlight);
-    }
-    if (activeRanges.length > 0) {
-      const activeHighlight = new HighlightCtor(...activeRanges);
-      activeHighlight.priority = 1;
-      registry.set('pdfy-search-active', activeHighlight);
-    }
-  }, [searchOpen, searchQuery, activeMatch, numPages, textLayerRevision]);
+    syncHighlights();
+    if (!searchOpen || !searchQuery.trim() || !viewport.current) return;
+    const observer = new MutationObserver(() => syncHighlights());
+    observer.observe(viewport.current, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [searchOpen, searchQuery, activeMatch, numPages]);
 
   const handleDocumentLoad = (pdf: PdfProxyLike) => {
     setNumPages(pdf.numPages);
@@ -578,7 +578,6 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                       viewRotation={rotation}
                       renderTextLayer
                       renderAnnotationLayer
-                      onTextRendered={() => setTextLayerRevision(value => value + 1)}
                     />
                   </Box>
                 ))}
