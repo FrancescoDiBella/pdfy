@@ -35,9 +35,21 @@ async function prepare(file: File) {
   return { pageCount: pdf.getPageCount(), bytes };
 }
 
-export default function PDFPrinter({ initialFile, active = true }: { initialFile?: File | null; active?: boolean }) {
+export default function PDFPrinter({
+  initialFile,
+  active = true,
+  onSessionChange,
+}: {
+  initialFile?: File | null;
+  active?: boolean;
+  onSessionChange?: (active: boolean) => void;
+}) {
   const replacement = usePDFSession(prepare, initialFile);
   const [isPrinting, setIsPrinting] = useState(false);
+
+  useEffect(() => {
+    onSessionChange?.(!!replacement.session);
+  }, [replacement.session, onSessionChange]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>

@@ -42,6 +42,9 @@ const DEFAULT_PAGE_GEOMETRY: PageGeometry = { x: 0, y: 0, width: A4_W * .75, hei
 interface Props {
   onBack: () => void;
   onPrint?: (file: File) => void;
+  onCompress?: (file: File) => void;
+  onOrganize?: (file: File) => void;
+  onSessionChange?: (active: boolean) => void;
   active?: boolean;
   initialFile?: File | null;
 }
@@ -54,9 +57,13 @@ async function prepareEditorFile(source: File | (() => Promise<File>)) {
   return { file, bytes, pageCount: pdf.getPageCount(), sizes: Object.fromEntries(pdf.getPages().map((page, index) => [index, pageGeometry(page)])) };
 }
 
-export default function AdvancedEditor({ onBack, onPrint, initialFile, active = true }: Props) {
+export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize, onSessionChange, initialFile, active = true }: Props) {
   const [fileBlob, setFileBlob] = useState<Blob | null>(null);
   const [originalBytes, setOriginalBytes] = useState<Uint8Array | null>(null);
+
+  useEffect(() => {
+    onSessionChange?.(!!fileBlob);
+  }, [fileBlob, onSessionChange]);
   const [history, dispatchHistory] = useReducer(reduceEditorHistory<EditorElement>, { entries: [[]], index: 0 });
   const historyIndex = history.index;
   const elements = history.entries[historyIndex];
@@ -513,27 +520,32 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
     }
   };
 
-  const pendingPrintFileRef = useRef<File | null>(null);
+  const pendingHandoffRef = useRef<{ target: 'print' | 'compress' | 'organize'; file: File } | null>(null);
 
   useEffect(() => {
-    if (isSaving || !pendingPrintFileRef.current) return;
-    const nextFile = pendingPrintFileRef.current;
-    pendingPrintFileRef.current = null;
+    if (isSaving || !pendingHandoffRef.current) return;
+    const next = pendingHandoffRef.current;
+    pendingHandoffRef.current = null;
     actionsButton.current?.focus();
-    onPrint?.(nextFile);
-  }, [isSaving, onPrint]);
+    if (next.target === 'print') onPrint?.(next.file);
+    else if (next.target === 'compress') onCompress?.(next.file);
+    else onOrganize?.(next.file);
+  }, [isSaving, onPrint, onCompress, onOrganize]);
 
-  const printPDF = async () => {
-    if (!originalBytes || pageOperation.current || isLoading || transformingRef.current || !onPrint) return;
+  const handoffPDF = async (target: 'print' | 'compress' | 'organize') => {
+    const callback = target === 'print' ? onPrint : target === 'compress' ? onCompress : onOrganize;
+    if (!originalBytes || pageOperation.current || isLoading || transformingRef.current || !callback) return;
     setIsSaving(true);
     try {
       const saved = await buildEditedPDFBytes();
       const name = `${(docTitle || 'document').replace(/\.pdf$/i, '')}.pdf`;
-      pendingPrintFileRef.current = new File([saved as BlobPart], name, { type: 'application/pdf' });
+      pendingHandoffRef.current = { target, file: new File([saved as BlobPart], name, { type: 'application/pdf' }) };
     } catch (err) {
-      pendingPrintFileRef.current = null;
+      pendingHandoffRef.current = null;
       console.error(err);
-      const message = err instanceof Error && err.message.includes('cannot encode') ? 'The selected font cannot print one of these characters. Edit the text and try again.' : 'Could not prepare this PDF for printing. Your edits are still here; try again.';
+      const message = err instanceof Error && err.message.includes('cannot encode')
+        ? 'The selected font cannot export one of these characters. Edit the text and try again.'
+        : `Could not prepare this PDF for ${target}. Your edits are still here; try again.`;
       setToast({ message, severity: 'error' });
     } finally {
       setIsSaving(false);
@@ -656,7 +668,9 @@ export default function AdvancedEditor({ onBack, onPrint, initialFile, active = 
         panel={panel}
         onPanel={next => { if (panel === next) closePanel(); else openPanel(next); }}
         onExport={exportPDF}
-        onPrint={printPDF}
+        onPrint={() => void handoffPDF('print')}
+        onCompress={onCompress ? () => void handoffPDF('compress') : undefined}
+        onOrganize={onOrganize ? () => void handoffPDF('organize') : undefined}
         onClear={() => setConfirmAction('clear')}
         onBack={() => { if (!transformingRef.current) onBack(); }}
         busy={controlsBusy} exporting={isSaving}

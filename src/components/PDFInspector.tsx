@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Divider, Paper, TextField, Typography } from '@mui/material';
 import { InfoOutlined, DownloadOutlined } from '@mui/icons-material';
 import ToolIntro from './ToolIntro';
@@ -10,9 +10,22 @@ import { readPDFInfo, writePDFInfo, type MetadataFields } from '../utils/pdfInfo
 async function prepare(file: File) { return readPDFInfo(await file.arrayBuffer()); }
 type Info = Awaited<ReturnType<typeof prepare>>;
 
-export default function PDFInspector({ initialFile, active = true }: { initialFile?: File | null; active?: boolean }) {
+export default function PDFInspector({
+  initialFile,
+  active = true,
+  onSessionChange,
+}: {
+  initialFile?: File | null;
+  active?: boolean;
+  onSessionChange?: (active: boolean) => void;
+}) {
   const replacement = usePDFSession(prepare, initialFile);
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    onSessionChange?.(!!replacement.session);
+  }, [replacement.session, onSessionChange]);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       {!replacement.session && <ToolIntro icon={<InfoOutlined />} title="Understand your document" description="Review page sizes and the document’s title, author, and other basic properties."><Typography color="text.secondary">Edit these fields and download a copy. Your original file stays unchanged.</Typography></ToolIntro>}
