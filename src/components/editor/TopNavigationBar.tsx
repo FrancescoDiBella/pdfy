@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { RefObject } from 'react';
 import { Box, IconButton, Tooltip, Button, TextField, CircularProgress, Menu, MenuItem, Divider, Dialog, DialogTitle, DialogContent, DialogActions, ListItemIcon } from '@mui/material';
-import { ArrowBack, Undo, Redo, MoreVert, ChevronLeft, ChevronRight, ZoomIn, DownloadOutlined, WidgetsOutlined, Tune, Gesture, ApprovalOutlined, NoteAddOutlined, DeleteOutlined, ClearAll, PaletteOutlined, FolderOpenOutlined, PrintOutlined, CompressOutlined, DashboardCustomizeOutlined } from '@mui/icons-material';
+import { ArrowBack, Undo, Redo, MoreVert, ChevronLeft, ChevronRight, ZoomIn, DownloadOutlined, WidgetsOutlined, Tune, Gesture, ApprovalOutlined, NoteAddOutlined, DeleteOutlined, ClearAll, PaletteOutlined, FolderOpenOutlined, PrintOutlined, CompressOutlined, DashboardCustomizeOutlined, Check, VisibilityOffOutlined } from '@mui/icons-material';
 import AppearanceControl from '../AppearanceControl';
 
 interface Props {
@@ -13,12 +13,14 @@ interface Props {
   canUndo: boolean; canRedo: boolean; onUndo: () => void; onRedo: () => void;
   onOpenSignature: () => void; onOpenStamp: () => void;
   panel: 'tools' | 'properties' | null; onPanel: (panel: 'tools' | 'properties') => void;
+  redactedPageCount?: number; burnInRedactions?: boolean; onToggleBurnInRedactions?: () => void;
 }
 
 export default function TopNavigationBar({ actionsRef, ...props }: Props) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [settings, setSettings] = useState(false);
   const action = (run: () => void) => { setAnchor(null); run(); };
+  const redactedPages = props.redactedPageCount ?? 0;
   return (
     <Box component="header" aria-label="Editor controls" sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', px: { xs: 1, sm: 2 }, pt: 'env(safe-area-inset-top)', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', '@media (min-width: 900px), (min-width: 760px) and (max-height: 500px)': { gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center', gap: 1, '& .editor-tools-row': { pb: 0 }, '& .editor-tools-button': { flex: '0 0 auto', minWidth: 100 } } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, minWidth: 0 }}>
@@ -36,6 +38,18 @@ export default function TopNavigationBar({ actionsRef, ...props }: Props) {
         <IconButton ref={actionsRef} aria-label="Document actions" aria-haspopup="menu" aria-expanded={!!anchor} disabled={props.busy} onClick={event => setAnchor(event.currentTarget)}><MoreVert /></IconButton>
       </Box>
       <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)} slotProps={{ paper: { variant: 'outlined', sx: { borderColor: 'divider' } }, list: { sx: { '& .MuiMenuItem-root': { minHeight: 44 } } } }}>
+        {redactedPages > 0 && props.onToggleBurnInRedactions && (
+          <MenuItem
+            role="menuitemcheckbox"
+            aria-checked={props.burnInRedactions !== false}
+            disabled={props.busy}
+            onClick={() => action(props.onToggleBurnInRedactions!)}
+          >
+            <ListItemIcon>{props.burnInRedactions !== false ? <Check /> : <VisibilityOffOutlined />}</ListItemIcon>
+            Burn-in redactions ({redactedPages} {redactedPages === 1 ? 'page' : 'pages'})
+          </MenuItem>
+        )}
+        {redactedPages > 0 && props.onToggleBurnInRedactions && <Divider />}
         <MenuItem disabled={props.busy} onClick={() => action(props.onPrint)}><ListItemIcon><PrintOutlined /></ListItemIcon>Print PDF…</MenuItem>
         {props.onOrganize && <MenuItem disabled={props.busy} onClick={() => action(props.onOrganize!)}><ListItemIcon><DashboardCustomizeOutlined /></ListItemIcon>Organize pages…</MenuItem>}
         {props.onCompress && <MenuItem disabled={props.busy} onClick={() => action(props.onCompress!)}><ListItemIcon><CompressOutlined /></ListItemIcon>Compress PDF…</MenuItem>}
