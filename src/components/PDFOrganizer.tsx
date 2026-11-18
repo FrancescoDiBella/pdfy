@@ -1,12 +1,30 @@
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent } from 'react';
-import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, Menu, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Tooltip } from '@mui/material';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent } from 'react';
+import { Box, Button, Typography, Paper, CircularProgress, IconButton, TextField, Slider, Switch, FormControlLabel, FormControl, FormLabel, RadioGroup, Radio, Divider, Menu, MenuItem, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Tooltip } from '@mui/material';
 import { RotateRight, RotateLeft, DeleteOutlined, ArrowBack, ArrowForward, ContentCopy, AddBoxOutlined, DashboardCustomizeOutlined, PrintOutlined, CompressOutlined, EditOutlined, MergeType, DragIndicator, SwapVert } from '@mui/icons-material';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdfDocumentOptions } from '../utils/pdfRendering';
 import { generateSamplePDF } from '../utils/pdfSamples';
 import { appendPDFsToFile } from '../utils/pdfMerge';
-import { movePageToIndex, removePageById, reorderPageItems, restorePageAtIndex, type OrganizablePage } from '../utils/pdfOrganize';
+import {
+  applyPageMarginCrop,
+  clampCropMarginPct,
+  computePreviewClipInset,
+  DEFAULT_DOCUMENT_CROP,
+  formatCropSummary,
+  hasActiveCrop,
+  MAX_CROP_MARGIN_PCT,
+  movePageToIndex,
+  removePageById,
+  reorderPageItems,
+  resolveCropMarginsPct,
+  resolveEffectivePageCrop,
+  restorePageAtIndex,
+  type CropMarginsPct,
+  type MarginCropConfig,
+  type MarginCropPreset,
+  type OrganizablePage,
+} from '../utils/pdfOrganize';
 import { usePDFSession, type PDFSession } from '../hooks/usePDFSession';
 import PDFSessionControls from './PDFSessionControls';
 import ToolIntro from './ToolIntro';
@@ -18,6 +36,61 @@ async function prepare(file: File) {
   const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
   if (!pdf.getPageCount()) throw new Error('Empty PDF');
   return { count: pdf.getPageCount() };
+}
+
+function CropMarginField({
+  label,
+  value,
+  describedBy,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  describedBy: string;
+  onChange: (next: number) => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState('');
+  return (
+    <TextField
+      label={label}
+      type="number"
+      size="small"
+      fullWidth
+      value={focused ? draft : String(value)}
+      slotProps={{
+        htmlInput: {
+          min: 0,
+          max: MAX_CROP_MARGIN_PCT,
+          step: 1,
+          inputMode: 'decimal',
+          'aria-describedby': describedBy,
+        },
+      }}
+      sx={{ '& input': { fontSize: 16, fontVariantNumeric: 'tabular-nums' } }}
+      onFocus={() => {
+        setDraft(String(value));
+        setFocused(true);
+      }}
+      onChange={event => {
+        const raw = event.target.value;
+        setDraft(raw);
+        if (raw.trim() === '') return;
+        const parsed = Number(raw);
+        if (Number.isFinite(parsed) && parsed >= 0 && parsed <= MAX_CROP_MARGIN_PCT) {
+          onChange(clampCropMarginPct(parsed));
+        }
+      }}
+      onBlur={() => {
+        setFocused(false);
+        if (draft.trim() === '') return;
+        const parsed = Number(draft);
+        if (Number.isFinite(parsed)) {
+          onChange(clampCropMarginPct(parsed));
+        }
+      }}
+    />
+  );
 }
 
 export default function PDFOrganizer({
@@ -43,9 +116,9 @@ export default function PDFOrganizer({
   }, [replacement.session, onSessionChange]);
 
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-    {!replacement.session && <ToolIntro icon={<DashboardCustomizeOutlined />} title="Put your pages in order" description="Move, rotate, copy, add another PDF, or remove pages. Add a watermark or page numbers when you need them."><Typography color="text.secondary">Open a PDF to get started, or merge multiple PDFs first.</Typography></ToolIntro>}
+    {!replacement.session && <ToolIntro icon={<DashboardCustomizeOutlined />} title="Put your pages in order" description="Move, rotate, trim margins, copy, add another PDF, or remove pages. Add a watermark or page numbers when you need them."><Typography color="text.secondary">Open a PDF to get started, or merge multiple PDFs first.</Typography></ToolIntro>}
     <PDFSessionControls tool="Organize" active={active} hasSession={!!replacement.session} busy={replacement.isReading || isExporting} pendingName={replacement.pending?.file.name} error={replacement.error} onOpen={replacement.open} onSample={() => replacement.open(() => generateSamplePDF('multi-page-report'))} onCancel={replacement.cancel} onConfirm={replacement.confirm} />
-    {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><OrganizerWorkspace key={replacement.session.id} session={replacement.session} active={active} onExporting={setIsExporting} onOpenInPrint={onOpenInPrint} onOpenInCompress={onOpenInCompress} onOpenInEditor={onOpenInEditor} /></Box>}
+    {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><legend className="sr-only">Organize workspace</legend><OrganizerWorkspace key={replacement.session.id} session={replacement.session} active={active} onExporting={setIsExporting} onOpenInPrint={onOpenInPrint} onOpenInCompress={onOpenInCompress} onOpenInEditor={onOpenInEditor} /></Box>}
   </Box>;
 }
 
@@ -84,6 +157,12 @@ function OrganizerWorkspace({
   const addFileInputRef = useRef<HTMLInputElement>(null);
   const touchDragRef = useRef<{ pointerId: number; sourceId: string; targetId: string | null } | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [documentCrop, setDocumentCrop] = useState<MarginCropConfig>(() => ({
+    preset: DEFAULT_DOCUMENT_CROP.preset,
+    margins: { ...DEFAULT_DOCUMENT_CROP.margins },
+  }));
+  const [cropTarget, setCropTarget] = useState<'all' | string>('all');
+  const cropHintId = useId();
   const [enableWatermark, setEnableWatermark] = useState(false);
   const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
   const [watermarkColor, setWatermarkColor] = useState('#EF4444');
@@ -96,6 +175,57 @@ function OrganizerWorkspace({
   const [batesPrefix, setBatesPrefix] = useState('DOC-');
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
   const isBusy = isExporting || isAddingPDFs;
+
+  const activeTargetPage = cropTarget !== 'all' ? pageConfigs.find(page => page.id === cropTarget) ?? null : null;
+  const effectiveCropTarget = activeTargetPage ? cropTarget : 'all';
+  const activePresetValue: MarginCropPreset | 'inherit' = activeTargetPage
+    ? (activeTargetPage.crop?.preset ?? 'inherit')
+    : documentCrop.preset;
+  const activeCustomMargins = activeTargetPage
+    ? (activeTargetPage.crop?.margins ?? documentCrop.margins)
+    : documentCrop.margins;
+  const showCustomMarginFields = activePresetValue === 'custom';
+  const pageCropOverrideCount = pageConfigs.filter(page => !!page.crop).length;
+
+  const handleChangeCropPreset = (nextValue: MarginCropPreset | 'inherit') => {
+    if (activeTargetPage) {
+      if (nextValue === 'inherit') {
+        setPageConfigs(previous => previous.map(page => page.id === activeTargetPage.id ? { ...page, crop: undefined } : page));
+      } else {
+        setPageConfigs(previous => previous.map(page => {
+          if (page.id !== activeTargetPage.id) return page;
+          const margins = page.crop?.margins ?? documentCrop.margins;
+          return { ...page, crop: { preset: nextValue, margins: { ...margins } } };
+        }));
+      }
+      return;
+    }
+    if (nextValue !== 'inherit') {
+      setDocumentCrop(previous => ({ ...previous, preset: nextValue }));
+    }
+  };
+
+  const handleChangeCustomMargin = (side: keyof CropMarginsPct, nextValue: number) => {
+    const clamped = clampCropMarginPct(nextValue);
+    if (activeTargetPage) {
+      setPageConfigs(previous => previous.map(page => {
+        if (page.id !== activeTargetPage.id) return page;
+        const baseMargins = page.crop?.margins ?? documentCrop.margins;
+        return {
+          ...page,
+          crop: {
+            preset: 'custom',
+            margins: { ...baseMargins, [side]: clamped },
+          },
+        };
+      }));
+      return;
+    }
+    setDocumentCrop(previous => ({
+      preset: 'custom',
+      margins: { ...previous.margins, [side]: clamped },
+    }));
+  };
 
   const movePage = (index: number, direction: -1 | 1) => {
     const target = index + direction;
@@ -173,7 +303,18 @@ function OrganizerWorkspace({
 
   const rotatePage = (id: string, delta: number) => setPageConfigs(previous => previous.map(page => page.id === id ? { ...page, rotation: (page.rotation + delta + 360) % 360 } : page));
   const insert = (index: number, blank: boolean) => {
-    const next = [...pageConfigs]; next.splice(index + 1, 0, { ...next[index], id: crypto.randomUUID(), ...(blank ? { originalIndex: -1, rotation: 0 } : {}) }); setPageConfigs(next);
+    const sourcePage = pageConfigs[index];
+    const copiedCrop = !blank && sourcePage.crop
+      ? { preset: sourcePage.crop.preset, margins: { ...sourcePage.crop.margins } }
+      : undefined;
+    const next = [...pageConfigs];
+    next.splice(index + 1, 0, {
+      ...sourcePage,
+      id: crypto.randomUUID(),
+      crop: copiedCrop,
+      ...(blank ? { originalIndex: -1, rotation: 0 } : {}),
+    });
+    setPageConfigs(next);
   };
 
   const deletePage = (index: number, page: OrganizablePage) => {
@@ -265,15 +406,16 @@ function OrganizerWorkspace({
       const currentRot = page.getRotation().angle;
       page.setRotation(degrees((currentRot + cfg.rotation) % 360));
 
-      const { width, height } = page.getSize();
+      const effectiveCrop = resolveEffectivePageCrop(cfg, documentCrop);
+      const { x: boxX, y: boxY, width, height } = applyPageMarginCrop(page, effectiveCrop);
 
       // Apply Watermark if enabled
       if (enableWatermark && watermarkText.trim()) {
         const textWidth = fontBold.widthOfTextAtSize(watermarkText, watermarkSize);
         if (watermarkDiagonal) {
           page.drawText(watermarkText, {
-            x: width / 2 - (textWidth * Math.cos(Math.PI / 4)) / 2,
-            y: height / 2 - (textWidth * Math.sin(Math.PI / 4)) / 2,
+            x: boxX + width / 2 - (textWidth * Math.cos(Math.PI / 4)) / 2,
+            y: boxY + height / 2 - (textWidth * Math.sin(Math.PI / 4)) / 2,
             size: watermarkSize,
             font: fontBold,
             color: wmColor,
@@ -282,8 +424,8 @@ function OrganizerWorkspace({
           });
         } else {
           page.drawText(watermarkText, {
-            x: (width - textWidth) / 2,
-            y: height / 2,
+            x: boxX + (width - textWidth) / 2,
+            y: boxY + height / 2,
             size: watermarkSize,
             font: fontBold,
             color: wmColor,
@@ -305,15 +447,15 @@ function OrganizerWorkspace({
 
         const fontSize = 9.5;
         const labelWidth = fontMono.widthOfTextAtSize(label, fontSize);
-        let x = (width - labelWidth) / 2;
-        let y = 28;
+        let x = boxX + (width - labelWidth) / 2;
+        let y = boxY + 28;
 
         if (pageNumberPosition === 'bottom-right') {
-          x = width - labelWidth - 40;
-          y = 28;
+          x = boxX + width - labelWidth - 40;
+          y = boxY + 28;
         } else if (pageNumberPosition === 'top-right') {
-          x = width - labelWidth - 40;
-          y = height - 32;
+          x = boxX + width - labelWidth - 40;
+          y = boxY + height - 32;
         }
 
         page.drawText(label, {
@@ -419,7 +561,11 @@ function OrganizerWorkspace({
     <Typography role="status" className="sr-only">{announcement}</Typography>
     <Document file={workingFile} options={pdfDocumentOptions} loading={<CircularProgress aria-label="Loading page previews" />} error={<Alert severity="warning">Previews could not be displayed. Your page actions and download remain available.</Alert>}>
       <Box component="ol" aria-label="Page order" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 2 }}>
-        {pageConfigs.map((page, index) => <Paper
+        {pageConfigs.map((page, index) => {
+          const effectivePageCrop = resolveEffectivePageCrop(page, documentCrop);
+          const pageCropActive = hasActiveCrop(effectivePageCrop);
+          const previewClip = computePreviewClipInset(page.rotation, resolveCropMarginsPct(effectivePageCrop));
+          return <Paper
           component="li"
           variant="outlined"
           key={page.id}
@@ -481,7 +627,7 @@ function OrganizerWorkspace({
               <DragIndicator fontSize="small" />
             </Box>
             <Typography component="h3" id={`organizer-page-${page.id}`} tabIndex={-1} className="tabular-nums" sx={{ fontWeight: 600, fontSize: '0.875rem', flex: 1, textAlign: 'center', overflowWrap: 'anywhere' }}>
-              Page {index + 1} · {page.originalIndex === -1 ? 'Blank' : `Source ${page.originalIndex + 1}`} · {page.rotation}°
+              Page {index + 1} · {page.originalIndex === -1 ? 'Blank' : `Source ${page.originalIndex + 1}`} · {page.rotation}°{pageCropActive ? ` · ${formatCropSummary(effectivePageCrop)}` : ''}
             </Typography>
             <Tooltip title="Move to position" describeChild>
               <Box component="span" sx={{ display: 'inline-flex', flexShrink: 0 }}>
@@ -537,11 +683,12 @@ function OrganizerWorkspace({
                   display: 'block',
                   bgcolor: '#FFFFFF',
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.16)',
+                  clipPath: previewClip,
                 },
               }}
             >
               {page.originalIndex === -1 ? (
-                <Box sx={{ height: '100%', maxWidth: '100%', aspectRatio: '210 / 297', bgcolor: '#FFFFFF', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.16)' }} />
+                <Box sx={{ height: '100%', maxWidth: '100%', aspectRatio: '210 / 297', bgcolor: '#FFFFFF', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.16)', clipPath: previewClip }} />
               ) : (
                 <Page pageNumber={page.originalIndex + 1} width={180} renderTextLayer={false} renderAnnotationLayer={false} />
               )}
@@ -577,7 +724,8 @@ function OrganizerWorkspace({
             <Tooltip title="Add blank page after" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Add blank after page ${index + 1}`} disabled={isBusy} onClick={() => insert(index, true)}><AddBoxOutlined /></IconButton></Box></Tooltip>
             <Tooltip title="Delete page" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Delete page ${index + 1}`} disabled={pageConfigs.length <= 1 || isBusy} onClick={() => deletePage(index, page)}><DeleteOutlined /></IconButton></Box></Tooltip>
           </Box>
-        </Paper>)}
+        </Paper>;
+        })}
       </Box>
     </Document>
     <Menu
@@ -603,6 +751,66 @@ function OrganizerWorkspace({
     </Menu>
     <ToolPanel open={active && settings} title="Page settings" onClose={() => setSettings(false)}>
       <Box component="fieldset" disabled={isBusy} sx={{ border: 0, m: 0, p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <legend className="sr-only">Page settings controls</legend>
+        <TextField
+          select
+          label="Apply margin crop to"
+          value={effectiveCropTarget}
+          onChange={event => setCropTarget(event.target.value)}
+          fullWidth
+          slotProps={{ select: { MenuProps: { slotProps: { list: { sx: { '& .MuiMenuItem-root': { minHeight: 44 } } } } } } }}
+        >
+          <MenuItem value="all">All pages ({formatCropSummary(documentCrop)})</MenuItem>
+          {pageConfigs.map((page, idx) => (
+            <MenuItem key={page.id} value={page.id}>
+              Page {idx + 1}{page.crop ? ` (${formatCropSummary(page.crop)})` : ''}
+            </MenuItem>
+          ))}
+        </TextField>
+        <FormControl component="fieldset" sx={{ minWidth: 0 }}>
+          <FormLabel component="legend" sx={{ fontWeight: 600, fontSize: '0.875rem', mb: 0.5 }}>Margin crop preset</FormLabel>
+          <RadioGroup
+            aria-label="Margin crop preset"
+            value={activePresetValue}
+            onChange={event => handleChangeCropPreset(event.target.value as MarginCropPreset | 'inherit')}
+          >
+            {activeTargetPage && (
+              <FormControlLabel
+                value="inherit"
+                control={<Radio size="small" />}
+                label={`Follow all pages (${formatCropSummary(documentCrop)})`}
+              />
+            )}
+            <FormControlLabel value="original" control={<Radio size="small" />} label="Original" />
+            <FormControlLabel value="trim-4" control={<Radio size="small" />} label="Trim 4%" />
+            <FormControlLabel value="trim-8" control={<Radio size="small" />} label="Trim 8%" />
+            <FormControlLabel value="custom" control={<Radio size="small" />} label="Custom margins" />
+          </RadioGroup>
+        </FormControl>
+        {showCustomMarginFields && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+            <Typography id={cropHintId} variant="caption" color="text.secondary">
+              Trim 0% to {MAX_CROP_MARGIN_PCT}% from each visual edge using PDF CropBox adjustments.
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+              <CropMarginField label="Top margin (%)" value={activeCustomMargins.top} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('top', val)} />
+              <CropMarginField label="Bottom margin (%)" value={activeCustomMargins.bottom} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('bottom', val)} />
+              <CropMarginField label="Left margin (%)" value={activeCustomMargins.left} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('left', val)} />
+              <CropMarginField label="Right margin (%)" value={activeCustomMargins.right} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('right', val)} />
+            </Box>
+          </Box>
+        )}
+        {!activeTargetPage && pageCropOverrideCount > 0 && (
+          <Button
+            type="button"
+            variant="outlined"
+            size="small"
+            onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, crop: undefined })))}
+          >
+            Clear page crop overrides ({pageCropOverrideCount})
+          </Button>
+        )}
+        <Divider />
         <FormControlLabel control={<Switch checked={enableWatermark} onChange={event => setEnableWatermark(event.target.checked)} />} label="Watermark" />
         <TextField label="Watermark Text" value={watermarkText} onChange={event => setWatermarkText(event.target.value)} disabled={!enableWatermark} fullWidth />
         <TextField label="Watermark color" type="color" value={watermarkColor} onChange={event => setWatermarkColor(event.target.value)} disabled={!enableWatermark} fullWidth />
@@ -613,15 +821,15 @@ function OrganizerWorkspace({
         <TextField select label="Number format" value={pageNumberFormat} onChange={event => setPageNumberFormat(event.target.value as typeof pageNumberFormat)} disabled={!enablePageNumbers}>{[['page-of', 'Page 1 of 3'], ['simple', '1, 2, 3'], ['bates', 'Prefix and number']].map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
         {pageNumberFormat === 'bates' && <TextField label="Number prefix" value={batesPrefix} onChange={event => setBatesPrefix(event.target.value)} />}
         <TextField select label="Number position" value={pageNumberPosition} onChange={event => setPageNumberPosition(event.target.value as typeof pageNumberPosition)} disabled={!enablePageNumbers}>{[['bottom-center', 'Bottom center'], ['bottom-right', 'Bottom right'], ['top-right', 'Top right']].map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
-        <Button variant="outlined" startIcon={<RotateLeft />} onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, rotation: (page.rotation + 270) % 360 })))}>Rotate all left</Button>
-        <Button variant="outlined" startIcon={<RotateRight />} onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, rotation: (page.rotation + 90) % 360 })))}>Rotate all right</Button>
-        <Button variant="outlined" onClick={() => { trigger.current = settingsButton.current; setSettings(false); setConfirmReset(true); }}>Reset page order</Button>
+        <Button type="button" variant="outlined" startIcon={<RotateLeft />} onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, rotation: (page.rotation + 270) % 360 })))}>Rotate all left</Button>
+        <Button type="button" variant="outlined" startIcon={<RotateRight />} onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, rotation: (page.rotation + 90) % 360 })))}>Rotate all right</Button>
+        <Button type="button" variant="outlined" onClick={() => { trigger.current = settingsButton.current; setSettings(false); setConfirmReset(true); }}>Reset page order</Button>
       </Box>
     </ToolPanel>
     <Dialog open={active && confirmReset} onClose={() => setConfirmReset(false)} aria-labelledby="organizer-confirm-title" disableRestoreFocus slotProps={{ transition: { onExited: () => (trigger.current?.isConnected ? trigger.current : settingsButton.current)?.focus() } }}>
       <DialogTitle id="organizer-confirm-title">Reset page order?</DialogTitle>
-      <DialogContent><DialogContentText>Restore every original source page and remove page copies, blank pages, and rotations. Watermark and numbering settings will stay.</DialogContentText></DialogContent>
-      <DialogActions><Button autoFocus onClick={() => setConfirmReset(false)}>Cancel</Button><Button color="error" onClick={() => { setPageConfigs(buildInitialPages(sourcePageCount)); setDeletedUndo(null); setConfirmReset(false); }}>Confirm</Button></DialogActions>
+      <DialogContent><DialogContentText>Restore every original source page and remove page copies, blank pages, per-page crop overrides, and rotations. Document crop, watermark, and numbering settings will stay.</DialogContentText></DialogContent>
+      <DialogActions><Button autoFocus onClick={() => setConfirmReset(false)}>Cancel</Button><Button color="error" onClick={() => { setPageConfigs(buildInitialPages(sourcePageCount)); setCropTarget('all'); setDeletedUndo(null); setConfirmReset(false); }}>Confirm</Button></DialogActions>
     </Dialog>
   </Box>;
 }

@@ -16,6 +16,8 @@ import type { InteractionMode } from './editor/EditorInteractionBar';
 import { pageGeometry, editorSize, sourceTextGeometry, sourceMaskBounds, textLayout, constrainBounds, updateGeometry } from '../utils/editorGeometry';
 import type { PageGeometry } from '../utils/editorGeometry';
 import { drawEditorElements } from '../utils/exportEditorElements';
+import { getRedactedPageIndices } from '../utils/pdfRedaction';
+import { burnInPDFRedactions } from '../utils/pdfRedactionRunner';
 import { reduceEditorHistory } from '../utils/editorHistory';
 import type { TextItem, TextStyle } from 'pdfjs-dist/types/src/display/api';
 import type { EditorElement, ElementType, StrokePoint } from './editor/types';
@@ -94,6 +96,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   const [pendingFile, setPendingFile] = useState<Awaited<ReturnType<typeof prepareEditorFile>> | null>(null);
   const zoom = manualZoom ?? Math.max(0.1, Math.min(1, viewportWidth / A4_W));
   const [docTitle, setDocTitle] = useState('Untitled Document');
+  const [burnInRedactions, setBurnInRedactions] = useState(true);
 
   // Brush controls
   const isDrawMode = mode === 'draw';
@@ -140,6 +143,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   const pageTextStyles = currentText?.styles ?? {};
 
   const selectedElement = elements.find(e => e.id === selectedId) ?? null;
+  const redactedPageIndices = getRedactedPageIndices(elements, numPages);
 
   /* ── History Helper ───────────────────────── */
   const pushElements = useCallback((value: EditorElement[] | ((current: EditorElement[]) => EditorElement[])) => dispatchHistory({ type: 'push', value }), []);
@@ -150,7 +154,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
     setOriginalBytes(bytes); setFileBlob(file); dispatchHistory({ type: 'reset', value: [] });
     setSelectedId(null); setDocTitle(file.name.replace(/\.pdf$/i, '')); setCurrentPageIndex(0);
     setNumPages(pageCount); setPdfPageDimsMap(sizes); setPageDims({ width: 0, height: 0 });
-    setManualZoom(null); setMode('select'); setResizing(false); setToast(null);
+    setManualZoom(null); setMode('select'); setResizing(false); setBurnInRedactions(true); setToast(null);
   }, []);
 
   const loadFile = useCallback(async (source: File | (() => Promise<File>)) => {
@@ -494,7 +498,12 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
     if (!originalBytes) throw new Error('No PDF loaded');
     const doc = await PDFDocument.load(originalBytes);
     await drawEditorElements(doc, elements, resolveFont);
-    return await doc.save();
+    const editedBytes = await doc.save();
+    const redactedIndices = getRedactedPageIndices(elements, doc.getPageCount());
+    if (burnInRedactions && redactedIndices.length > 0) {
+      return await burnInPDFRedactions(editedBytes, redactedIndices);
+    }
+    return editedBytes;
   };
 
   const exportPDF = async () => {
@@ -510,7 +519,11 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 200);
-      setToast({ message: `Exported ${docTitle || 'document'}.pdf`, severity: 'success' });
+      const flattenedCount = burnInRedactions ? redactedPageIndices.length : 0;
+      const suffix = flattenedCount > 0
+        ? ` (${flattenedCount} redacted ${flattenedCount === 1 ? 'page' : 'pages'} flattened)`
+        : '';
+      setToast({ message: `Exported ${docTitle || 'document'}.pdf${suffix}`, severity: 'success' });
     } catch (err) {
       console.error(err);
       const message = err instanceof Error && err.message.includes('cannot encode') ? 'The selected font cannot export one of these characters. Edit the text and try again.' : 'Could not export this PDF. Your edits are still here; try again.';
@@ -690,9 +703,12 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
           setSigModalTab('stamp');
           setSigModalOpen(true);
         }}
+        redactedPageCount={redactedPageIndices.length}
+        burnInRedactions={burnInRedactions}
+        onToggleBurnInRedactions={() => setBurnInRedactions(prev => !prev)}
       />
 
-      <EditorInteractionBar status={isChangingPages ? 'Updating pages…' : isLoading ? 'Opening file…' : isSaving ? 'Preparing download…' : undefined} mode={mode} selected={selectedElement} resizing={resizing} disabled={controlsBusy} onMode={changeMode} onResize={() => setResizing(value => !value)} onEdit={() => openPanel('properties')} onDuplicate={() => { if (selectedId) duplicateElement(selectedId); }} onDelete={() => { if (selectedId) deleteElement(selectedId); }} />
+      <EditorInteractionBar status={isChangingPages ? 'Updating pages…' : isLoading ? 'Opening file…' : isSaving ? (burnInRedactions && redactedPageIndices.length > 0 ? 'Flattening redactions…' : 'Preparing download…') : undefined} mode={mode} selected={selectedElement} resizing={resizing} disabled={controlsBusy} onMode={changeMode} onResize={() => setResizing(value => !value)} onEdit={() => openPanel('properties')} onDuplicate={() => { if (selectedId) duplicateElement(selectedId); }} onDelete={() => { if (selectedId) deleteElement(selectedId); }} />
       <Typography id="editor-canvas-help" className="sr-only">Drag an item to move it. Choose Resize for a corner handle. Arrow keys move the selected item; Shift uses larger steps. Escape cancels an active gesture. Pan lets you scroll over items.</Typography>
       {/* Document viewport */}
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
@@ -952,11 +968,17 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
           onOpenStamp={() => { closePanel(); setSigModalTab('stamp'); setSigModalOpen(true); }}
           onToggleDrawMode={() => { changeMode(isDrawMode ? 'select' : 'draw'); closePanel(); }}
           onToggleEditTextMode={() => changeMode(isEditTextMode ? 'select' : 'text')}
+          burnInRedactions={burnInRedactions}
+          onChangeBurnInRedactions={setBurnInRedactions}
+          redactedPageCount={redactedPageIndices.length}
         />) : (<RightPropertiesPanel
           element={selectedElement}
           onUpdate={updateElement}
           onDelete={deleteElement}
           onDuplicate={duplicateElement}
+          burnInRedactions={burnInRedactions}
+          onChangeBurnInRedactions={setBurnInRedactions}
+          redactedPageCount={redactedPageIndices.length}
         />)}
       </ToolPanel>
       <Dialog open={active && !!pendingFile} onClose={() => setPendingFile(null)} aria-labelledby="editor-replacement-title" aria-describedby="editor-replacement-description" slotProps={{ transition: { onExited: () => { if (active) actionsButton.current?.focus({ preventScroll: true }); } } }}>

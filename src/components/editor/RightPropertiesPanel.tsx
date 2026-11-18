@@ -1,10 +1,13 @@
+import { useId } from 'react';
 import { Box, Typography, TextField, Slider, Divider, ToggleButtonGroup, ToggleButton, MenuItem, Button, IconButton, FormControlLabel, Switch } from '@mui/material';
 import { ArrowBack, ArrowForward, ArrowUpward, ArrowDownward } from '@mui/icons-material';
 import type { EditorElement } from './types';
+import { REDACTION_BURN_IN_DPI } from '../../utils/pdfRedaction';
 
 interface Props {
   element: EditorElement | null; onUpdate: (id: string, patch: Partial<EditorElement>) => void;
   onDelete: (id: string) => void; onDuplicate: (id: string) => void;
+  burnInRedactions?: boolean; onChangeBurnInRedactions?: (value: boolean) => void; redactedPageCount?: number;
 }
 
 function NumericField({ label, value, min = 0, onChange }: { label: string; value: number; min?: number; onChange: (value: number) => void }) {
@@ -13,7 +16,8 @@ function NumericField({ label, value, min = 0, onChange }: { label: string; valu
   }} />;
 }
 
-export default function RightPropertiesPanel({ element, onUpdate, onDelete, onDuplicate }: Props) {
+export default function RightPropertiesPanel({ element, onUpdate, onDelete, onDuplicate, burnInRedactions = true, onChangeBurnInRedactions, redactedPageCount = 0 }: Props) {
+  const burnInHelpId = useId();
   if (!element) return <Box sx={{ p: 2 }}><Typography>Select an item on the page or in Tools, then edit its text, position, and appearance here.</Typography></Box>;
   const text = element.type === 'text' || element.type === 'edit-text';
   const colorKey = text || element.type === 'draw' ? 'strokeColor' : 'fillColor';
@@ -23,6 +27,25 @@ export default function RightPropertiesPanel({ element, onUpdate, onDelete, onDu
     <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       {text && <TextField label="Text content" helperText={element.type === 'edit-text' ? 'This covers the original text; it remains in the PDF.' : 'Resize the box to show more lines.'} multiline minRows={2} maxRows={5} value={element.content ?? ''} onChange={event => onUpdate(element.id, { content: event.target.value })} fullWidth />}
       {element.type === 'image' && <FormControlLabel label="Keep image proportions" control={<Switch checked={element.lockAspectRatio !== false} onChange={(_, checked) => onUpdate(element.id, { lockAspectRatio: checked })} />} />}
+      {element.type === 'redact' && onChangeBurnInRedactions && (
+        <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+          <FormControlLabel
+            label="Burn-in redactions on export"
+            control={
+              <Switch
+                checked={burnInRedactions}
+                slotProps={{ input: { 'aria-describedby': burnInHelpId } }}
+                onChange={(_, checked) => onChangeBurnInRedactions(checked)}
+              />
+            }
+          />
+          <Typography id={burnInHelpId} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+            {burnInRedactions
+              ? `Flattens ${redactedPageCount > 1 ? `all ${redactedPageCount} redacted pages` : 'this redacted page'} at ${REDACTION_BURN_IN_DPI} DPI during export so underlying text streams cannot be selected or extracted. Unredacted pages stay vectorized.`
+              : 'Draws a visual cover rectangle only; underlying text streams remain in the exported PDF.'}
+          </Typography>
+        </Box>
+      )}
       <Typography variant="h2">Position and size</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
         <NumericField label="Horizontal position" value={element.x} onChange={x => onUpdate(element.id, { x })} />

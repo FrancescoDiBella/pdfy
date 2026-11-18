@@ -1,4 +1,5 @@
-import { Box, Typography, IconButton, Divider, Slider, Button, TextField } from '@mui/material';
+import { useId } from 'react';
+import { Box, Typography, IconButton, Divider, Slider, Button, TextField, FormControlLabel, Switch } from '@mui/material';
 import { DeleteOutlined, ContentCopy, TextFields, BorderColorOutlined, CropSquare, RadioButtonUnchecked, ImageOutlined, Rectangle, DrawOutlined, EditNote, Gesture, ApprovalOutlined, LayersOutlined } from '@mui/icons-material';
 import type { EditorElement, ElementType } from './types';
 
@@ -9,6 +10,7 @@ interface Props {
   pdfText: { index: number; text: string }[]; onEditPDFText: (index: number) => void;
   onSelect: (id: string) => void; onDelete: (id: string) => void; onDuplicate: (id: string) => void;
   onAdd: (type: ElementType) => void; onOpenSignature: () => void; onOpenStamp: () => void; onToggleDrawMode: () => void; onToggleEditTextMode: () => void;
+  burnInRedactions?: boolean; onChangeBurnInRedactions?: (value: boolean) => void; redactedPageCount?: number;
 }
 
 const tools = [
@@ -19,6 +21,8 @@ const tools = [
 const tile = { minHeight: 72, display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, textAlign: 'center', lineHeight: 1.4 } as const;
 
 export default function LeftToolboxPanel(props: Props) {
+  const burnInHelpId = useId();
+  const redactedPages = props.redactedPageCount ?? 0;
   return <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
     <Box><Typography variant="h3">Add to this page</Typography><Typography variant="body2" color="text.secondary">Choose a tool. Drag added items into place and use Edit for their details.</Typography></Box>
     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
@@ -51,5 +55,24 @@ export default function LeftToolboxPanel(props: Props) {
         <IconButton aria-label={`Delete ${label} ${index + 1}`} onClick={() => props.onDelete(element.id)}><DeleteOutlined fontSize="small" /></IconButton>
       </Box>;
     })}
+    {redactedPages > 0 && props.onChangeBurnInRedactions && (
+      <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+        <FormControlLabel
+          label="Burn-in redactions on export"
+          control={
+            <Switch
+              checked={props.burnInRedactions !== false}
+              slotProps={{ input: { 'aria-describedby': burnInHelpId } }}
+              onChange={(_, checked) => props.onChangeBurnInRedactions!(checked)}
+            />
+          }
+        />
+        <Typography id={burnInHelpId} variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          {props.burnInRedactions !== false
+            ? `${redactedPages} redacted ${redactedPages === 1 ? 'page' : 'pages'} will be flattened so hidden text streams are removed; other pages stay vectorized.`
+            : 'Export will draw a visual cover only; underlying text remains in the PDF.'}
+        </Typography>
+      </Box>
+    )}
   </Box>;
 }
