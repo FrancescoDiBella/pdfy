@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, PDFHexString, PDFName, StandardFonts, rgb } from 'pdf-lib';
 import { buildSampleFillableFormBytes } from './pdfForms';
 
 export type SampleTemplateId = 'executive-brief' | 'service-invoice' | 'multi-page-report' | 'application-form';
@@ -239,8 +239,10 @@ export async function generateSamplePDF(templateId: SampleTemplateId = 'executiv
     },
   ];
 
+  const createdPages = [];
   for (let i = 0; i < pageCount; i++) {
     const page = doc.addPage([595.28, 841.89]);
+    createdPages.push({ page, title: sections[i % sections.length].title });
     const { width, height } = page.getSize();
     const sec = sections[i % sections.length];
 
@@ -323,6 +325,32 @@ export async function generateSamplePDF(templateId: SampleTemplateId = 'executiv
       font: fontRegular,
       color: rgb(0.22, 0.2, 0.18),
     });
+  }
+
+  // Embed real PDF bookmarks / outline entries for multi-page samples so Outline & Split-by-Bookmarks work out of the box.
+  if (createdPages.length > 0) {
+    const outlinesRef = doc.context.nextRef();
+    const itemRefs = createdPages.map(() => doc.context.nextRef());
+    createdPages.forEach(({ page, title }, idx) => {
+      const itemDict = doc.context.obj({
+        Title: PDFHexString.fromText(title),
+        Parent: outlinesRef,
+        Dest: doc.context.obj([page.ref, PDFName.of('Fit')]),
+      });
+      if (idx > 0) itemDict.set(PDFName.of('Prev'), itemRefs[idx - 1]);
+      if (idx + 1 < itemRefs.length) itemDict.set(PDFName.of('Next'), itemRefs[idx + 1]);
+      doc.context.assign(itemRefs[idx], itemDict);
+    });
+    doc.context.assign(
+      outlinesRef,
+      doc.context.obj({
+        Type: 'Outlines',
+        First: itemRefs[0],
+        Last: itemRefs[itemRefs.length - 1],
+        Count: itemRefs.length,
+      }),
+    );
+    doc.catalog.set(PDFName.of('Outlines'), outlinesRef);
   }
 
   const bytes = await doc.save();
