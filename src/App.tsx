@@ -7,7 +7,8 @@ import {
 import { useTheme } from '@mui/material/styles';
 import {
   DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
-  InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, CompressOutlined, Menu as MenuIcon, Close, LockOutlined, CloudUploadOutlined,
+  InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, CompressOutlined,
+  CompareArrowsOutlined, Menu as MenuIcon, Close, LockOutlined, CloudUploadOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import AppearanceControl from './components/AppearanceControl';
@@ -21,11 +22,12 @@ const PDFPrinter = lazy(() => import('./components/PDFPrinter'));
 const PDFForms = lazy(() => import('./components/PDFForms'));
 const PDFConverter = lazy(() => import('./components/PDFConverter'));
 const PDFCompressor = lazy(() => import('./components/PDFCompressor'));
+const PDFCompare = lazy(() => import('./components/PDFCompare'));
 const AdvancedEditor = lazy(() => import('./components/AdvancedEditor'));
 
-export type ViewMode = 'view' | 'edit' | 'forms' | 'organize' | 'merge' | 'split' | 'convert' | 'compress' | 'print' | 'inspect';
+export type ViewMode = 'view' | 'edit' | 'forms' | 'compare' | 'organize' | 'merge' | 'split' | 'convert' | 'compress' | 'print' | 'inspect';
 type Session = { file: File | null; version: number };
-type HandoffMode = 'view' | 'edit' | 'forms' | 'organize' | 'split' | 'compress' | 'print' | 'inspect';
+type HandoffMode = 'view' | 'edit' | 'forms' | 'compare' | 'organize' | 'split' | 'compress' | 'print' | 'inspect';
 type Handoff = { mode: HandoffMode; file: File };
 
 interface LaunchParamsLike {
@@ -50,6 +52,7 @@ const navItems = [
   { mode: 'view', group: 'Workspace', label: 'Read', title: 'Read PDF', description: 'Open a document, find your page, and take the next step.', icon: <DescriptionOutlined /> },
   { mode: 'edit', group: 'Workspace', label: 'Edit', title: 'Edit PDF', description: 'Add text, drawings, and signatures.', icon: <EditOutlined /> },
   { mode: 'forms', group: 'Workspace', label: 'Forms', title: 'Fill forms', description: 'Detect fillable PDF fields, enter values, and flatten copies.', icon: <AssignmentOutlined /> },
+  { mode: 'compare', group: 'Workspace', label: 'Compare', title: 'Compare PDFs', description: 'Compare two PDF versions side by side with visual pixel diffs and text diffs.', icon: <CompareArrowsOutlined /> },
   { mode: 'organize', group: 'Pages & Files', label: 'Organize', title: 'Organize pages', description: 'Reorder, rotate, and watermark your pages.', icon: <DashboardCustomizeOutlined /> },
   { mode: 'merge', group: 'Pages & Files', label: 'Merge', title: 'Merge PDFs', description: 'Bring your documents together in the right order.', icon: <MergeType /> },
   { mode: 'split', group: 'Pages & Files', label: 'Split', title: 'Split PDF', description: 'Choose the pages you need and save them separately.', icon: <CallSplit /> },
@@ -111,6 +114,7 @@ export default function App() {
   const sessionHandlers = useMemo(() => ({
     edit: (active: boolean) => setToolActive('edit', active),
     forms: (active: boolean) => setToolActive('forms', active),
+    compare: (active: boolean) => setToolActive('compare', active),
     organize: (active: boolean) => setToolActive('organize', active),
     split: (active: boolean) => setToolActive('split', active),
     compress: (active: boolean) => setToolActive('compress', active),
@@ -384,9 +388,11 @@ export default function App() {
               {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
                 const session = sessions[item.mode]!;
                 const content = item.mode === 'view' ? (
-                  <PDFViewer activeFile={sharedFile} active={viewMode === 'view'} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} />
+                  <PDFViewer activeFile={sharedFile} active={viewMode === 'view'} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} onOpenInCompare={file => openInTool('compare', file)} />
                 ) : item.mode === 'forms' ? (
                   <PDFForms initialFile={session.file} active={viewMode === 'forms'} onSessionChange={sessionHandlers.forms} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} onOpenInEditor={file => openInTool('edit', file)} />
+                ) : item.mode === 'compare' ? (
+                  <PDFCompare initialFile={session.file} active={viewMode === 'compare'} onSessionChange={sessionHandlers.compare} />
                 ) : item.mode === 'convert' ? (
                   <PDFConverter initialFile={session.file} active={viewMode === 'convert'} onOpenInPrint={file => openInTool('print', file)} onOpenInEditor={file => openInTool('edit', file)} />
                 ) : item.mode === 'compress' ? (

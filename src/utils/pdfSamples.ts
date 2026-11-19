@@ -357,3 +357,93 @@ export async function generateSamplePDF(templateId: SampleTemplateId = 'executiv
   const info = SAMPLE_TEMPLATES.find(t => t.id === templateId) || SAMPLE_TEMPLATES[0];
   return new File([bytes as BlobPart], info.filename, { type: 'application/pdf' });
 }
+
+export async function generateSampleComparisonPair(): Promise<{ baseline: File; revised: File }> {
+  const buildAgreement = async (version: 'v1' | 'v2') => {
+    const doc = await PDFDocument.create();
+    const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const fontMono = await doc.embedFont(StandardFonts.Courier);
+
+    doc.setTitle(`Master Service Agreement (${version.toUpperCase()})`);
+    doc.setAuthor('PDFy Local Workbench');
+
+    const p1 = doc.addPage([595.28, 841.89]);
+    const { width, height } = p1.getSize();
+    p1.drawRectangle({ x: 48, y: height - 56, width: width - 96, height: 3, color: rgb(0.706, 0.235, 0.094) });
+    p1.drawText(
+      version === 'v1' ? 'MASTER SERVICE AGREEMENT — DRAFT V1' : 'MASTER SERVICE AGREEMENT — REVISED V2',
+      { x: 48, y: height - 84, size: 15, font: fontBold, color: rgb(0.102, 0.098, 0.086) },
+    );
+    p1.drawText('Effective Date: November 1, 2026', { x: 48, y: height - 110, size: 10.5, font: fontMono, color: rgb(0.329, 0.306, 0.263) });
+
+    const page1Lines = version === 'v1'
+      ? [
+          '1. Scope of Services',
+          'Provider will deliver client-side PDF workflow engineering and support.',
+          '2. Compensation & Billing',
+          'Monthly Retainer Fee: $8,500.00 USD',
+          'Payment Terms: Net 30 days from invoice receipt.',
+          'Late Fee Interest: 1.5% per month on overdue balances.',
+          '3. Service Availability',
+          'Standard business-hours support (09:00–17:00 CET).',
+        ]
+      : [
+          '1. Scope of Services',
+          'Provider will deliver client-side PDF workflow engineering and support.',
+          '2. Compensation & Billing',
+          'Monthly Retainer Fee: $9,200.00 USD',
+          'Payment Terms: Net 15 days from invoice receipt.',
+          'Late Fee Interest: 1.5% per month on overdue balances.',
+          '3. Service Availability',
+          'Priority 24/7 response with 99.9% uptime SLA credit guarantee.',
+          '4. Data Sovereignty Addendum',
+          'All documents must be processed strictly on local user hardware.',
+        ];
+
+    let curY = height - 160;
+    for (const line of page1Lines) {
+      const isHeading = /^\d\.\s/.test(line);
+      p1.drawText(line, {
+        x: 48,
+        y: curY,
+        size: isHeading ? 12 : 10.5,
+        font: isHeading ? fontBold : fontRegular,
+        color: isHeading ? rgb(0.102, 0.098, 0.086) : rgb(0.22, 0.2, 0.18),
+      });
+      curY -= isHeading ? 24 : 20;
+    }
+
+    // Page 2 is intentionally identical in both versions so users can verify unchanged pages too.
+    const p2 = doc.addPage([595.28, 841.89]);
+    p2.drawRectangle({ x: 48, y: height - 56, width: width - 96, height: 3, color: rgb(0.706, 0.235, 0.094) });
+    p2.drawText('CONFIDENTIALITY & GOVERNING LAW', {
+      x: 48,
+      y: height - 84,
+      size: 14,
+      font: fontBold,
+      color: rgb(0.102, 0.098, 0.086),
+    });
+    const boilerplate = [
+      'Both parties agree to protect confidential technical and commercial records',
+      'with the same standard of care applied to their own proprietary assets.',
+      'This agreement is governed by the laws of the European Union and applicable',
+      'member state commercial statutes. All notices shall be delivered in writing.',
+    ];
+    let y2 = height - 132;
+    for (const line of boilerplate) {
+      p2.drawText(line, { x: 48, y: y2, size: 10.5, font: fontRegular, color: rgb(0.22, 0.2, 0.18) });
+      y2 -= 22;
+    }
+
+    const bytes = await doc.save();
+    return new File(
+      [bytes as BlobPart],
+      version === 'v1' ? 'MSA_Agreement_v1.pdf' : 'MSA_Agreement_v2.pdf',
+      { type: 'application/pdf' },
+    );
+  };
+
+  const [baseline, revised] = await Promise.all([buildAgreement('v1'), buildAgreement('v2')]);
+  return { baseline, revised };
+}
