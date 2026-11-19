@@ -396,7 +396,7 @@ export default function App() {
                 ) : item.mode === 'organize' ? (
                   <PDFOrganizer initialFile={session.file} active={viewMode === 'organize'} onSessionChange={sessionHandlers.organize} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} onOpenInEditor={file => openInTool('edit', file)} />
                 ) : item.mode === 'split' ? (
-                  <PDFSplitter initialFile={session.file} active={viewMode === 'split'} onSessionChange={sessionHandlers.split} />
+                  <PDFSplitter initialFile={session.file} active={viewMode === 'split'} onSessionChange={sessionHandlers.split} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInEditor={file => openInTool('edit', file)} onOpenInCompress={file => openInTool('compress', file)} />
                 ) : item.mode === 'print' ? (
                   <PDFPrinter initialFile={session.file} active={viewMode === 'print'} onSessionChange={sessionHandlers.print} />
                 ) : (
