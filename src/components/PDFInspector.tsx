@@ -1,23 +1,62 @@
 import { useEffect, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Divider, Paper, TextField, Typography } from '@mui/material';
-import { InfoOutlined, DownloadOutlined } from '@mui/icons-material';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  TextField,
+  Typography,
+} from '@mui/material';
+import {
+  InfoOutlined,
+  DownloadOutlined,
+  VerifiedUserOutlined,
+  CheckCircleOutlined,
+  WarningAmberOutlined,
+  DescriptionOutlined,
+  CompressOutlined,
+} from '@mui/icons-material';
 import ToolIntro from './ToolIntro';
 import PDFSessionControls from './PDFSessionControls';
 import { usePDFSession, type PDFSession } from '../hooks/usePDFSession';
 import { generateSamplePDF } from '../utils/pdfSamples';
 import { readPDFInfo, writePDFInfo, type MetadataFields } from '../utils/pdfInfo';
+import {
+  auditPDFPrivacy,
+  DEFAULT_SANITIZE_OPTIONS,
+  sanitizePDF,
+  type FormSanitizeAction,
+  type PrivacyAuditReport,
+  type SanitizeOptions,
+} from '../utils/pdfSanitize';
 
-async function prepare(file: File) { return readPDFInfo(await file.arrayBuffer()); }
+async function prepare(file: File) {
+  const bytes = await file.arrayBuffer();
+  const [info, privacy] = await Promise.all([readPDFInfo(bytes), auditPDFPrivacy(bytes)]);
+  return { ...info, privacy };
+}
 type Info = Awaited<ReturnType<typeof prepare>>;
 
 export default function PDFInspector({
   initialFile,
   active = true,
   onSessionChange,
+  onOpenInRead,
+  onOpenInCompress,
 }: {
   initialFile?: File | null;
   active?: boolean;
   onSessionChange?: (active: boolean) => void;
+  onOpenInRead?: (file: File) => void;
+  onOpenInCompress?: (file: File) => void;
 }) {
   const replacement = usePDFSession(prepare, initialFile);
   const [isExporting, setIsExporting] = useState(false);
@@ -28,10 +67,20 @@ export default function PDFInspector({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-      {!replacement.session && <ToolIntro icon={<InfoOutlined />} title="Understand your document" description="Review page sizes and the document’s title, author, and other basic properties."><Typography color="text.secondary">Edit these fields and download a copy. Your original file stays unchanged.</Typography></ToolIntro>}
+      {!replacement.session && <ToolIntro icon={<InfoOutlined />} title="Understand and sanitize your document" description="Review page sizes, inspect hidden privacy metadata, edit document properties, or export a deeply sanitized copy."><Typography color="text.secondary">All checks and sanitization run 100% locally. Your original file stays unchanged.</Typography></ToolIntro>}
       <PDFSessionControls tool="Info" active={active} hasSession={!!replacement.session} busy={replacement.isReading || isExporting} pendingName={replacement.pending?.file.name} error={replacement.error}
         onOpen={replacement.open} onSample={() => replacement.open(() => generateSamplePDF('executive-brief'))} onCancel={replacement.cancel} onConfirm={replacement.confirm} />
-      {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><InfoWorkspace key={replacement.session.id} session={replacement.session} onExporting={setIsExporting} /></Box>}
+      {replacement.session && (
+        <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+          <InfoWorkspace
+            key={replacement.session.id}
+            session={replacement.session}
+            onExporting={setIsExporting}
+            onOpenInRead={onOpenInRead}
+            onOpenInCompress={onOpenInCompress}
+          />
+        </Box>
+      )}
     </Box>
   );
 }
@@ -40,10 +89,34 @@ const fieldLabels: Record<keyof MetadataFields, string> = {
   title: 'Document title', author: 'Author', subject: 'Subject', keywords: 'Keywords (comma-separated)', creator: 'Creator application', producer: 'PDF producer',
 };
 
-function InfoWorkspace({ session: { file, data }, onExporting }: { session: PDFSession<Info>; onExporting: (busy: boolean) => void }) {
+function describeAuditRow(found: boolean, detectedText: string, cleanText = 'None detected') {
+  return {
+    found,
+    detail: found ? detectedText : cleanText,
+  };
+}
+
+function InfoWorkspace({
+  session: { file, data },
+  onExporting,
+  onOpenInRead,
+  onOpenInCompress,
+}: {
+  session: PDFSession<Info>;
+  onExporting: (busy: boolean) => void;
+  onOpenInRead?: (file: File) => void;
+  onOpenInCompress?: (file: File) => void;
+}) {
   const [fields, setFields] = useState(data.fields);
   const [isExporting, setIsExporting] = useState(false);
   const [feedback, setFeedback] = useState<{ severity: 'success' | 'error'; message: string } | null>(null);
+  const [sanitizeOptions, setSanitizeOptions] = useState<SanitizeOptions>(DEFAULT_SANITIZE_OPTIONS);
+  const [sanitizedResult, setSanitizedResult] = useState<{
+    file: File;
+    before: PrivacyAuditReport;
+    after: PrivacyAuditReport;
+    removedCategories: string[];
+  } | null>(null);
 
   const download = async (clear: boolean) => {
     if (isExporting) return;
@@ -69,6 +142,105 @@ function InfoWorkspace({ session: { file, data }, onExporting }: { session: PDFS
     }
   };
 
+  const runSanitize = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    onExporting(true);
+    setFeedback(null);
+    try {
+      const result = await sanitizePDF(await file.arrayBuffer(), sanitizeOptions);
+      const sanitizedName = `sanitized_${file.name}`;
+      const sanitizedFile = new File([result.bytes as BlobPart], sanitizedName, { type: 'application/pdf' });
+      const url = URL.createObjectURL(sanitizedFile);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = sanitizedName;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setSanitizedResult({
+        file: sanitizedFile,
+        before: result.before,
+        after: result.after,
+        removedCategories: result.removedCategories,
+      });
+    } catch {
+      setFeedback({ severity: 'error', message: 'Could not sanitize the PDF. Your original file has been kept. Try again.' });
+    } finally {
+      setIsExporting(false);
+      onExporting(false);
+    }
+  };
+
+  const { privacy } = data;
+  const infoDetailParts: string[] = [];
+  if (privacy.infoFieldsPresent.length > 0) infoDetailParts.push(privacy.infoFieldsPresent.join(', '));
+  if (privacy.customInfoKeys.length > 0) infoDetailParts.push(`+${privacy.customInfoKeys.length} custom`);
+  if (privacy.hasDates) infoDetailParts.push('timestamps');
+
+  const auditRows = [
+    {
+      key: 'info',
+      label: 'Info dictionary & timestamps',
+      ...describeAuditRow(
+        privacy.infoFieldsPresent.length > 0 || privacy.customInfoKeys.length > 0 || privacy.hasDates,
+        infoDetailParts.join(' · '),
+      ),
+    },
+    {
+      key: 'xmp',
+      label: 'XMP XML metadata',
+      ...describeAuditRow(
+        privacy.hasXmpMetadata,
+        `Embedded XML stream (${privacy.xmpByteLength.toLocaleString()} bytes)`,
+      ),
+    },
+    {
+      key: 'annotations',
+      label: 'Annotations & comments',
+      ...describeAuditRow(
+        privacy.annotationCount > 0,
+        `${privacy.annotationCount} non-form annotation${privacy.annotationCount === 1 ? '' : 's'}`,
+      ),
+    },
+    {
+      key: 'forms',
+      label: 'Interactive form fields',
+      ...describeAuditRow(
+        privacy.hasAcroForm || privacy.formFieldCount > 0,
+        privacy.formFieldCount > 0
+          ? `${privacy.formFieldCount} interactive field${privacy.formFieldCount === 1 ? '' : 's'}`
+          : 'AcroForm dictionary present',
+      ),
+    },
+    {
+      key: 'outlines',
+      label: 'Document outline / bookmarks',
+      ...describeAuditRow(privacy.hasOutlines, 'Bookmark tree present'),
+    },
+    {
+      key: 'actions',
+      label: 'Actions, JavaScript & attachments',
+      ...describeAuditRow(
+        privacy.hasDocumentActions || privacy.hasEmbeddedFiles,
+        [
+          privacy.hasDocumentActions ? 'OpenAction / JavaScript' : '',
+          privacy.hasEmbeddedFiles ? 'Embedded attachments' : '',
+        ].filter(Boolean).join(' · '),
+      ),
+    },
+  ];
+
+  const anySanitizeEnabled = (
+    sanitizeOptions.stripInfoAndDates
+    || sanitizeOptions.stripXmpMetadata
+    || sanitizeOptions.stripAnnotations
+    || sanitizeOptions.formAction !== 'keep'
+    || sanitizeOptions.stripOutlines
+    || sanitizeOptions.stripActionsAndAttachments
+  );
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
@@ -76,10 +248,178 @@ function InfoWorkspace({ session: { file, data }, onExporting }: { session: PDFS
         <Typography color="text.secondary" className="tabular-nums">{(file.size / 1024).toFixed(1)} KB · {data.pages.length} pages</Typography>
       </Paper>
       {feedback && <Alert severity={feedback.severity}>{feedback.message}</Alert>}
+      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <VerifiedUserOutlined color="primary" aria-hidden="true" />
+            <Typography variant="h2">Privacy audit & deep sanitizer</Typography>
+          </Box>
+          <Typography
+            variant="body2"
+            className="tabular-nums"
+            data-testid="privacy-findings-summary"
+            sx={{ fontWeight: 700, color: privacy.totalFindings > 0 ? 'primary.main' : 'text.primary' }}
+          >
+            {privacy.totalFindings > 0
+              ? `${privacy.totalFindings} of 6 categories detected`
+              : '0 of 6 categories detected'}
+          </Typography>
+        </Box>
+        <Typography color="text.secondary">
+          Inspect hidden document metadata and active PDF features, then export a deeply sanitized copy without leaving your device. Visual page text and images stay intact; use Edit redactions for sensitive visible text.
+        </Typography>
+        <Box
+          component="ul"
+          aria-label="Privacy audit findings"
+          sx={{
+            listStyle: 'none',
+            m: 0,
+            p: 0,
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+            gap: 1.25,
+          }}
+        >
+          {auditRows.map(row => (
+            <Box
+              component="li"
+              key={row.key}
+              sx={{
+                p: 1.5,
+                borderRadius: 1.5,
+                border: 1,
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 1.25,
+                minWidth: 0,
+              }}
+            >
+              {row.found ? (
+                <WarningAmberOutlined fontSize="small" color="warning" aria-hidden="true" sx={{ mt: 0.25, flexShrink: 0 }} />
+              ) : (
+                <CheckCircleOutlined fontSize="small" color="success" aria-hidden="true" sx={{ mt: 0.25, flexShrink: 0 }} />
+              )}
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{row.label}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
+                  {row.detail}
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+        <Divider />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 0.5, alignItems: 'center' }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={sanitizeOptions.stripInfoAndDates}
+                disabled={isExporting}
+                onChange={event => setSanitizeOptions(prev => ({ ...prev, stripInfoAndDates: event.target.checked }))}
+              />
+            }
+            label="Remove Info dictionary & timestamps"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={sanitizeOptions.stripXmpMetadata}
+                disabled={isExporting}
+                onChange={event => setSanitizeOptions(prev => ({ ...prev, stripXmpMetadata: event.target.checked }))}
+              />
+            }
+            label="Strip XMP XML metadata streams"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={sanitizeOptions.stripAnnotations}
+                disabled={isExporting}
+                onChange={event => setSanitizeOptions(prev => ({ ...prev, stripAnnotations: event.target.checked }))}
+              />
+            }
+            label="Remove annotations & comments"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={sanitizeOptions.stripOutlines}
+                disabled={isExporting}
+                onChange={event => setSanitizeOptions(prev => ({ ...prev, stripOutlines: event.target.checked }))}
+              />
+            }
+            label="Remove outline / bookmarks"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={sanitizeOptions.stripActionsAndAttachments}
+                disabled={isExporting}
+                onChange={event => setSanitizeOptions(prev => ({ ...prev, stripActionsAndAttachments: event.target.checked }))}
+              />
+            }
+            label="Strip JavaScript, OpenAction & attachments"
+          />
+          <FormControl size="small" fullWidth disabled={isExporting} sx={{ mt: { xs: 1, sm: 0 } }}>
+            <InputLabel id="sanitize-forms-label">Interactive form fields</InputLabel>
+            <Select
+              labelId="sanitize-forms-label"
+              label="Interactive form fields"
+              value={sanitizeOptions.formAction}
+              onChange={event => setSanitizeOptions(prev => ({ ...prev, formAction: event.target.value as FormSanitizeAction }))}
+            >
+              <MenuItem value="flatten">Flatten values (make read-only)</MenuItem>
+              <MenuItem value="remove">Remove form fields completely</MenuItem>
+              <MenuItem value="keep">Keep interactive form fields</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+          <Button
+            variant="contained"
+            startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <VerifiedUserOutlined />}
+            disabled={isExporting || !anySanitizeEnabled}
+            onClick={runSanitize}
+          >
+            Sanitize & download PDF
+          </Button>
+          {sanitizedResult && onOpenInRead && (
+            <Button
+              variant="outlined"
+              startIcon={<DescriptionOutlined />}
+              disabled={isExporting}
+              onClick={() => onOpenInRead(sanitizedResult.file)}
+            >
+              Open sanitized copy in Read
+            </Button>
+          )}
+          {sanitizedResult && onOpenInCompress && (
+            <Button
+              variant="outlined"
+              startIcon={<CompressOutlined />}
+              disabled={isExporting}
+              onClick={() => onOpenInCompress(sanitizedResult.file)}
+            >
+              Compress sanitized copy
+            </Button>
+          )}
+        </Box>
+        {sanitizedResult && (
+          <Alert severity="success" data-testid="sanitize-verification-alert">
+            Sanitized copy downloaded ({(sanitizedResult.file.size / 1024).toFixed(1)} KB). Verified{' '}
+            <strong>{sanitizedResult.after.totalFindings} of 6</strong> categories remaining (down from{' '}
+            {sanitizedResult.before.totalFindings}).
+            {sanitizedResult.removedCategories.length > 0
+              ? ` Cleaned: ${sanitizedResult.removedCategories.join(', ')}.`
+              : ' Document already had no matching privacy findings.'}
+          </Alert>
+        )}
+      </Paper>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 3fr) minmax(0, 2fr)' }, gap: 2, minWidth: 0 }}>
         <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           <Typography variant="h2">Document properties</Typography>
-          <Typography color="text.secondary">These six fields come from the PDF Info dictionary. Clearing them does not remove XMP metadata, dates, annotations, or identifying content inside the document.</Typography>
+          <Typography color="text.secondary">These six fields come from the PDF Info dictionary. To remove XMP metadata, timestamps, annotations, or active actions as well, use the Privacy audit & deep sanitizer above.</Typography>
           {(Object.keys(fieldLabels) as (keyof MetadataFields)[]).map(key => (
             <TextField key={key} label={fieldLabels[key]} value={fields[key]} fullWidth disabled={isExporting} onChange={event => { setFields(previous => ({ ...previous, [key]: event.target.value })); setFeedback(null); }} />
           ))}
