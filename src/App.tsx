@@ -400,7 +400,7 @@ export default function App() {
                 ) : item.mode === 'print' ? (
                   <PDFPrinter initialFile={session.file} active={viewMode === 'print'} onSessionChange={sessionHandlers.print} />
                 ) : (
-                  <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} onSessionChange={sessionHandlers.inspect} />
+                  <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} onSessionChange={sessionHandlers.inspect} onOpenInRead={file => openInTool('view', file)} onOpenInCompress={file => openInTool('compress', file)} />
                 );
                 return (
                   <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
