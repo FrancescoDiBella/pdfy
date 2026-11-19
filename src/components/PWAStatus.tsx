@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Snackbar } from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Snackbar, useMediaQuery } from '@mui/material';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { activateWaitingWorker } from '../utils/serviceWorkerUpdate';
 
 export default function PWAStatus() {
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const [confirmUpdate, setConfirmUpdate] = useState(false);
   const [registrationFailed, setRegistrationFailed] = useState(false);
   const [externalUpdate, setExternalUpdate] = useState(false);
@@ -46,7 +47,7 @@ export default function PWAStatus() {
 
   return (
     <>
-      <Snackbar open={offlineReady || hasUpdate || registrationFailed} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} sx={{ zIndex: theme => theme.zIndex.modal - 1, bottom: { xs: 'calc(64px + env(safe-area-inset-bottom))', sm: 24 }, maxHeight: 'calc(100dvh - 120px)', overflow: 'auto' }}>
+      <Snackbar open={offlineReady || hasUpdate || registrationFailed} transitionDuration={prefersReducedMotion ? 0 : undefined} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} sx={{ zIndex: theme => theme.zIndex.modal - 1, bottom: { xs: 'calc(64px + env(safe-area-inset-bottom))', sm: 24 }, maxHeight: 'calc(100dvh - 120px)', overflow: 'auto' }}>
         <Alert
           severity={registrationFailed ? 'warning' : 'info'}
           sx={{ flexWrap: 'wrap', '& .MuiAlert-message': { flex: '1 1 160px' }, '& .MuiAlert-action': { flexWrap: 'wrap' } }}
