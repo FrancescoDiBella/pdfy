@@ -7,6 +7,7 @@ import {
   FolderOpenOutlined, ZoomIn, ZoomOut, RotateRight, ViewSidebarOutlined, EditOutlined,
   DashboardCustomizeOutlined, DescriptionOutlined, PrintOutlined, CompressOutlined, CompareArrowsOutlined,
   SearchOutlined, TocOutlined, KeyboardArrowUp, KeyboardArrowDown, Close, ContentCopy, DownloadOutlined,
+  MenuBookOutlined, FullscreenOutlined, FullscreenExitOutlined,
 } from '@mui/icons-material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
@@ -23,6 +24,13 @@ import {
   type ExtractedPageText,
   type FlattenedOutlineItem,
 } from '../utils/pdfTextSearch';
+import {
+  buildPageSpreads,
+  computePageRenderWidth,
+  computeScrollProgress,
+  SPREAD_MIN_VIEWPORT_WIDTH,
+  type ReaderLayoutMode,
+} from '../utils/pdfReaderLayout';
 import ToolIntro from './ToolIntro';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
@@ -59,6 +67,8 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'thumbnails' | 'outline'>('thumbnails');
   const [activePage, setActivePage] = useState(1);
+  const [spreadMode, setSpreadMode] = useState<ReaderLayoutMode>('single');
+  const [focusMode, setFocusMode] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
   const [error, setError] = useState('');
   const [viewportWidth, setViewportWidth] = useState(600);
@@ -73,13 +83,88 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
   const extractedPages = useMemo(() => (docData?.file === file ? docData.pages : []), [docData, file]);
   const outlineItems = useMemo(() => (docData?.file === file ? docData.outline : []), [docData, file]);
   const isExtractingText = extractingForFile !== null && extractingForFile === file;
+  const isFocusActive = focusMode && active && Boolean(file);
+  const canSpread = numPages >= 2 && viewportWidth >= SPREAD_MIN_VIEWPORT_WIDTH;
+  const effectiveSpreadMode: ReaderLayoutMode = spreadMode === 'spread' && canSpread ? 'spread' : 'single';
+  const pageSpreads = useMemo(
+    () => buildPageSpreads(numPages, effectiveSpreadMode, true),
+    [numPages, effectiveSpreadMode],
+  );
 
   const fileInput = useRef<HTMLInputElement>(null);
+  const readerStageRef = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const findToggleRef = useRef<HTMLButtonElement>(null);
+  const focusToggleRef = useRef<HTMLButtonElement>(null);
+  const wasFocusActiveRef = useRef(false);
   const busy = useRef(false);
   const activeDocIdRef = useRef(0);
+
+  const exitFocusMode = useCallback(() => {
+    setFocusMode(false);
+    if (document.fullscreenElement && document.exitFullscreen) {
+      void document.exitFullscreen()
+        .catch(() => {})
+        .finally(() => {
+          requestAnimationFrame(() => focusToggleRef.current?.focus());
+        });
+    }
+  }, []);
+
+  const enterFocusMode = useCallback(() => {
+    setFocusMode(true);
+    const stage = readerStageRef.current;
+    if (stage?.requestFullscreen) {
+      void stage.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    if (wasFocusActiveRef.current && !isFocusActive) {
+      focusToggleRef.current?.focus();
+    }
+    wasFocusActiveRef.current = isFocusActive;
+  }, [isFocusActive]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement && focusMode) {
+        setFocusMode(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, [focusMode]);
+
+  useEffect(() => {
+    if (!isFocusActive) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !searchOpen) {
+        event.preventDefault();
+        exitFocusMode();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isFocusActive, searchOpen, exitFocusMode]);
+
+  useEffect(() => {
+    const container = viewport.current;
+    const bar = progressBarRef.current;
+    if (!container || !bar || !file) return;
+    const supportsScrollTimeline = typeof CSS !== 'undefined' && Boolean(CSS.supports?.('animation-timeline', 'scroll()'));
+    if (supportsScrollTimeline) return;
+
+    const updateProgress = () => {
+      const ratio = computeScrollProgress(container.scrollTop, container.scrollHeight, container.clientHeight);
+      bar.style.transform = `scaleX(${ratio})`;
+    };
+    updateProgress();
+    container.addEventListener('scroll', updateProgress, { passive: true });
+    return () => container.removeEventListener('scroll', updateProgress);
+  }, [file, numPages, effectiveSpreadMode, isFocusActive]);
 
   useEffect(() => {
     if (!viewport.current) return;
@@ -324,6 +409,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
       setActivePage(1);
       setRotation(0);
       setScale(1);
+      setFocusMode(false);
       setSearchOpen(false);
       setSearchQuery('');
       setActiveMatchIndex(0);
@@ -381,7 +467,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
         </Box>
       ) : (
         <>
-          <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Paper variant="outlined" className="pdfy-glass-card" sx={{ p: 1.5, display: isFocusActive ? 'none' : 'flex', flexDirection: 'column', gap: 1.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
               <DescriptionOutlined color="primary" />
               <Box sx={{ flex: 1, minWidth: 150, overflowWrap: 'anywhere' }}>
@@ -412,6 +498,30 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                 <Button aria-label={`${Math.round(scale * 100)}% zoom, fit page width`} onClick={() => setScale(1)} className="tabular-nums" sx={{ minWidth: 60, px: 1 }}>{Math.round(scale * 100)}%</Button>
                 <IconButton aria-label="Zoom in" disabled={scale >= 2.5} onClick={() => setScale(value => Math.min(2.5, value + 0.25))}><ZoomIn /></IconButton>
                 <IconButton aria-label="Rotate view clockwise" onClick={() => setRotation(value => (value + 90) % 360)}><RotateRight /></IconButton>
+                <Tooltip title={canSpread ? 'Two-page spread' : 'Two-page spread requires 2+ pages on a wider screen'}>
+                  <span>
+                    <IconButton
+                      aria-label="Two-page spread"
+                      aria-pressed={effectiveSpreadMode === 'spread'}
+                      disabled={!canSpread}
+                      color={effectiveSpreadMode === 'spread' ? 'primary' : 'default'}
+                      onClick={() => setSpreadMode(current => (current === 'spread' ? 'single' : 'spread'))}
+                    >
+                      <MenuBookOutlined />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Focus reading mode">
+                  <IconButton
+                    ref={focusToggleRef}
+                    aria-label="Focus reading mode"
+                    aria-pressed={isFocusActive}
+                    color={isFocusActive ? 'primary' : 'default'}
+                    onClick={enterFocusMode}
+                  >
+                    <FullscreenOutlined />
+                  </IconButton>
+                </Tooltip>
               </Box>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button variant="outlined" size="small" startIcon={<ContentCopy />} disabled={isExtractingText || !fullPlainText} onClick={() => void handleCopyText()}>Copy text</Button>
@@ -501,9 +611,14 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
           <Typography role="status" className="sr-only">
             {statusMessage || (searchOpen && searchQuery.trim() ? (searchMatches.length === 0 ? `No matches for ${searchQuery.trim()}` : `Match ${boundedMatchIndex + 1} of ${searchMatches.length} on page ${activeMatch?.pageNumber}`) : '')}
           </Typography>
-          <Box sx={{ flex: 1, minHeight: 320, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-            {sidebarOpen && (
-              <Paper variant="outlined" className="pdfy-scroll-region" sx={{ width: { xs: '100%', sm: 210 }, flexShrink: 0, overflow: 'auto', maxHeight: { xs: 240, sm: 600 }, p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Box
+            ref={readerStageRef}
+            className={isFocusActive ? 'pdfy-reader-focus' : undefined}
+            data-focus-mode={isFocusActive ? 'true' : 'false'}
+            sx={{ flex: 1, minHeight: 320, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}
+          >
+            {sidebarOpen && !isFocusActive && (
+              <Paper variant="outlined" className="pdfy-scroll-region pdfy-glass-card" sx={{ width: { xs: '100%', sm: 210 }, flexShrink: 0, overflow: 'auto', maxHeight: { xs: 240, sm: 600 }, p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Box role="group" aria-label="Sidebar view" sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.75 }}>
                   <Button
                     size="small"
@@ -572,21 +687,112 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                 )}
               </Paper>
             )}
-            <Box ref={viewport} role="region" aria-label="PDF pages" tabIndex={0} className="pdfy-workbench-mat pdfy-scroll-region" sx={{ flex: 1, minWidth: 0, overflow: 'auto', maxHeight: '70dvh', minHeight: 320, p: 2, borderRadius: 2 }}>
+            <Box
+              ref={viewport}
+              role="region"
+              aria-label="PDF pages"
+              tabIndex={0}
+              className="pdfy-workbench-mat pdfy-scroll-region"
+              data-layout-mode={effectiveSpreadMode}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                overflow: 'auto',
+                maxHeight: isFocusActive ? '100%' : '70dvh',
+                minHeight: 320,
+                p: 2,
+                pb: isFocusActive ? 10 : 2,
+                borderRadius: 2,
+                position: 'relative',
+              }}
+            >
+              <div className="pdfy-reader-progress-track" aria-hidden="true">
+                <div
+                  ref={progressBarRef}
+                  className="pdfy-reader-progress-bar"
+                  data-testid="reader-progress-bar"
+                  aria-hidden="true"
+                />
+              </div>
               <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} onLoadSuccess={handleDocumentLoad} onLoadError={() => setError('This PDF could not be displayed. Try opening another PDF.')} loading={<CircularProgress aria-label="Loading PDF pages" />} error="">
-                {Array.from({ length: numPages }, (_, index) => (
-                  <Box id={`viewer-page-${index + 1}`} role="group" tabIndex={-1} aria-label={`Page ${index + 1}`} key={index} onClick={() => setActivePage(index + 1)} sx={{ mb: 3, mx: 'auto', width: 'max-content', boxShadow: '0 4px 20px rgba(0,0,0,0.14)', bgcolor: '#FFFFFF' }}>
-                    <ViewerPage
-                      pageNumber={index + 1}
-                      width={Math.max(100, Math.min(900, viewportWidth)) * scale}
-                      viewRotation={rotation}
-                      renderTextLayer
-                      renderAnnotationLayer
-                    />
+                {pageSpreads.map((row, rowIndex) => (
+                  <Box
+                    key={row.join('-')}
+                    data-spread-row={rowIndex}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'flex-start',
+                      gap: row.length > 1 ? 2 : 0,
+                      width: 'max-content',
+                      mx: 'auto',
+                      mb: 3,
+                    }}
+                  >
+                    {row.map(pageNumber => (
+                      <Box
+                        id={`viewer-page-${pageNumber}`}
+                        role="group"
+                        tabIndex={-1}
+                        aria-label={`Page ${pageNumber}`}
+                        key={pageNumber}
+                        onClick={() => setActivePage(pageNumber)}
+                        sx={{
+                          width: 'max-content',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.14)',
+                          bgcolor: '#FFFFFF',
+                        }}
+                      >
+                        <ViewerPage
+                          pageNumber={pageNumber}
+                          width={computePageRenderWidth(viewportWidth, scale, row.length)}
+                          viewRotation={rotation}
+                          renderTextLayer
+                          renderAnnotationLayer
+                        />
+                      </Box>
+                    ))}
                   </Box>
                 ))}
               </Document>
             </Box>
+            {isFocusActive && (
+              <Box
+                role="toolbar"
+                aria-label="Focus reading controls"
+                className="pdfy-glass-pill pdfy-reader-focus-pill"
+              >
+                <Typography variant="caption" className="tabular-nums" sx={{ px: 1, fontWeight: 700, color: 'text.primary', whiteSpace: 'nowrap' }}>
+                  Page {activePage} / {numPages}
+                </Typography>
+                <IconButton aria-label="Zoom out" size="small" disabled={scale <= 0.5} onClick={() => setScale(value => Math.max(0.5, value - 0.25))}>
+                  <ZoomOut fontSize="small" />
+                </IconButton>
+                <IconButton aria-label="Zoom in" size="small" disabled={scale >= 2.5} onClick={() => setScale(value => Math.min(2.5, value + 0.25))}>
+                  <ZoomIn fontSize="small" />
+                </IconButton>
+                {canSpread && (
+                  <IconButton
+                    aria-label="Two-page spread"
+                    aria-pressed={effectiveSpreadMode === 'spread'}
+                    size="small"
+                    color={effectiveSpreadMode === 'spread' ? 'primary' : 'default'}
+                    onClick={() => setSpreadMode(current => (current === 'spread' ? 'single' : 'spread'))}
+                  >
+                    <MenuBookOutlined fontSize="small" />
+                  </IconButton>
+                )}
+                <Button
+                  size="small"
+                  variant="contained"
+                  startIcon={<FullscreenExitOutlined fontSize="small" />}
+                  onClick={exitFocusMode}
+                  sx={{ borderRadius: 99, px: 1.5, whiteSpace: 'nowrap' }}
+                >
+                  Exit focus
+                </Button>
+              </Box>
+            )}
           </Box>
         </>
       )}
