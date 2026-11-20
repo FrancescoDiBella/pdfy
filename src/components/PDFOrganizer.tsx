@@ -25,6 +25,17 @@ import {
   type MarginCropPreset,
   type OrganizablePage,
 } from '../utils/pdfOrganize';
+import {
+  applyHeaderFooterBatesToPage,
+  clampBatesDigits,
+  clampBatesStart,
+  DEFAULT_HEADER_FOOTER_BATES,
+  formatBatesNumber,
+  interpolateStampText,
+  resolveStampTargetIndices,
+  STAMP_ZONES,
+  type HeaderFooterBatesConfig,
+} from '../utils/pdfBates';
 import { usePDFSession, type PDFSession } from '../hooks/usePDFSession';
 import PDFSessionControls from './PDFSessionControls';
 import ToolIntro from './ToolIntro';
@@ -173,8 +184,24 @@ function OrganizerWorkspace({
   const [pageNumberFormat, setPageNumberFormat] = useState<'page-of' | 'simple' | 'bates'>('page-of');
   const [pageNumberPosition, setPageNumberPosition] = useState<'bottom-center' | 'bottom-right' | 'top-right'>('bottom-center');
   const [batesPrefix, setBatesPrefix] = useState('DOC-');
+  const [batesConfig, setBatesConfig] = useState<HeaderFooterBatesConfig>(() => ({
+    ...DEFAULT_HEADER_FOOTER_BATES,
+    zones: { ...DEFAULT_HEADER_FOOTER_BATES.zones },
+  }));
+  const [batesRangeTouched, setBatesRangeTouched] = useState(false);
+  const batesRangeHintId = useId();
+  const batesRangeErrorId = useId();
+  const batesTokensHintId = useId();
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' | 'info' } | null>(null);
   const isBusy = isExporting || isAddingPDFs;
+
+  const batesTargetResolution = resolveStampTargetIndices(batesConfig.pageRange, pageConfigs.length);
+  const batesSequenceMap = new Map<number, number>();
+  batesTargetResolution.indices.forEach((pageIdx, seqIdx) => {
+    batesSequenceMap.set(pageIdx, seqIdx);
+  });
+  const showBatesRangeError = batesConfig.enabled && batesRangeTouched && !!batesTargetResolution.error;
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const activeTargetPage = cropTarget !== 'all' ? pageConfigs.find(page => page.id === cropTarget) ?? null : null;
   const effectiveCropTarget = activeTargetPage ? cropTarget : 'all';
@@ -381,6 +408,7 @@ function OrganizerWorkspace({
     const srcDoc = await PDFDocument.load(arrayBuffer);
     const outDoc = await PDFDocument.create();
     const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
     const fontMono = await outDoc.embedFont(StandardFonts.Courier);
 
     const hexToRgb = (hex: string) => {
@@ -465,6 +493,26 @@ function OrganizerWorkspace({
           font: fontMono,
           color: rgb(0.35, 0.39, 0.45),
         });
+      }
+
+      // Apply 6-zone Headers, Footers & Bates Numbering if enabled and page is in target range
+      if (batesConfig.enabled && !batesTargetResolution.error) {
+        const seqIndex = batesSequenceMap.get(i);
+        if (seqIndex !== undefined) {
+          applyHeaderFooterBatesToPage(
+            page,
+            fontRegular,
+            { x: boxX, y: boxY, width, height },
+            batesConfig,
+            {
+              pageNumber: i + 1,
+              sequenceIndex: seqIndex,
+              totalPages: pageConfigs.length,
+              dateIso: todayIso,
+              filename: workingFile.name,
+            },
+          );
+        }
       }
     }
 
@@ -715,6 +763,37 @@ function OrganizerWorkspace({
                 {pageNumberFormat === 'page-of' ? `Page ${index + 1} of ${pageConfigs.length}` : pageNumberFormat === 'simple' ? index + 1 : `${batesPrefix}${String(index + 1).padStart(4, '0')}`}
               </Typography>
             )}
+            {batesConfig.enabled && !batesTargetResolution.error && batesSequenceMap.has(index) && (
+              <Typography
+                className="tabular-nums"
+                data-testid={`organizer-bates-badge-${index + 1}`}
+                sx={{
+                  position: 'absolute',
+                  pointerEvents: 'none',
+                  fontSize: 9,
+                  fontWeight: 600,
+                  color: '#1A1916',
+                  bgcolor: 'rgba(255, 254, 250, 0.94)',
+                  border: '1px solid rgba(180, 60, 24, 0.45)',
+                  px: 0.6,
+                  borderRadius: 0.5,
+                  top: 6,
+                  left: 6,
+                  maxWidth: 'calc(100% - 12px)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {formatBatesNumber(
+                  batesConfig.batesPrefix,
+                  batesConfig.batesSuffix,
+                  batesConfig.batesStart,
+                  batesConfig.batesDigits,
+                  batesSequenceMap.get(index)!,
+                )}
+              </Typography>
+            )}
           </Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(44px, 1fr))', gap: 1, width: '100%' }}>
             <Tooltip title="Move earlier" describeChild><Box component="span" sx={{ display: 'grid' }}><IconButton aria-label={`Move page ${index + 1} earlier`} disabled={index === 0 || isBusy} onClick={() => movePage(index, -1)}><ArrowBack /></IconButton></Box></Tooltip>
@@ -750,77 +829,237 @@ function OrganizerWorkspace({
       ))}
     </Menu>
     <ToolPanel open={active && settings} title="Page settings" onClose={() => setSettings(false)}>
-      <Box component="fieldset" disabled={isBusy} sx={{ border: 0, m: 0, p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+      <Box component="fieldset" disabled={isBusy} sx={{ border: 0, m: 0, p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0 }}>
         <legend className="sr-only">Page settings controls</legend>
-        <TextField
-          select
-          label="Apply margin crop to"
-          value={effectiveCropTarget}
-          onChange={event => setCropTarget(event.target.value)}
-          fullWidth
-          slotProps={{ select: { MenuProps: { slotProps: { list: { sx: { '& .MuiMenuItem-root': { minHeight: 44 } } } } } } }}
-        >
-          <MenuItem value="all">All pages ({formatCropSummary(documentCrop)})</MenuItem>
-          {pageConfigs.map((page, idx) => (
-            <MenuItem key={page.id} value={page.id}>
-              Page {idx + 1}{page.crop ? ` (${formatCropSummary(page.crop)})` : ''}
-            </MenuItem>
-          ))}
-        </TextField>
-        <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-          <FormLabel component="legend" sx={{ fontWeight: 600, fontSize: '0.875rem', mb: 0.5 }}>Margin crop preset</FormLabel>
-          <RadioGroup
-            aria-label="Margin crop preset"
-            value={activePresetValue}
-            onChange={event => handleChangeCropPreset(event.target.value as MarginCropPreset | 'inherit')}
-          >
-            {activeTargetPage && (
-              <FormControlLabel
-                value="inherit"
-                control={<Radio size="small" />}
-                label={`Follow all pages (${formatCropSummary(documentCrop)})`}
-              />
+
+        <details className="pdfy-details" open>
+          <summary>Margin crop</summary>
+          <Box sx={{ px: 1.75, pb: 1.75, pt: 0.5, display: 'flex', flexDirection: 'column', gap: 1.75, minWidth: 0 }}>
+            <TextField
+              select
+              label="Apply margin crop to"
+              value={effectiveCropTarget}
+              onChange={event => setCropTarget(event.target.value)}
+              fullWidth
+              slotProps={{ select: { MenuProps: { slotProps: { list: { sx: { '& .MuiMenuItem-root': { minHeight: 44 } } } } } } }}
+            >
+              <MenuItem value="all">All pages ({formatCropSummary(documentCrop)})</MenuItem>
+              {pageConfigs.map((page, idx) => (
+                <MenuItem key={page.id} value={page.id}>
+                  Page {idx + 1}{page.crop ? ` (${formatCropSummary(page.crop)})` : ''}
+                </MenuItem>
+              ))}
+            </TextField>
+            <FormControl component="fieldset" sx={{ minWidth: 0 }}>
+              <FormLabel component="legend" sx={{ fontWeight: 600, fontSize: '0.875rem', mb: 0.5 }}>Margin crop preset</FormLabel>
+              <RadioGroup
+                aria-label="Margin crop preset"
+                value={activePresetValue}
+                onChange={event => handleChangeCropPreset(event.target.value as MarginCropPreset | 'inherit')}
+              >
+                {activeTargetPage && (
+                  <FormControlLabel
+                    value="inherit"
+                    control={<Radio size="small" />}
+                    label={`Follow all pages (${formatCropSummary(documentCrop)})`}
+                  />
+                )}
+                <FormControlLabel value="original" control={<Radio size="small" />} label="Original" />
+                <FormControlLabel value="trim-4" control={<Radio size="small" />} label="Trim 4%" />
+                <FormControlLabel value="trim-8" control={<Radio size="small" />} label="Trim 8%" />
+                <FormControlLabel value="custom" control={<Radio size="small" />} label="Custom margins" />
+              </RadioGroup>
+            </FormControl>
+            {showCustomMarginFields && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                <Typography id={cropHintId} variant="caption" color="text.secondary">
+                  Trim 0% to {MAX_CROP_MARGIN_PCT}% from each visual edge using PDF CropBox adjustments.
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+                  <CropMarginField label="Top margin (%)" value={activeCustomMargins.top} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('top', val)} />
+                  <CropMarginField label="Bottom margin (%)" value={activeCustomMargins.bottom} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('bottom', val)} />
+                  <CropMarginField label="Left margin (%)" value={activeCustomMargins.left} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('left', val)} />
+                  <CropMarginField label="Right margin (%)" value={activeCustomMargins.right} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('right', val)} />
+                </Box>
+              </Box>
             )}
-            <FormControlLabel value="original" control={<Radio size="small" />} label="Original" />
-            <FormControlLabel value="trim-4" control={<Radio size="small" />} label="Trim 4%" />
-            <FormControlLabel value="trim-8" control={<Radio size="small" />} label="Trim 8%" />
-            <FormControlLabel value="custom" control={<Radio size="small" />} label="Custom margins" />
-          </RadioGroup>
-        </FormControl>
-        {showCustomMarginFields && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-            <Typography id={cropHintId} variant="caption" color="text.secondary">
-              Trim 0% to {MAX_CROP_MARGIN_PCT}% from each visual edge using PDF CropBox adjustments.
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
-              <CropMarginField label="Top margin (%)" value={activeCustomMargins.top} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('top', val)} />
-              <CropMarginField label="Bottom margin (%)" value={activeCustomMargins.bottom} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('bottom', val)} />
-              <CropMarginField label="Left margin (%)" value={activeCustomMargins.left} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('left', val)} />
-              <CropMarginField label="Right margin (%)" value={activeCustomMargins.right} describedBy={cropHintId} onChange={val => handleChangeCustomMargin('right', val)} />
-            </Box>
+            {!activeTargetPage && pageCropOverrideCount > 0 && (
+              <Button
+                type="button"
+                variant="outlined"
+                size="small"
+                onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, crop: undefined })))}
+              >
+                Clear page crop overrides ({pageCropOverrideCount})
+              </Button>
+            )}
           </Box>
-        )}
-        {!activeTargetPage && pageCropOverrideCount > 0 && (
-          <Button
-            type="button"
-            variant="outlined"
-            size="small"
-            onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, crop: undefined })))}
-          >
-            Clear page crop overrides ({pageCropOverrideCount})
-          </Button>
-        )}
+        </details>
+
+        <details className="pdfy-details">
+          <summary>Headers, footers &amp; Bates numbering</summary>
+          <Box sx={{ px: 1.75, pb: 1.75, pt: 0.5, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={batesConfig.enabled}
+                  onChange={event => setBatesConfig(prev => ({ ...prev, enabled: event.target.checked }))}
+                />
+              }
+              label="Enable headers, footers & Bates stamps"
+            />
+            <Typography id={batesTokensHintId} variant="caption" color="text.secondary">
+              Available tokens: <code>{'{bates}'}</code>, <code>{'{page}'}</code>, <code>{'{total}'}</code>, <code>{'{date}'}</code>, <code>{'{filename}'}</code>.
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.25 }}>
+              <TextField
+                size="small"
+                label="Bates prefix"
+                value={batesConfig.batesPrefix}
+                disabled={!batesConfig.enabled}
+                onChange={event => setBatesConfig(prev => ({ ...prev, batesPrefix: event.target.value }))}
+              />
+              <TextField
+                size="small"
+                label="Bates suffix"
+                value={batesConfig.batesSuffix}
+                disabled={!batesConfig.enabled}
+                onChange={event => setBatesConfig(prev => ({ ...prev, batesSuffix: event.target.value }))}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Bates start number"
+                value={batesConfig.batesStart}
+                disabled={!batesConfig.enabled}
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                onChange={event => setBatesConfig(prev => ({ ...prev, batesStart: clampBatesStart(Number(event.target.value)) }))}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Zero-pad digits"
+                value={batesConfig.batesDigits}
+                disabled={!batesConfig.enabled}
+                slotProps={{ htmlInput: { min: 1, max: 10, step: 1 } }}
+                onChange={event => setBatesConfig(prev => ({ ...prev, batesDigits: clampBatesDigits(Number(event.target.value)) }))}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {/* Hint placed above input per validate-input-after-interaction guidance */}
+              <Typography id={batesRangeHintId} variant="caption" color="text.secondary">
+                Apply stamps to pages (leave blank for all {pageConfigs.length} pages, or e.g. 2-{Math.max(2, pageConfigs.length)} to skip cover).
+              </Typography>
+              <TextField
+                size="small"
+                label="Stamp page range"
+                placeholder={`1-${pageConfigs.length}`}
+                value={batesConfig.pageRange}
+                disabled={!batesConfig.enabled}
+                error={showBatesRangeError}
+                slotProps={{
+                  htmlInput: {
+                    'aria-invalid': showBatesRangeError ? 'true' : 'false',
+                    'aria-describedby': showBatesRangeError ? `${batesRangeHintId} ${batesRangeErrorId}` : batesRangeHintId,
+                  },
+                }}
+                onBlur={() => setBatesRangeTouched(true)}
+                onChange={event => setBatesConfig(prev => ({ ...prev, pageRange: event.target.value }))}
+                fullWidth
+              />
+              {showBatesRangeError && (
+                <Typography id={batesRangeErrorId} variant="caption" color="error" sx={{ fontWeight: 600 }}>
+                  Error: {batesTargetResolution.error}
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {STAMP_ZONES.map(zone => (
+                <TextField
+                  key={zone.id}
+                  size="small"
+                  label={`${zone.label} stamp`}
+                  value={batesConfig.zones[zone.id]}
+                  disabled={!batesConfig.enabled}
+                  slotProps={{ htmlInput: { 'aria-describedby': batesTokensHintId } }}
+                  onChange={event =>
+                    setBatesConfig(prev => ({
+                      ...prev,
+                      zones: { ...prev.zones, [zone.id]: event.target.value },
+                    }))
+                  }
+                  fullWidth
+                />
+              ))}
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 88px', gap: 1.25, alignItems: 'center' }}>
+              <Box>
+                <Typography variant="caption" color="text.secondary" className="tabular-nums">Stamp font size ({batesConfig.fontSize} pt)</Typography>
+                <Slider
+                  aria-label="Stamp font size"
+                  size="small"
+                  min={7}
+                  max={16}
+                  step={0.5}
+                  value={batesConfig.fontSize}
+                  disabled={!batesConfig.enabled}
+                  onChange={(_, value) => setBatesConfig(prev => ({ ...prev, fontSize: value as number }))}
+                />
+              </Box>
+              <TextField
+                size="small"
+                label="Stamp color"
+                type="color"
+                value={batesConfig.colorHex}
+                disabled={!batesConfig.enabled}
+                onChange={event => setBatesConfig(prev => ({ ...prev, colorHex: event.target.value }))}
+              />
+            </Box>
+            {batesConfig.enabled && !batesTargetResolution.error && batesTargetResolution.indices.length > 0 && (
+              <Paper variant="outlined" sx={{ p: 1.25, bgcolor: 'background.default' }} data-testid="bates-live-preview">
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }}>
+                  Live preview (first stamped page: Page {batesTargetResolution.indices[0] + 1})
+                </Typography>
+                <Typography variant="caption" className="mono" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
+                  {interpolateStampText(
+                    batesConfig.zones['bottom-right'] || batesConfig.zones['bottom-center'] || batesConfig.zones['top-right'] || '{bates}',
+                    {
+                      pageNumber: batesTargetResolution.indices[0] + 1,
+                      totalPages: pageConfigs.length,
+                      bates: formatBatesNumber(batesConfig.batesPrefix, batesConfig.batesSuffix, batesConfig.batesStart, batesConfig.batesDigits, 0),
+                      dateIso: todayIso,
+                      filename: workingFile.name,
+                    },
+                  )}
+                </Typography>
+              </Paper>
+            )}
+          </Box>
+        </details>
+
+        <details className="pdfy-details" open>
+          <summary>Watermark</summary>
+          <Box sx={{ px: 1.75, pb: 1.75, pt: 0.5, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0 }}>
+            <FormControlLabel control={<Switch checked={enableWatermark} onChange={event => setEnableWatermark(event.target.checked)} />} label="Watermark" />
+            <TextField label="Watermark Text" value={watermarkText} onChange={event => setWatermarkText(event.target.value)} disabled={!enableWatermark} fullWidth />
+            <TextField label="Watermark color" type="color" value={watermarkColor} onChange={event => setWatermarkColor(event.target.value)} disabled={!enableWatermark} fullWidth />
+            <Box><Typography>Watermark opacity</Typography><Slider aria-label="Watermark opacity" min={0.05} max={0.8} step={0.01} value={watermarkOpacity} onChange={(_, value) => setWatermarkOpacity(value as number)} disabled={!enableWatermark} /></Box>
+            <Box><Typography>Watermark size</Typography><Slider aria-label="Watermark size" min={16} max={120} value={watermarkSize} onChange={(_, value) => setWatermarkSize(value as number)} disabled={!enableWatermark} /></Box>
+            <FormControlLabel control={<Switch checked={watermarkDiagonal} disabled={!enableWatermark} onChange={event => setWatermarkDiagonal(event.target.checked)} />} label="Diagonal watermark" />
+          </Box>
+        </details>
+
+        <details className="pdfy-details" open>
+          <summary>Simple page numbers</summary>
+          <Box sx={{ px: 1.75, pb: 1.75, pt: 0.5, display: 'flex', flexDirection: 'column', gap: 1.5, minWidth: 0 }}>
+            <FormControlLabel control={<Switch checked={enablePageNumbers} onChange={event => setEnablePageNumbers(event.target.checked)} />} label="Page numbers" />
+            <TextField select label="Number format" value={pageNumberFormat} onChange={event => setPageNumberFormat(event.target.value as typeof pageNumberFormat)} disabled={!enablePageNumbers}>{[['page-of', 'Page 1 of 3'], ['simple', '1, 2, 3'], ['bates', 'Prefix and number']].map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
+            {pageNumberFormat === 'bates' && <TextField label="Number prefix" value={batesPrefix} onChange={event => setBatesPrefix(event.target.value)} />}
+            <TextField select label="Number position" value={pageNumberPosition} onChange={event => setPageNumberPosition(event.target.value as typeof pageNumberPosition)} disabled={!enablePageNumbers}>{[['bottom-center', 'Bottom center'], ['bottom-right', 'Bottom right'], ['top-right', 'Top right']].map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
+          </Box>
+        </details>
+
         <Divider />
-        <FormControlLabel control={<Switch checked={enableWatermark} onChange={event => setEnableWatermark(event.target.checked)} />} label="Watermark" />
-        <TextField label="Watermark Text" value={watermarkText} onChange={event => setWatermarkText(event.target.value)} disabled={!enableWatermark} fullWidth />
-        <TextField label="Watermark color" type="color" value={watermarkColor} onChange={event => setWatermarkColor(event.target.value)} disabled={!enableWatermark} fullWidth />
-        <Box><Typography>Watermark opacity</Typography><Slider aria-label="Watermark opacity" min={0.05} max={0.8} step={0.01} value={watermarkOpacity} onChange={(_, value) => setWatermarkOpacity(value as number)} disabled={!enableWatermark} /></Box>
-        <Box><Typography>Watermark size</Typography><Slider aria-label="Watermark size" min={16} max={120} value={watermarkSize} onChange={(_, value) => setWatermarkSize(value as number)} disabled={!enableWatermark} /></Box>
-        <FormControlLabel control={<Switch checked={watermarkDiagonal} disabled={!enableWatermark} onChange={event => setWatermarkDiagonal(event.target.checked)} />} label="Diagonal watermark" />
-        <FormControlLabel control={<Switch checked={enablePageNumbers} onChange={event => setEnablePageNumbers(event.target.checked)} />} label="Page numbers" />
-        <TextField select label="Number format" value={pageNumberFormat} onChange={event => setPageNumberFormat(event.target.value as typeof pageNumberFormat)} disabled={!enablePageNumbers}>{[['page-of', 'Page 1 of 3'], ['simple', '1, 2, 3'], ['bates', 'Prefix and number']].map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
-        {pageNumberFormat === 'bates' && <TextField label="Number prefix" value={batesPrefix} onChange={event => setBatesPrefix(event.target.value)} />}
-        <TextField select label="Number position" value={pageNumberPosition} onChange={event => setPageNumberPosition(event.target.value as typeof pageNumberPosition)} disabled={!enablePageNumbers}>{[['bottom-center', 'Bottom center'], ['bottom-right', 'Bottom right'], ['top-right', 'Top right']].map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
         <Button type="button" variant="outlined" startIcon={<RotateLeft />} onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, rotation: (page.rotation + 270) % 360 })))}>Rotate all left</Button>
         <Button type="button" variant="outlined" startIcon={<RotateRight />} onClick={() => setPageConfigs(previous => previous.map(page => ({ ...page, rotation: (page.rotation + 90) % 360 })))}>Rotate all right</Button>
         <Button type="button" variant="outlined" onClick={() => { trigger.current = settingsButton.current; setSettings(false); setConfirmReset(true); }}>Reset page order</Button>
