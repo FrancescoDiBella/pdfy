@@ -87,7 +87,7 @@ const toolKeywords: Record<ViewMode, readonly string[]> = {
   inspect: ['info', 'metadata', 'privacy', 'audit', 'sanitize', 'strip', 'properties'],
 };
 
-function FolioMark({ size = 30 }: { size?: number }) {
+function FolioMark({ size = 28 }: { size?: number }) {
   return (
     <Box
       component="svg"
@@ -96,10 +96,18 @@ function FolioMark({ size = 30 }: { size?: number }) {
       fill="none"
       sx={{ width: size, height: size, flexShrink: 0, display: 'block' }}
     >
-      <path d="M10 4h19l11 11v29a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" fill="var(--pdfy-paper)" stroke="var(--pdfy-ink)" strokeWidth="2.5" strokeLinejoin="round" />
-      <path d="M29 4v9a2 2 0 0 0 2 2h9Z" fill="var(--pdfy-mat-bg)" stroke="var(--pdfy-ink)" strokeWidth="2.5" strokeLinejoin="round" />
-      <rect x="14" y="19" width="12" height="4" rx="1" fill="var(--pdfy-accent)" />
-      <path d="M14 28h19M14 34h14" stroke="var(--pdfy-ink-muted)" strokeWidth="2.5" strokeLinecap="round" />
+      <defs>
+        <linearGradient id="pdfy-app-icon-bg" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#3B9BFF" />
+          <stop offset="100%" stopColor="#0055C4" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="3" width="42" height="42" rx="11.5" fill="url(#pdfy-app-icon-bg)" />
+      <rect x="3.75" y="3.75" width="40.5" height="40.5" rx="10.75" stroke="rgba(255,255,255,0.34)" strokeWidth="1.5" />
+      <path d="M16 12.5h11.5L34 19v16.5a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2v-21a2 2 0 0 1 2-2Z" fill="rgba(255,255,255,0.95)" />
+      <path d="M27.5 12.5V17a2 2 0 0 0 2 2H34Z" fill="rgba(186,219,255,0.95)" />
+      <rect x="18" y="23" width="12" height="2.4" rx="1.2" fill="#0062CC" />
+      <rect x="18" y="28" width="9" height="2.4" rx="1.2" fill="#64748B" />
     </Box>
   );
 }
@@ -392,24 +400,24 @@ export default function App() {
       : `Drop PDF to open in ${current.label}`;
 
   const navigation = (
-    <Box className="pdfy-scroll-region" sx={{ p: 1.25, pb: !desktop ? 'max(16px, env(safe-area-inset-bottom, 0px))' : 1.5, height: '100%', display: 'flex', flexDirection: 'column', gap: 1.25, overflowY: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, pb: !desktop ? 0.75 : 0, borderBottom: !desktop ? 1 : 0, borderColor: 'var(--pdfy-glass-border)' }}>
+    <Box className="pdfy-scroll-region" sx={{ p: 1.15, pb: !desktop ? 'max(18px, env(safe-area-inset-bottom, 0px))' : 1.25, height: '100%', display: 'flex', flexDirection: 'column', gap: desktop ? 0.85 : 1.15, overflowY: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, pb: !desktop ? 0.75 : 0, borderBottom: !desktop ? 1 : 0, borderColor: 'var(--pdfy-glass-hairline)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {!desktop && <FolioMark size={24} />}
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.08em' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.07em' }}>
             {!desktop ? 'PDFY TOOLS' : 'PDF TOOLS'}
           </Typography>
         </Box>
         {!desktop && <IconButton aria-label="Close tools menu" onClick={() => setMenuOpen(false)}><Close /></IconButton>}
       </Box>
-      <Box component="nav" id="tools-navigation" aria-label="PDF tools" sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+      <Box component="nav" id="tools-navigation" aria-label="PDF tools" sx={{ display: 'flex', flexDirection: 'column', gap: desktop ? 0.85 : 1.15 }}>
         {navGroups.map((group, groupIndex) => (
-          <Box key={group} sx={{ pt: groupIndex > 0 ? 1 : 0, borderTop: groupIndex > 0 ? 1 : 0, borderColor: 'var(--pdfy-glass-border)' }}>
+          <Box key={group} sx={{ pt: groupIndex > 0 ? 0.75 : 0, borderTop: groupIndex > 0 ? 1 : 0, borderColor: 'var(--pdfy-glass-hairline)' }}>
             <Typography
               component="div"
               variant="caption"
               color="text.secondary"
-              sx={{ px: 1.25, pb: 0.5, fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.04em' }}
+              sx={{ px: 1.25, pb: 0.35, fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.04em' }}
             >
               {group}
             </Typography>
@@ -417,7 +425,7 @@ export default function App() {
               {navItems.filter(item => item.group === group).map(item => {
                 const active = viewMode === item.mode;
                 return (
-                  <ListItem key={item.mode} disablePadding sx={{ mb: 0.35 }}>
+                  <ListItem key={item.mode} disablePadding sx={{ mb: desktop ? 0.2 : 0.3 }}>
                     <ListItemButton
                       component="button"
                       selected={active}
@@ -425,12 +433,12 @@ export default function App() {
                       onClick={() => navigate(item.mode)}
                       sx={{
                         width: '100%',
-                        minHeight: 44,
-                        borderRadius: 2.5,
+                        minHeight: desktop ? 36 : 44,
+                        '@media (pointer: coarse)': { minHeight: 44 },
+                        borderRadius: 999,
                         color: active ? 'primary.main' : 'text.primary',
-                        borderInlineStart: '3px solid',
-                        borderColor: active ? 'primary.main' : 'transparent',
                         bgcolor: active ? 'var(--pdfy-glass-active-bg)' : 'transparent',
+                        boxShadow: active ? 'var(--pdfy-glass-active-shadow)' : 'none',
                         '&.Mui-selected': {
                           bgcolor: 'var(--pdfy-glass-active-bg)',
                         },
@@ -438,14 +446,14 @@ export default function App() {
                           bgcolor: 'var(--pdfy-glass-active-bg)',
                         },
                         textAlign: 'left',
-                        px: 1.25,
-                        py: 0.75,
+                        px: 1.35,
+                        py: desktop ? 0.45 : 0.65,
                       }}
                     >
-                      <ListItemIcon sx={{ color: active ? 'primary.main' : 'text.secondary', minWidth: 34 }}>{item.icon}</ListItemIcon>
+                      <ListItemIcon sx={{ color: active ? 'primary.main' : 'text.secondary', minWidth: 30, '& svg': { fontSize: 19 } }}>{item.icon}</ListItemIcon>
                       <ListItemText
                         primary={item.label}
-                        slotProps={{ primary: { sx: { fontWeight: 600, fontSize: '0.875rem' } } }}
+                        slotProps={{ primary: { sx: { fontWeight: active ? 700 : 500, fontSize: '0.85rem', letterSpacing: '-0.01em' } } }}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -455,13 +463,13 @@ export default function App() {
           </Box>
         ))}
       </Box>
-      <Box sx={{ mt: 'auto', p: 1.15, pt: 1.5, borderTop: 1, borderColor: 'var(--pdfy-glass-border)' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.35 }}>
-          <LockOutlined sx={{ fontSize: 16, color: 'primary.main' }} />
+      <Box sx={{ mt: 'auto', px: 1.15, pt: 1.1, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.65, mb: 0.25 }}>
+          <LockOutlined sx={{ fontSize: 14, color: 'primary.main' }} />
           <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>100% on-device</Typography>
         </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.45 }}>
-          Files never leave this tab. Download your work before closing.
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.38 }}>
+          Local-only · Download before closing.
         </Typography>
       </Box>
     </Box>
@@ -471,12 +479,12 @@ export default function App() {
     <>
       <a className="skip-link" href={viewMode === 'edit' ? '#editor-session' : '#workspace-title'}>Skip to workspace</a>
       <Box hidden={viewMode === 'edit'} data-testid="workspace" data-theme={theme.palette.mode} className="pdfy-workspace-shell" sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', color: 'text.primary' }}>
-        <Box component="header" className="pdfy-glass pdfy-glass-header" sx={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, borderBottom: 1, borderColor: 'var(--pdfy-glass-border)', zIndex: 10 }}>
+        <Box component="header" className="pdfy-glass pdfy-glass-header" sx={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, borderBottom: 1, borderColor: 'var(--pdfy-glass-hairline)', zIndex: 10 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
             {!desktop && <IconButton aria-label="Open tools menu" aria-expanded={menuOpen} aria-controls={menuOpen ? 'tools-navigation' : undefined} onClick={() => { setMenuSelected(false); setMenuOpen(true); }}><MenuIcon /></IconButton>}
-            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}><FolioMark size={26} /></Box>
-            <Typography component="span" sx={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.025em' }}>PDFy</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, pl: 1, borderLeft: 1, borderColor: 'var(--pdfy-glass-border)', fontWeight: 500 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}><FolioMark size={26} /></Box>
+            <Typography component="span" sx={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.03em' }}>PDFy</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, pl: 1, borderLeft: 1, borderColor: 'var(--pdfy-glass-hairline)', fontWeight: 500 }}>
               Local PDF workbench
             </Typography>
           </Box>
@@ -515,7 +523,22 @@ export default function App() {
         </Box>
         <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
           {desktop ? (
-            <Box component="aside" className="pdfy-glass" sx={{ width: 224, flexShrink: 0, borderRight: 1, borderColor: 'var(--pdfy-glass-border)' }}>{navigation}</Box>
+            <Box
+              component="aside"
+              className="pdfy-glass-card"
+              sx={{
+                width: 220,
+                flexShrink: 0,
+                m: 1.5,
+                mr: 0,
+                borderRadius: '20px',
+                border: 1,
+                borderColor: 'var(--pdfy-glass-border)',
+                overflow: 'hidden',
+              }}
+            >
+              {navigation}
+            </Box>
           ) : (
             <Drawer
               open={menuOpen}
@@ -523,12 +546,14 @@ export default function App() {
               ModalProps={{ disableRestoreFocus: menuSelected }}
               slotProps={{
                 paper: {
-                  className: 'pdfy-glass',
+                  className: 'pdfy-glass-card',
                   sx: {
                     width: 276,
                     maxWidth: 'calc(100vw - 24px)',
                     bgcolor: 'var(--pdfy-glass-strong)',
                     borderRight: '1px solid var(--pdfy-glass-border)',
+                    borderTopRightRadius: 22,
+                    borderBottomRightRadius: 22,
                   },
                 },
                 transition: { onExited: () => { if (menuSelected) focusWorkspace(viewMode); } },
@@ -537,10 +562,10 @@ export default function App() {
               {navigation}
             </Drawer>
           )}
-          <Box component="main" className="pdfy-scroll-region pdfy-workspace-main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', containerType: 'inline-size', px: { xs: 1.25, sm: 2.5, lg: 3.5 }, pt: { xs: 1.25, sm: 2, lg: 2.5 }, pb: desktop ? { xs: 2.5, lg: 3.5 } : 'calc(84px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
+          <Box component="main" className="pdfy-scroll-region pdfy-workspace-main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', containerType: 'inline-size', px: { xs: 1.5, sm: 2.5, lg: 3.5 }, pt: { xs: 1.25, sm: 2, lg: 2.25 }, pb: desktop ? { xs: 2.5, lg: 3.5 } : 'calc(88px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ mb: { xs: 1.5, sm: 2.25 }, pb: { xs: 1.25, sm: 1.75 }, borderBottom: 1, borderColor: 'var(--pdfy-glass-border)', flexShrink: 0 }}>
-                <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: 0.35 }}>{current.title}</Typography>
+              <Box sx={{ mb: { xs: 1.25, sm: 2 }, pb: { xs: 0.75, sm: 1.25 }, borderBottom: { xs: 0, sm: 1 }, borderColor: 'var(--pdfy-glass-hairline)', flexShrink: 0 }}>
+                <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: 0.25 }}>{current.title}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '64ch' }}>{current.description}</Typography>
               </Box>
               {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {

@@ -53,10 +53,10 @@ export default function PWAStatus() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         sx={{
           zIndex: theme => theme.zIndex.modal - 1,
-          left: { xs: 12, md: 6 },
+          left: { xs: 12, md: 12 },
           right: { xs: 12, md: 'auto' },
-          bottom: { xs: 'calc(78px + env(safe-area-inset-bottom, 0px))', md: 8 },
-          maxWidth: { xs: 'calc(100vw - 24px)', md: 216 },
+          bottom: { xs: 'calc(80px + env(safe-area-inset-bottom, 0px))', md: 12 },
+          maxWidth: { xs: 'calc(100vw - 24px)', md: 220 },
           maxHeight: 'calc(100dvh - 120px)',
           overflow: 'auto',
         }}
@@ -65,6 +65,7 @@ export default function PWAStatus() {
           severity={registrationFailed ? 'warning' : 'info'}
           sx={{
             width: '100%',
+            borderRadius: '16px',
             flexWrap: 'wrap',
             '& .MuiAlert-message': { flex: '1 1 130px' },
             '& .MuiAlert-action': { flexWrap: 'wrap', pl: 0 },
