@@ -540,8 +540,20 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
               )}
             </Box>
             <Divider sx={{ borderColor: 'var(--pdfy-glass-hairline)' }} />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-              <Box role="group" aria-label="View controls" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: compactToolbar ? 'nowrap' : 'wrap', flexDirection: compactToolbar ? 'column' : 'row' }}>
+              <Box
+                role="group"
+                aria-label="View controls"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: compactToolbar ? '100%' : 'auto',
+                  flexWrap: compactToolbar ? 'nowrap' : 'wrap',
+                  overflowX: compactToolbar ? 'auto' : 'visible',
+                  scrollbarWidth: 'none',
+                  '&::-webkit-scrollbar': { display: 'none' },
+                }}
+              >
                 <Tooltip title="Page thumbnails">
                   <IconButton aria-label="Page thumbnails" aria-pressed={sidebarOpen && sidebarTab === 'thumbnails'} onClick={() => toggleSidebar('thumbnails')} color={sidebarOpen && sidebarTab === 'thumbnails' ? 'primary' : 'default'}>
                     <ViewSidebarOutlined />
@@ -558,25 +570,23 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                   </IconButton>
                 </Tooltip>
                 <IconButton aria-label="Zoom out" disabled={scale <= 0.5} onClick={() => setScale(value => Math.max(0.5, value - 0.25))}><ZoomOut /></IconButton>
-                <Button aria-label={`${Math.round(scale * 100)}% zoom, fit page width`} onClick={() => setScale(1)} className="tabular-nums" sx={{ minWidth: 50, px: 0.75 }}>{Math.round(scale * 100)}%</Button>
+                <Button aria-label={`${Math.round(scale * 100)}% zoom, fit page width`} onClick={() => setScale(1)} className="tabular-nums" sx={{ minWidth: 50, px: 0.75, flexShrink: 0 }}>{Math.round(scale * 100)}%</Button>
                 <IconButton aria-label="Zoom in" disabled={scale >= 2.5} onClick={() => setScale(value => Math.min(2.5, value + 0.25))}><ZoomIn /></IconButton>
+                <IconButton aria-label="Rotate view clockwise" onClick={() => setRotation(value => (value + 90) % 360)}><RotateRight /></IconButton>
                 {!compactToolbar && (
-                  <>
-                    <IconButton aria-label="Rotate view clockwise" onClick={() => setRotation(value => (value + 90) % 360)}><RotateRight /></IconButton>
-                    <Tooltip title={canSpread ? 'Two-page spread' : 'Two-page spread requires 2+ pages on a wider screen'}>
-                      <span>
-                        <IconButton
-                          aria-label="Two-page spread"
-                          aria-pressed={effectiveSpreadMode === 'spread'}
-                          disabled={!canSpread}
-                          color={effectiveSpreadMode === 'spread' ? 'primary' : 'default'}
-                          onClick={() => setSpreadMode(current => (current === 'spread' ? 'single' : 'spread'))}
-                        >
-                          <MenuBookOutlined />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </>
+                  <Tooltip title={canSpread ? 'Two-page spread' : 'Two-page spread requires 2+ pages on a wider screen'}>
+                    <span>
+                      <IconButton
+                        aria-label="Two-page spread"
+                        aria-pressed={effectiveSpreadMode === 'spread'}
+                        disabled={!canSpread}
+                        color={effectiveSpreadMode === 'spread' ? 'primary' : 'default'}
+                        onClick={() => setSpreadMode(current => (current === 'spread' ? 'single' : 'spread'))}
+                      >
+                        <MenuBookOutlined />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                 )}
                 <Tooltip title="Focus reading mode">
                   <IconButton
@@ -590,17 +600,32 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                   </IconButton>
                 </Tooltip>
               </Box>
-              {!compactToolbar && (
-                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                  <Button variant="outlined" size="small" startIcon={<ContentCopy />} disabled={isExtractingText || !fullPlainText} onClick={() => void handleCopyText()}>Copy text</Button>
-                  <Button variant="outlined" size="small" startIcon={<DownloadOutlined />} disabled={isExtractingText || !fullPlainText} onClick={handleDownloadText}>Download .txt</Button>
-                  {onOpenInPrint && <Button variant="outlined" size="small" startIcon={<PrintOutlined />} onClick={() => onOpenInPrint(file)}>Print PDF</Button>}
-                  {onOpenInCompress && <Button variant="outlined" size="small" startIcon={<CompressOutlined />} onClick={() => onOpenInCompress(file)}>Compress PDF</Button>}
-                  {onOpenInCompare && <Button variant="outlined" size="small" startIcon={<CompareArrowsOutlined />} onClick={() => onOpenInCompare(file)}>Compare PDF</Button>}
-                  <Button variant="outlined" size="small" startIcon={<DashboardCustomizeOutlined />} onClick={() => onOpenInOrganizer(file)}>Organize pages</Button>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 0.75,
+                  width: compactToolbar ? '100%' : 'auto',
+                  flexWrap: compactToolbar ? 'nowrap' : 'wrap',
+                  overflowX: compactToolbar ? 'auto' : 'visible',
+                  scrollbarWidth: 'none',
+                  '&::-webkit-scrollbar': { display: 'none' },
+                  '& > button': { flexShrink: 0, whiteSpace: 'nowrap' },
+                }}
+              >
+                {!compactToolbar && (
+                  <>
+                    <Button variant="outlined" size="small" startIcon={<ContentCopy />} disabled={isExtractingText || !fullPlainText} onClick={() => void handleCopyText()}>Copy text</Button>
+                    <Button variant="outlined" size="small" startIcon={<DownloadOutlined />} disabled={isExtractingText || !fullPlainText} onClick={handleDownloadText}>Download .txt</Button>
+                  </>
+                )}
+                {onOpenInCompare && <Button variant="outlined" size="small" startIcon={<CompareArrowsOutlined />} onClick={() => onOpenInCompare(file)}>Compare PDF</Button>}
+                <Button variant="outlined" size="small" startIcon={<DashboardCustomizeOutlined />} onClick={() => onOpenInOrganizer(file)}>Organize pages</Button>
+                {onOpenInCompress && <Button variant="outlined" size="small" startIcon={<CompressOutlined />} onClick={() => onOpenInCompress(file)}>Compress PDF</Button>}
+                {onOpenInPrint && <Button variant="outlined" size="small" startIcon={<PrintOutlined />} onClick={() => onOpenInPrint(file)}>Print PDF</Button>}
+                {!compactToolbar && (
                   <Button variant="contained" size="small" startIcon={<EditOutlined />} onClick={() => onOpenInEditor(file)}>Edit PDF</Button>
-                </Box>
-              )}
+                )}
+              </Box>
             </Box>
             {searchOpen && (
               <>

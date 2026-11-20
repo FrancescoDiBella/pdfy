@@ -42,6 +42,7 @@ test('command palette opens with Ctrl+K, filters by keyword, switches tools and 
   await expect(dialog).toBeVisible();
   await input.fill('dark');
   await page.keyboard.press('Enter');
+  await expect(dialog).toBeHidden();
   await expect(page.getByTestId('workspace')).toHaveAttribute('data-theme', 'dark');
 
   // Open again and verify backdrop light-dismiss (click outside dialog box).
