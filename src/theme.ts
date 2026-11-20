@@ -16,8 +16,8 @@ export const workspaceTheme = createTheme({
     },
     dark: {
       palette: {
-        primary: { main: '#F08B5E', contrastText: '#1A110B' },
-        secondary: { main: '#7AB6D6', contrastText: '#0F181E' },
+        primary: { main: '#F08B5E', dark: '#F4A27D', light: '#F7B89B', contrastText: '#1A110B' },
+        secondary: { main: '#7AB6D6', dark: '#97C7E1', light: '#B0D5E9', contrastText: '#0F181E' },
         background: { default: '#131210', paper: '#1D1B18' },
         text: { primary: '#F4EFE6', secondary: '#BFB7A8' },
         divider: '#464137',
