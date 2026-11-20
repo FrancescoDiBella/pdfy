@@ -31,6 +31,7 @@ import {
   PermMediaOutlined,
   PrintOutlined,
   RotateRight,
+  TableChartOutlined,
 } from '@mui/icons-material';
 import { PDFDocument } from 'pdf-lib';
 import { usePDFSession, type PDFSession } from '../hooks/usePDFSession';
@@ -53,6 +54,7 @@ import {
 } from '../utils/pdfImageExport';
 import { generateSamplePDF } from '../utils/pdfSamples';
 import PDFSessionControls from './PDFSessionControls';
+import PDFTableExtractorTab from './PDFTableExtractorTab';
 import ToolIntro from './ToolIntro';
 
 const IMAGE_DRAG_TYPE = 'application/x-pdfy-image-item';
@@ -132,7 +134,7 @@ export default function PDFConverter({
   onOpenInPrint?: (file: File) => void;
   onOpenInEditor?: (file: File) => void;
 }) {
-  const [tab, setTab] = useState<'images-to-pdf' | 'pdf-to-images'>(initialFile ? 'pdf-to-images' : 'images-to-pdf');
+  const [tab, setTab] = useState<'images-to-pdf' | 'pdf-to-images' | 'pdf-to-tables'>(initialFile ? 'pdf-to-images' : 'images-to-pdf');
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -146,6 +148,7 @@ export default function PDFConverter({
         >
           <Tab value="images-to-pdf" icon={<AddPhotoAlternateOutlined />} iconPosition="start" label="Images to PDF" />
           <Tab value="pdf-to-images" icon={<ImageOutlined />} iconPosition="start" label="PDF to Images" />
+          <Tab value="pdf-to-tables" icon={<TableChartOutlined />} iconPosition="start" label="PDF to Tables" />
         </Tabs>
       </Paper>
 
@@ -154,6 +157,9 @@ export default function PDFConverter({
       </Box>
       <Box hidden={tab !== 'pdf-to-images'} sx={{ minWidth: 0 }}>
         <PDFToImagesTab initialFile={initialFile} active={active && tab === 'pdf-to-images'} />
+      </Box>
+      <Box hidden={tab !== 'pdf-to-tables'} sx={{ minWidth: 0 }}>
+        <PDFTableExtractorTab initialFile={initialFile} active={active && tab === 'pdf-to-tables'} />
       </Box>
     </Box>
   );
