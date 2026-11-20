@@ -18,7 +18,7 @@ const tools = [
   { type: 'rect', label: 'Rectangle', icon: <CropSquare /> }, { type: 'circle', label: 'Circle', icon: <RadioButtonUnchecked /> },
   { type: 'image', label: 'Upload Image', icon: <ImageOutlined /> }, { type: 'redact', label: 'Cover area', icon: <Rectangle /> },
 ] as const;
-const tile = { minHeight: 72, display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, textAlign: 'center', lineHeight: 1.4 } as const;
+const tile = { minHeight: 72, display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, borderRadius: '18px', textAlign: 'center', lineHeight: 1.4 } as const;
 
 export default function LeftToolboxPanel(props: Props) {
   const burnInHelpId = useId();
@@ -30,7 +30,7 @@ export default function LeftToolboxPanel(props: Props) {
       <Button variant="outlined" onClick={props.onOpenSignature} sx={tile}><Gesture /><span>Signature</span></Button>
       <Button variant="outlined" onClick={props.onOpenStamp} sx={tile}><ApprovalOutlined /><span>Stamp</span></Button>
     </Box>
-    <Divider />
+    <Divider sx={{ borderColor: 'var(--pdfy-glass-hairline)' }} />
     <Typography variant="h3">Edit the page</Typography>
     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
       <Button variant={props.isDrawMode ? 'contained' : 'outlined'} aria-pressed={props.isDrawMode} onClick={props.onToggleDrawMode} sx={tile}><DrawOutlined /><span>{props.isDrawMode ? 'Stop drawing' : 'Freehand'}</span></Button>
@@ -42,21 +42,21 @@ export default function LeftToolboxPanel(props: Props) {
       <Box><Typography>Brush width: <Box component="span" className="tabular-nums" sx={{ fontVariantNumeric: 'tabular-nums' }}>{props.drawWidth}</Box></Typography><Slider aria-label="Brush width" min={1} max={16} value={props.drawWidth} onChange={(_, value) => props.onChangeDrawWidth(value as number)} /></Box>
       <Box><Typography>Brush opacity: <Box component="span" className="tabular-nums" sx={{ fontVariantNumeric: 'tabular-nums' }}>{Math.round(props.drawOpacity * 100)}%</Box></Typography><Slider aria-label="Brush opacity" min={0.15} max={1} step={0.05} value={props.drawOpacity} onChange={(_, value) => props.onChangeDrawOpacity(value as number)} /></Box>
     </Box>}
-    {props.isEditTextMode && <><Typography variant="h3">Text in this PDF</Typography>{!props.pdfText.length && <Typography color="text.secondary">No selectable text was found. Use Text Block to add your own.</Typography>}{props.pdfText.map(item => <Button key={item.index} variant="outlined" onClick={() => props.onEditPDFText(item.index)} sx={{ justifyContent: 'flex-start', textAlign: 'left', overflowWrap: 'anywhere' }}>{item.text}</Button>)}</>}
-    <Divider />
+    {props.isEditTextMode && <><Typography variant="h3">Text in this PDF</Typography>{!props.pdfText.length && <Typography color="text.secondary">No selectable text was found. Use Text Block to add your own.</Typography>}{props.pdfText.map(item => <Button key={item.index} variant="outlined" onClick={() => props.onEditPDFText(item.index)} sx={{ justifyContent: 'flex-start', textAlign: 'left', borderRadius: '14px', overflowWrap: 'anywhere' }}>{item.text}</Button>)}</>}
+    <Divider sx={{ borderColor: 'var(--pdfy-glass-hairline)' }} />
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><LayersOutlined sx={{ color: 'text.secondary' }} /><Typography variant="h3">Items on this page</Typography></Box>
     {!props.elements.length && <Typography color="text.secondary">Your added items appear here. Select one to move, resize, or edit it.</Typography>}
     {props.elements.map((element, index) => {
       const label = element.label || tools.find(tool => tool.type === element.type)?.label || (element.type === 'draw' ? 'Drawing' : 'Edited text');
       const selected = props.selectedId === element.id;
-      return <Box key={element.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, border: 1, borderColor: selected ? 'primary.main' : 'divider', bgcolor: selected ? 'action.selected' : 'transparent', borderRadius: 2 }}>
+      return <Box key={element.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, border: 1, borderColor: selected ? 'primary.main' : 'var(--pdfy-glass-hairline)', bgcolor: selected ? 'var(--pdfy-glass-active-bg)' : 'var(--pdfy-glass-subtle)', borderRadius: '14px' }}>
         <Button aria-label={`Select ${label} ${index + 1}`} aria-pressed={selected} onClick={() => props.onSelect(element.id)} sx={{ flex: 1, minWidth: 0, justifyContent: 'flex-start', overflowWrap: 'anywhere', textAlign: 'left', fontVariantNumeric: 'tabular-nums' }}>{label} {index + 1}</Button>
         <IconButton aria-label={`Duplicate ${label} ${index + 1}`} onClick={() => props.onDuplicate(element.id)}><ContentCopy fontSize="small" /></IconButton>
         <IconButton aria-label={`Delete ${label} ${index + 1}`} onClick={() => props.onDelete(element.id)}><DeleteOutlined fontSize="small" /></IconButton>
       </Box>;
     })}
     {redactedPages > 0 && props.onChangeBurnInRedactions && (
-      <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+      <Box sx={{ p: 1.5, border: 1, borderColor: 'var(--pdfy-glass-hairline)', bgcolor: 'var(--pdfy-glass-subtle)', borderRadius: '16px' }}>
         <FormControlLabel
           label="Burn-in redactions on export"
           control={

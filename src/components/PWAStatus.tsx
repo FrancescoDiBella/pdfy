@@ -55,17 +55,19 @@ export default function PWAStatus() {
           zIndex: theme => theme.zIndex.modal - 1,
           left: { xs: 12, md: 12 },
           right: { xs: 12, md: 'auto' },
-          bottom: { xs: 'calc(80px + env(safe-area-inset-bottom, 0px))', md: 12 },
+          bottom: { xs: 'calc(84px + env(safe-area-inset-bottom, 0px))', md: 12 },
           maxWidth: { xs: 'calc(100vw - 24px)', md: 220 },
-          maxHeight: 'calc(100dvh - 120px)',
-          overflow: 'auto',
         }}
       >
         <Alert
           severity={registrationFailed ? 'warning' : 'info'}
+          className="lg-surface lg-panel"
           sx={{
             width: '100%',
-            borderRadius: '16px',
+            maxHeight: 'calc(100dvh - 120px)',
+            overflow: 'auto',
+            borderRadius: '18px',
+            bgcolor: 'var(--lg-fill-panel)',
             flexWrap: 'wrap',
             '& .MuiAlert-message': { flex: '1 1 130px' },
             '& .MuiAlert-action': { flexWrap: 'wrap', pl: 0 },
