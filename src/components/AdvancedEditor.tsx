@@ -5,6 +5,7 @@ import {
   CloudUpload as UploadIcon,
   ArrowBack as BackIcon,
   Add as AddIcon,
+  EditOutlined,
   ReceiptLong as InvoiceIcon,
   Description as BriefIcon,
 } from '@mui/icons-material';
@@ -569,6 +570,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   if (!fileBlob) {
     return (
       <Box
+        className="pdfy-workspace-shell"
         sx={{
           width: '100%',
           height: viewport.height,
@@ -578,31 +580,56 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
           alignItems: 'center',
           justifyContent: 'flex-start',
           flexDirection: 'column',
-          bgcolor: 'background.default',
           p: { xs: 2, sm: 3 },
         }}
       >
         <Paper
+          elevation={0}
+          className="pdfy-panel-enter"
           sx={{
+            my: 'auto',
             p: { xs: 2.5, sm: 4 },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 2.5,
-            border: 1, borderColor: 'divider',
-            maxWidth: 520,
+            gap: 2.25,
+            border: 1,
+            borderColor: 'var(--pdfy-glass-hairline)',
+            borderRadius: '24px',
+            bgcolor: 'background.paper',
+            boxShadow: theme => theme.palette.mode === 'dark'
+              ? '0 20px 50px -16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+              : '0 20px 50px -16px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+            maxWidth: 540,
             flexShrink: 0,
             width: '100%',
           }}
         >
-          <Typography variant="h1" sx={{ fontSize: 26 }}>
+          <Box
+            aria-hidden="true"
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: '16px',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'var(--pdfy-glass-active-bg)',
+              color: 'primary.main',
+              border: 1,
+              borderColor: 'var(--pdfy-glass-border)',
+              boxShadow: 'var(--pdfy-glass-active-shadow)',
+            }}
+          >
+            <EditOutlined fontSize="large" />
+          </Box>
+          <Typography variant="h1" sx={{ fontSize: 26, textAlign: 'center' }}>
             Edit your PDF
           </Typography>
           <Typography variant="body1" sx={{ color: 'text.secondary', textAlign: 'center' }}>
             Open a PDF or start a blank page. Add text, images, shapes, drawings, and signatures.
           </Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5, width: '100%', mt: 1 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5, width: '100%', mt: 0.5 }}>
             <Button
               variant="contained"
               size="large"
@@ -629,8 +656,8 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
             </Button>
           </Box>
 
-          <Box sx={{ width: '100%', pt: 1 }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1, textAlign: 'center' }}>
+          <Box sx={{ width: '100%', pt: 2, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1.25, textAlign: 'center' }}>
               Or launch immediately with a sample template:
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5 }}>
@@ -657,7 +684,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
 
           {isLoading && <CircularProgress aria-label="Preparing PDF" />}
           {toast && <Alert severity={toast.severity}>{toast.message}</Alert>}
-          <Button startIcon={<BackIcon />} variant="text" size="small" onClick={onBack} sx={{ color: 'text.secondary', mt: 1 }}>
+          <Button startIcon={<BackIcon />} variant="text" size="small" onClick={onBack} sx={{ color: 'text.secondary', mt: 0.5 }}>
             Return to workspace
           </Button>
         </Paper>
@@ -670,7 +697,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   const canvasHeight = pageSize.height * zoom;
 
   return (
-    <Box ref={editorRef} sx={{ width: '100%', height: viewport.height, position: 'fixed', top: viewport.top, left: 0, right: 0, display: 'flex', flexDirection: 'column', bgcolor: 'background.default', color: 'text.primary', overflow: 'hidden' }}>
+    <Box ref={editorRef} className="pdfy-workspace-shell" sx={{ width: '100%', height: viewport.height, position: 'fixed', top: viewport.top, left: 0, right: 0, display: 'flex', flexDirection: 'column', color: 'text.primary', overflow: 'hidden' }}>
       <input ref={pdfInput} type="file" accept="application/pdf" aria-label="Replacement PDF for Edit" hidden onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void loadFile(file); }} />
       <input ref={imageInput} type="file" accept="image/png,image/jpeg" aria-label="Image to insert" hidden onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void insertImage(file); }} />
       <h1 className="sr-only">Edit PDF</h1>
@@ -753,7 +780,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
                 mx: 'auto', flexShrink: 0,
                 width: canvasWidth,
                 height: canvasHeight,
-                boxShadow: '0 12px 32px rgba(26, 25, 22, 0.24), 0 0 0 1px var(--pdfy-border)',
+                boxShadow: 'var(--lg-page-shadow), 0 0 0 1px var(--pdfy-border)',
                 borderRadius: '4px',
                 overflow: 'hidden',
                 bgcolor: '#FFFFFF',
@@ -1008,7 +1035,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
         sx={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}
       >
         {toast ? (
-          <Alert severity={toast.severity} onClose={() => setToast(null)} sx={{ borderRadius: 2 }}>
+          <Alert severity={toast.severity} onClose={() => setToast(null)} sx={{ borderRadius: '14px' }}>
             {toast.message}
           </Alert>
         ) : undefined}

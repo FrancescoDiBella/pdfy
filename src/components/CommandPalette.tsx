@@ -212,42 +212,44 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
   return (
     <dialog
       ref={dialogRef}
-      className="pdfy-command-dialog"
+      className="pdfy-command-dialog lg-surface lg-panel"
       aria-labelledby={titleId}
       {...({ closedby: 'any' } as Record<string, unknown>)}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: 'min(560px, calc(100dvh - 32px))' }}>
-        <Box className="pdfy-command-search-row" sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25, borderBottom: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
-          <SearchOutlined aria-hidden="true" sx={{ color: 'text.secondary', fontSize: 22, flexShrink: 0 }} />
-          <label htmlFor={inputId} id={titleId} className="sr-only">
-            Quick command palette
-          </label>
-          <input
-            id={inputId}
-            ref={inputRef}
-            type="search"
-            className="pdfy-command-input"
-            placeholder="Jump to a PDF tool, feature, or theme…"
-            value={query}
-            aria-controls={listboxId}
-            aria-autocomplete="list"
-            onChange={event => {
-              setQuery(event.target.value);
-              setSelectedIndex(0);
-            }}
-            onKeyDown={handleInputKeyDown}
-          />
-          <IconButton aria-label="Close command palette" onClick={requestClose} size="small">
-            <Close />
-          </IconButton>
+        <Box sx={{ p: 1.5, pb: 1.15, borderBottom: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
+          <Box className="pdfy-command-search-well">
+            <SearchOutlined aria-hidden="true" sx={{ color: 'text.secondary', fontSize: 21, flexShrink: 0 }} />
+            <label htmlFor={inputId} id={titleId} className="sr-only">
+              Quick command palette
+            </label>
+            <input
+              id={inputId}
+              ref={inputRef}
+              type="search"
+              className="pdfy-command-input"
+              placeholder="Jump to a PDF tool, feature, or theme…"
+              value={query}
+              aria-controls={listboxId}
+              aria-autocomplete="list"
+              onChange={event => {
+                setQuery(event.target.value);
+                setSelectedIndex(0);
+              }}
+              onKeyDown={handleInputKeyDown}
+            />
+            <IconButton aria-label="Close command palette" onClick={requestClose} size="small">
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
 
         <Box
           id={listboxId}
           role="region"
           aria-label="Matching commands"
-          className="pdfy-scroll-region"
-          sx={{ overflowY: 'auto', p: 1, display: 'flex', flexDirection: 'column', gap: 1 }}
+          className="pdfy-scroll-region pdfy-command-list"
+          sx={{ overflowY: 'auto', p: 1.15, pb: 2.5, display: 'flex', flexDirection: 'column', gap: 1.1 }}
         >
           {filtered.length === 0 ? (
             <Box sx={{ py: 4, px: 2, textAlign: 'center' }}>
@@ -262,7 +264,7 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
                   component="div"
                   variant="caption"
                   color="text.secondary"
-                  sx={{ px: 1.25, py: 0.5, fontWeight: 700, letterSpacing: '0.05em' }}
+                  sx={{ px: 1.25, py: 0.4, fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.06em' }}
                 >
                   {group.category.toUpperCase()}
                 </Typography>
@@ -279,7 +281,21 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
                           onMouseEnter={() => setSelectedIndex(flatIndex)}
                           onClick={() => runCommand(item)}
                         >
-                          <Box component="span" aria-hidden="true" sx={{ display: 'inline-flex', color: active ? 'primary.main' : 'text.secondary', flexShrink: 0 }}>
+                          <Box
+                            component="span"
+                            aria-hidden="true"
+                            sx={{
+                              display: 'inline-grid',
+                              placeItems: 'center',
+                              width: 32,
+                              height: 32,
+                              borderRadius: '10px',
+                              bgcolor: active ? 'var(--lg-segmented-active-bg)' : 'var(--lg-segmented-track)',
+                              color: active ? 'primary.main' : 'text.secondary',
+                              flexShrink: 0,
+                              '& svg': { fontSize: 18 },
+                            }}
+                          >
                             {item.icon}
                           </Box>
                           <Box sx={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
@@ -296,12 +312,14 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
                               variant="caption"
                               sx={{
                                 px: 1,
-                                py: 0.25,
+                                py: 0.2,
                                 borderRadius: 99,
                                 border: 1,
-                                borderColor: 'var(--pdfy-glass-border)',
+                                borderColor: 'var(--lg-outer-hairline)',
+                                bgcolor: 'var(--pdfy-glass-subtle)',
                                 color: 'text.secondary',
                                 fontWeight: 600,
+                                fontSize: '0.72rem',
                                 flexShrink: 0,
                               }}
                             >
@@ -319,9 +337,17 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
         </Box>
 
         <Box sx={{ px: 2, py: 0.9, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Typography variant="caption" color="text.secondary">
-            Arrows to move · Enter to run · Esc to close
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap' }}>
+            <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+              <kbd className="pdfy-kbd-hint">↑↓</kbd> Move
+            </Typography>
+            <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+              <kbd className="pdfy-kbd-hint">↵</kbd> Run
+            </Typography>
+            <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+              <kbd className="pdfy-kbd-hint">Esc</kbd> Close
+            </Typography>
+          </Box>
           <Typography variant="caption" color="text.secondary" className="tabular-nums">
             {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
           </Typography>

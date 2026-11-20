@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
 import {
-  Box, Button, Typography, Paper, CircularProgress, IconButton, Tooltip, Divider, Alert, TextField, InputAdornment,
+  Box, Button, Typography, CircularProgress, IconButton, Tooltip, Divider, Alert, TextField, InputAdornment,
   Menu, MenuItem, ListItemIcon, ListItemText, useMediaQuery,
 } from '@mui/material';
 import {
@@ -461,20 +461,91 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
               ['Make it yours', 'Pick a tool from the menu.'],
               ['Download', 'Save your work before you leave.'],
             ].map(([title, description], index) => (
-              <Box component="li" key={title} className="pdfy-glass-subtle" sx={{ display: 'flex', gap: 1.25, p: 1.5, borderRadius: '16px' }}>
-                <Typography aria-hidden="true" className="tabular-nums" sx={{ color: 'primary.main', fontWeight: 700 }}>{index + 1}.</Typography>
-                <Box><Typography variant="body2" sx={{ fontWeight: 700 }}>{title}</Typography><Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>{description}</Typography></Box>
+              <Box
+                component="li"
+                key={title}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 1.25,
+                  p: 1.75,
+                  borderRadius: '18px',
+                  bgcolor: 'background.paper',
+                  border: 1,
+                  borderColor: 'var(--pdfy-glass-hairline)',
+                  boxShadow: theme => theme.palette.mode === 'dark'
+                    ? '0 4px 16px -6px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
+                    : '0 4px 16px -6px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85)',
+                }}
+              >
+                <Box
+                  aria-hidden="true"
+                  className="tabular-nums"
+                  sx={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: '8px',
+                    bgcolor: 'var(--pdfy-glass-active-bg)',
+                    color: 'primary.main',
+                    fontWeight: 700,
+                    fontSize: '0.8125rem',
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {index + 1}
+                </Box>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{title}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>{description}</Typography>
+                </Box>
               </Box>
             ))}
           </Box>
         </Box>
       ) : (
         <>
-          <Paper variant="outlined" className="pdfy-glass-card" sx={{ p: compactToolbar ? 1.25 : 1.5, borderRadius: '18px', display: isFocusActive ? 'none' : 'flex', flexDirection: 'column', gap: compactToolbar ? 1 : 1.25 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-              <DescriptionOutlined color="primary" sx={{ flexShrink: 0 }} />
-              <Box sx={{ flex: 1, minWidth: 110, overflowWrap: 'anywhere' }}>
-                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: compactToolbar ? '0.8125rem' : '0.875rem', lineHeight: 1.28 }}>{file.name}</Typography>
+          <Box
+            className="lg-surface lg-panel"
+            sx={{
+              p: compactToolbar ? 1.125 : 1.5,
+              borderRadius: '20px',
+              display: isFocusActive ? 'none' : 'flex',
+              flexDirection: 'column',
+              gap: compactToolbar ? 0.875 : 1.125,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: compactToolbar ? 'nowrap' : 'wrap', minWidth: 0 }}>
+              <Box
+                aria-hidden="true"
+                sx={{
+                  width: compactToolbar ? 30 : 34,
+                  height: compactToolbar ? 30 : 34,
+                  borderRadius: '10px',
+                  bgcolor: 'var(--pdfy-glass-active-bg)',
+                  color: 'primary.main',
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <DescriptionOutlined fontSize="small" />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: compactToolbar ? 0 : 110, overflow: compactToolbar ? 'hidden' : 'visible', overflowWrap: compactToolbar ? 'normal' : 'anywhere' }}>
+                <Typography
+                  variant="body2"
+                  noWrap={compactToolbar}
+                  title={file.name}
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: compactToolbar ? '0.8125rem' : '0.875rem',
+                    lineHeight: 1.28,
+                    ...(compactToolbar && { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }),
+                  }}
+                >
+                  {file.name}
+                </Typography>
                 <Typography variant="caption" color="text.secondary" className="tabular-nums">
                   {numPages} {numPages === 1 ? 'page' : 'pages'}{compactToolbar ? '' : ' · View changes do not modify the file'}
                 </Typography>
@@ -547,6 +618,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
+                  gap: 0.25,
                   width: compactToolbar ? '100%' : 'auto',
                   flexWrap: compactToolbar ? 'nowrap' : 'wrap',
                   overflowX: compactToolbar ? 'auto' : 'visible',
@@ -555,24 +627,97 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                 }}
               >
                 <Tooltip title="Page thumbnails">
-                  <IconButton aria-label="Page thumbnails" aria-pressed={sidebarOpen && sidebarTab === 'thumbnails'} onClick={() => toggleSidebar('thumbnails')} color={sidebarOpen && sidebarTab === 'thumbnails' ? 'primary' : 'default'}>
+                  <IconButton
+                    aria-label="Page thumbnails"
+                    aria-pressed={sidebarOpen && sidebarTab === 'thumbnails'}
+                    onClick={() => toggleSidebar('thumbnails')}
+                    color={sidebarOpen && sidebarTab === 'thumbnails' ? 'primary' : 'default'}
+                    sx={{
+                      flexShrink: 0,
+                      bgcolor: sidebarOpen && sidebarTab === 'thumbnails' ? 'var(--pdfy-glass-active-bg)' : 'transparent',
+                      boxShadow: sidebarOpen && sidebarTab === 'thumbnails' ? 'var(--pdfy-glass-active-shadow)' : 'none',
+                    }}
+                  >
                     <ViewSidebarOutlined />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Document outline">
-                  <IconButton aria-label="Document outline" aria-pressed={sidebarOpen && sidebarTab === 'outline'} onClick={() => toggleSidebar('outline')} color={sidebarOpen && sidebarTab === 'outline' ? 'primary' : 'default'}>
+                  <IconButton
+                    aria-label="Document outline"
+                    aria-pressed={sidebarOpen && sidebarTab === 'outline'}
+                    onClick={() => toggleSidebar('outline')}
+                    color={sidebarOpen && sidebarTab === 'outline' ? 'primary' : 'default'}
+                    sx={{
+                      flexShrink: 0,
+                      bgcolor: sidebarOpen && sidebarTab === 'outline' ? 'var(--pdfy-glass-active-bg)' : 'transparent',
+                      boxShadow: sidebarOpen && sidebarTab === 'outline' ? 'var(--pdfy-glass-active-shadow)' : 'none',
+                    }}
+                  >
                     <TocOutlined />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Find in document (Ctrl+F)">
-                  <IconButton ref={findToggleRef} aria-label="Find in document" aria-pressed={searchOpen} onClick={() => (searchOpen ? closeSearchBar() : openSearchBar())} color={searchOpen ? 'primary' : 'default'}>
+                  <IconButton
+                    ref={findToggleRef}
+                    aria-label="Find in document"
+                    aria-pressed={searchOpen}
+                    onClick={() => (searchOpen ? closeSearchBar() : openSearchBar())}
+                    color={searchOpen ? 'primary' : 'default'}
+                    sx={{
+                      flexShrink: 0,
+                      bgcolor: searchOpen ? 'var(--pdfy-glass-active-bg)' : 'transparent',
+                      boxShadow: searchOpen ? 'var(--pdfy-glass-active-shadow)' : 'none',
+                    }}
+                  >
                     <SearchOutlined />
                   </IconButton>
                 </Tooltip>
-                <IconButton aria-label="Zoom out" disabled={scale <= 0.5} onClick={() => setScale(value => Math.max(0.5, value - 0.25))}><ZoomOut /></IconButton>
-                <Button aria-label={`${Math.round(scale * 100)}% zoom, fit page width`} onClick={() => setScale(1)} className="tabular-nums" sx={{ minWidth: 50, px: 0.75, flexShrink: 0 }}>{Math.round(scale * 100)}%</Button>
-                <IconButton aria-label="Zoom in" disabled={scale >= 2.5} onClick={() => setScale(value => Math.min(2.5, value + 0.25))}><ZoomIn /></IconButton>
-                <IconButton aria-label="Rotate view clockwise" onClick={() => setRotation(value => (value + 90) % 360)}><RotateRight /></IconButton>
+                <Box
+                  role="group"
+                  aria-label="Zoom controls"
+                  className="lg-segmented"
+                  sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0, mx: 0.375 }}
+                >
+                  <IconButton
+                    aria-label="Zoom out"
+                    size="small"
+                    disabled={scale <= 0.5}
+                    onClick={() => setScale(value => Math.max(0.5, value - 0.25))}
+                    sx={{ minWidth: 36, minHeight: 36, '@media (pointer: coarse)': { minWidth: 44, minHeight: 44 } }}
+                  >
+                    <ZoomOut fontSize="small" />
+                  </IconButton>
+                  <Button
+                    size="small"
+                    aria-label={`${Math.round(scale * 100)}% zoom, fit page width`}
+                    onClick={() => setScale(1)}
+                    className="tabular-nums"
+                    sx={{
+                      minWidth: 50,
+                      minHeight: 36,
+                      px: 0.75,
+                      flexShrink: 0,
+                      borderRadius: 999,
+                      color: 'text.primary',
+                      fontWeight: 600,
+                      '@media (pointer: coarse)': { minHeight: 44 },
+                    }}
+                  >
+                    {Math.round(scale * 100)}%
+                  </Button>
+                  <IconButton
+                    aria-label="Zoom in"
+                    size="small"
+                    disabled={scale >= 2.5}
+                    onClick={() => setScale(value => Math.min(2.5, value + 0.25))}
+                    sx={{ minWidth: 36, minHeight: 36, '@media (pointer: coarse)': { minWidth: 44, minHeight: 44 } }}
+                  >
+                    <ZoomIn fontSize="small" />
+                  </IconButton>
+                </Box>
+                <IconButton aria-label="Rotate view clockwise" onClick={() => setRotation(value => (value + 90) % 360)} sx={{ flexShrink: 0 }}>
+                  <RotateRight />
+                </IconButton>
                 {!compactToolbar && (
                   <Tooltip title={canSpread ? 'Two-page spread' : 'Two-page spread requires 2+ pages on a wider screen'}>
                     <span>
@@ -582,6 +727,11 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                         disabled={!canSpread}
                         color={effectiveSpreadMode === 'spread' ? 'primary' : 'default'}
                         onClick={() => setSpreadMode(current => (current === 'spread' ? 'single' : 'spread'))}
+                        sx={{
+                          flexShrink: 0,
+                          bgcolor: effectiveSpreadMode === 'spread' ? 'var(--pdfy-glass-active-bg)' : 'transparent',
+                          boxShadow: effectiveSpreadMode === 'spread' ? 'var(--pdfy-glass-active-shadow)' : 'none',
+                        }}
                       >
                         <MenuBookOutlined />
                       </IconButton>
@@ -595,6 +745,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                     aria-pressed={isFocusActive}
                     color={isFocusActive ? 'primary' : 'default'}
                     onClick={enterFocusMode}
+                    sx={{ flexShrink: 0 }}
                   >
                     <FullscreenOutlined />
                   </IconButton>
@@ -607,6 +758,11 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                   width: compactToolbar ? '100%' : 'auto',
                   flexWrap: compactToolbar ? 'nowrap' : 'wrap',
                   overflowX: compactToolbar ? 'auto' : 'visible',
+                  pr: compactToolbar ? 2 : 0,
+                  ...(compactToolbar && {
+                    WebkitMaskImage: 'linear-gradient(to right, #000 0%, #000 90%, transparent 100%)',
+                    maskImage: 'linear-gradient(to right, #000 0%, #000 90%, transparent 100%)',
+                  }),
                   scrollbarWidth: 'none',
                   '&::-webkit-scrollbar': { display: 'none' },
                   '& > button': { flexShrink: 0, whiteSpace: 'nowrap' },
@@ -629,7 +785,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
             </Box>
             {searchOpen && (
               <>
-                <Divider />
+                <Divider sx={{ borderColor: 'var(--pdfy-glass-hairline)' }} />
                 <Box role="search" aria-label="Find in document" sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <TextField
@@ -665,7 +821,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                           ),
                         },
                       }}
-                      sx={{ flex: '1 1 200px', minWidth: 0 }}
+                      sx={{ flex: '1 1 200px', minWidth: 0, '& .MuiOutlinedInput-root': { borderRadius: '14px', bgcolor: 'var(--pdfy-glass-subtle)' } }}
                     />
                     <Typography variant="body2" color="text.secondary" className="tabular-nums" sx={{ minWidth: 88, textAlign: 'center' }}>
                       {isExtractingText
@@ -701,7 +857,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                 </Box>
               </>
             )}
-          </Paper>
+          </Box>
           <Typography role="status" className="sr-only">
             {statusMessage || (searchOpen && searchQuery.trim() ? (searchMatches.length === 0 ? `No matches for ${searchQuery.trim()}` : `Match ${boundedMatchIndex + 1} of ${searchMatches.length} on page ${activeMatch?.pageNumber}`) : '')}
           </Typography>
@@ -712,74 +868,126 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
             sx={{ flex: 1, minHeight: 320, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}
           >
             {sidebarOpen && !isFocusActive && (
-              <Paper variant="outlined" className="pdfy-scroll-region pdfy-glass-card" sx={{ width: { xs: '100%', sm: 210 }, flexShrink: 0, overflow: 'auto', maxHeight: { xs: 240, sm: 600 }, p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <Box role="group" aria-label="Sidebar view" sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.75 }}>
-                  <Button
-                    size="small"
-                    aria-pressed={sidebarTab === 'thumbnails'}
-                    variant={sidebarTab === 'thumbnails' ? 'contained' : 'outlined'}
-                    onClick={() => setSidebarTab('thumbnails')}
-                    sx={{ minWidth: 0, px: 1 }}
-                  >
-                    Pages
-                  </Button>
-                  <Button
-                    size="small"
-                    aria-pressed={sidebarTab === 'outline'}
-                    variant={sidebarTab === 'outline' ? 'contained' : 'outlined'}
-                    onClick={() => setSidebarTab('outline')}
-                    sx={{ minWidth: 0, px: 1 }}
-                  >
-                    Outline
-                  </Button>
+              <Box
+                className="lg-surface lg-panel"
+                sx={{
+                  width: { xs: '100%', sm: 216 },
+                  flexShrink: 0,
+                  maxHeight: { xs: 240, sm: 600 },
+                  borderRadius: '18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box sx={{ p: 1.25, pb: 1, flexShrink: 0 }}>
+                  <Box role="group" aria-label="Sidebar view" className="lg-segmented" sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.375 }}>
+                    <Button
+                      size="small"
+                      aria-pressed={sidebarTab === 'thumbnails'}
+                      variant="text"
+                      onClick={() => setSidebarTab('thumbnails')}
+                      sx={{
+                        minWidth: 0,
+                        minHeight: 34,
+                        px: 1,
+                        borderRadius: 999,
+                        color: sidebarTab === 'thumbnails' ? 'primary.main' : 'text.primary',
+                        fontWeight: sidebarTab === 'thumbnails' ? 650 : 500,
+                        '@media (pointer: coarse)': { minHeight: 44 },
+                      }}
+                    >
+                      Pages
+                    </Button>
+                    <Button
+                      size="small"
+                      aria-pressed={sidebarTab === 'outline'}
+                      variant="text"
+                      onClick={() => setSidebarTab('outline')}
+                      sx={{
+                        minWidth: 0,
+                        minHeight: 34,
+                        px: 1,
+                        borderRadius: 999,
+                        color: sidebarTab === 'outline' ? 'primary.main' : 'text.primary',
+                        fontWeight: sidebarTab === 'outline' ? 650 : 500,
+                        '@media (pointer: coarse)': { minHeight: 44 },
+                      }}
+                    >
+                      Outline
+                    </Button>
+                  </Box>
                 </Box>
-                {sidebarTab === 'thumbnails' ? (
-                  <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} loading="" error="" className="reader-thumbnails">
-                    <Box sx={{ display: 'flex', flexDirection: { xs: 'row', sm: 'column' }, gap: 1.5 }}>
-                      {Array.from({ length: numPages }, (_, index) => (
-                        <Box component="button" type="button" key={index} aria-label={`Go to page ${index + 1}`} aria-current={activePage === index + 1 ? 'page' : undefined} onClick={() => scrollToPage(index + 1)} sx={{ p: 0.5, borderRadius: 1.5, border: '2px solid', borderColor: activePage === index + 1 ? 'primary.main' : 'divider', bgcolor: 'background.paper', color: 'text.primary', cursor: 'pointer', flexShrink: 0 }}>
-                          <ViewerPage pageNumber={index + 1} width={110} viewRotation={rotation} renderTextLayer={false} renderAnnotationLayer={false} />
-                          <Typography variant="caption" component="span" className="tabular-nums">Page {index + 1}</Typography>
+                <Box className="pdfy-scroll-region" sx={{ flex: 1, minHeight: 0, overflow: 'auto', px: 1.25, pb: 1.25 }}>
+                  {sidebarTab === 'thumbnails' ? (
+                    <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} loading="" error="" className="reader-thumbnails">
+                      <Box sx={{ display: 'flex', flexDirection: { xs: 'row', sm: 'column' }, gap: 1.5 }}>
+                        {Array.from({ length: numPages }, (_, index) => (
+                          <Box
+                            component="button"
+                            type="button"
+                            key={index}
+                            aria-label={`Go to page ${index + 1}`}
+                            aria-current={activePage === index + 1 ? 'page' : undefined}
+                            onClick={() => scrollToPage(index + 1)}
+                            sx={{
+                              p: 0.625,
+                              borderRadius: '12px',
+                              border: '2px solid',
+                              borderColor: activePage === index + 1 ? 'primary.main' : 'var(--pdfy-glass-hairline)',
+                              bgcolor: 'background.paper',
+                              color: 'text.primary',
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              boxShadow: activePage === index + 1
+                                ? 'var(--pdfy-glass-active-shadow)'
+                                : '0 2px 8px -2px rgba(15, 23, 42, 0.12)',
+                            }}
+                          >
+                            <ViewerPage pageNumber={index + 1} width={110} viewRotation={rotation} renderTextLayer={false} renderAnnotationLayer={false} />
+                            <Typography variant="caption" component="span" className="tabular-nums">Page {index + 1}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Document>
+                  ) : outlineItems.length === 0 ? (
+                    <Typography variant="caption" color="text.secondary">
+                      This PDF has no embedded bookmarks. Use Pages or Find to navigate.
+                    </Typography>
+                  ) : (
+                    <Box component="ul" aria-label="Document outline" sx={{ m: 0, p: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      {outlineItems.map(item => (
+                        <Box component="li" key={item.id}>
+                          <Button
+                            size="small"
+                            disabled={item.pageNumber === null}
+                            onClick={() => item.pageNumber !== null && scrollToPage(item.pageNumber)}
+                            sx={{
+                              width: '100%',
+                              justifyContent: 'space-between',
+                              textAlign: 'left',
+                              borderRadius: '10px',
+                              pl: `${8 + Math.min(item.depth, 3) * 10}px`,
+                              pr: 1,
+                              py: 0.75,
+                              minHeight: 36,
+                              color: 'text.primary',
+                              fontWeight: item.depth === 0 ? 600 : 400,
+                            }}
+                          >
+                            <Box component="span" sx={{ overflowWrap: 'anywhere', mr: 1 }}>{item.title}</Box>
+                            {item.pageNumber !== null && (
+                              <Box component="span" className="tabular-nums" sx={{ color: 'text.secondary', fontSize: '0.75rem', flexShrink: 0 }}>
+                                p.{item.pageNumber}
+                              </Box>
+                            )}
+                          </Button>
                         </Box>
                       ))}
                     </Box>
-                  </Document>
-                ) : outlineItems.length === 0 ? (
-                  <Typography variant="caption" color="text.secondary">
-                    This PDF has no embedded bookmarks. Use Pages or Find to navigate.
-                  </Typography>
-                ) : (
-                  <Box component="ul" aria-label="Document outline" sx={{ m: 0, p: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    {outlineItems.map(item => (
-                      <Box component="li" key={item.id}>
-                        <Button
-                          size="small"
-                          disabled={item.pageNumber === null}
-                          onClick={() => item.pageNumber !== null && scrollToPage(item.pageNumber)}
-                          sx={{
-                            width: '100%',
-                            justifyContent: 'space-between',
-                            textAlign: 'left',
-                            pl: `${8 + Math.min(item.depth, 3) * 10}px`,
-                            pr: 1,
-                            py: 0.75,
-                            minHeight: 36,
-                            color: 'text.primary',
-                            fontWeight: item.depth === 0 ? 600 : 400,
-                          }}
-                        >
-                          <Box component="span" sx={{ overflowWrap: 'anywhere', mr: 1 }}>{item.title}</Box>
-                          {item.pageNumber !== null && (
-                            <Box component="span" className="tabular-nums" sx={{ color: 'text.secondary', fontSize: '0.75rem', flexShrink: 0 }}>
-                              p.{item.pageNumber}
-                            </Box>
-                          )}
-                        </Button>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Paper>
+                  )}
+                </Box>
+              </Box>
             )}
             <Box
               ref={viewport}
@@ -833,7 +1041,9 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                         onClick={() => setActivePage(pageNumber)}
                         sx={{
                           width: 'max-content',
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.14)',
+                          boxShadow: 'var(--lg-page-shadow)',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
                           bgcolor: '#FFFFFF',
                         }}
                       >
@@ -852,39 +1062,61 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
             </Box>
             {isFocusActive && (
               <Box
-                role="toolbar"
-                aria-label="Focus reading controls"
-                className="pdfy-glass-pill pdfy-reader-focus-pill"
+                sx={{
+                  position: 'fixed',
+                  left: 0,
+                  right: 0,
+                  bottom: 'max(16px, env(safe-area-inset-bottom, 0px))',
+                  zIndex: 1260,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  px: 1.5,
+                  pointerEvents: 'none',
+                }}
               >
-                <Typography variant="caption" className="tabular-nums" sx={{ px: 1, fontWeight: 700, color: 'text.primary', whiteSpace: 'nowrap' }}>
-                  Page {activePage} / {numPages}
-                </Typography>
-                <IconButton aria-label="Zoom out" size="small" disabled={scale <= 0.5} onClick={() => setScale(value => Math.max(0.5, value - 0.25))}>
-                  <ZoomOut fontSize="small" />
-                </IconButton>
-                <IconButton aria-label="Zoom in" size="small" disabled={scale >= 2.5} onClick={() => setScale(value => Math.min(2.5, value + 0.25))}>
-                  <ZoomIn fontSize="small" />
-                </IconButton>
-                {canSpread && (
-                  <IconButton
-                    aria-label="Two-page spread"
-                    aria-pressed={effectiveSpreadMode === 'spread'}
-                    size="small"
-                    color={effectiveSpreadMode === 'spread' ? 'primary' : 'default'}
-                    onClick={() => setSpreadMode(current => (current === 'spread' ? 'single' : 'spread'))}
-                  >
-                    <MenuBookOutlined fontSize="small" />
-                  </IconButton>
-                )}
-                <Button
-                  size="small"
-                  variant="contained"
-                  startIcon={<FullscreenExitOutlined fontSize="small" />}
-                  onClick={exitFocusMode}
-                  sx={{ borderRadius: 99, px: 1.5, whiteSpace: 'nowrap' }}
+                <Box
+                  role="toolbar"
+                  aria-label="Focus reading controls"
+                  className="lg-surface lg-pill lg-interactive"
+                  sx={{
+                    pointerEvents: 'auto',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.375,
+                    maxWidth: '100%',
+                    p: '4px 5px 4px 12px',
+                  }}
                 >
-                  Exit focus
-                </Button>
+                  <Typography variant="caption" className="tabular-nums" sx={{ pr: 0.5, fontWeight: 700, color: 'text.primary', whiteSpace: 'nowrap' }}>
+                    Page {activePage} / {numPages}
+                  </Typography>
+                  <IconButton aria-label="Zoom out" size="small" disabled={scale <= 0.5} onClick={() => setScale(value => Math.max(0.5, value - 0.25))}>
+                    <ZoomOut fontSize="small" />
+                  </IconButton>
+                  <IconButton aria-label="Zoom in" size="small" disabled={scale >= 2.5} onClick={() => setScale(value => Math.min(2.5, value + 0.25))}>
+                    <ZoomIn fontSize="small" />
+                  </IconButton>
+                  {canSpread && (
+                    <IconButton
+                      aria-label="Two-page spread"
+                      aria-pressed={effectiveSpreadMode === 'spread'}
+                      size="small"
+                      color={effectiveSpreadMode === 'spread' ? 'primary' : 'default'}
+                      onClick={() => setSpreadMode(current => (current === 'spread' ? 'single' : 'spread'))}
+                    >
+                      <MenuBookOutlined fontSize="small" />
+                    </IconButton>
+                  )}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<FullscreenExitOutlined fontSize="small" />}
+                    onClick={exitFocusMode}
+                    sx={{ borderRadius: 999, px: { xs: 1.25, sm: 1.75 }, whiteSpace: 'nowrap', flexShrink: 0 }}
+                  >
+                    Exit focus
+                  </Button>
+                </Box>
               </Box>
             )}
           </Box>

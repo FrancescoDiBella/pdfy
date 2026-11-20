@@ -3,9 +3,9 @@
   --in-oklab: ;
   --pdfy-paper: #FFFFFF;
   --pdfy-canvas: #EDF2F8;
-  --pdfy-mat-bg: #E3EAF3;
+  --pdfy-mat-bg: #E4EBF4;
   --pdfy-mat-dot: #C2CEE0;
-  --pdfy-border: rgba(15, 23, 42, 0.11);
+  --pdfy-border: rgba(15, 23, 42, 0.10);
   --pdfy-accent: #0062CC;
   --pdfy-secondary: #4F46E5;
   --pdfy-cyan: #0EA5E9;
@@ -13,31 +13,88 @@
   --pdfy-ink-muted: #475569;
   --pdfy-scrollbar-track: #E5ECF5;
   --pdfy-scrollbar-thumb: #94A3B8;
+
+  /* Spring physics tokens (cubic-bezier fallback upgraded to CSS linear() below) */
+  --lg-spring-snappy: cubic-bezier(0.22, 1, 0.36, 1);
+  --lg-spring-smooth: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Apple Liquid Glass optical material tokens (Light) */
+  --lg-fill-regular: rgba(255, 255, 255, 0.74);
+  --lg-fill-panel: rgba(255, 255, 255, 0.80);
+  --lg-fill-lens: rgba(255, 255, 255, 0.68);
+  --lg-brightness-regular: 1.03;
+  --lg-brightness-lens: 1.06;
+  --lg-outer-hairline: rgba(15, 23, 42, 0.08);
+  --lg-rim-hi: rgba(255, 255, 255, 0.96);
+  --lg-rim-mid: rgba(255, 255, 255, 0.36);
+  --lg-rim-lo: rgba(15, 23, 42, 0.08);
+  --lg-rim-bounce: rgba(255, 255, 255, 0.68);
+  --lg-sheen-color: rgba(255, 255, 255, 0.38);
+  --lg-surface-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.54) 0%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.24) 100%);
+  --lg-lens-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.26) 55%, rgba(255, 255, 255, 0.44) 100%);
+  --lg-shadow-pill:
+    0 12px 30px -8px rgba(15, 23, 42, 0.14),
+    0 2px 6px -1px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.90),
+    inset 0 -1px 0.5px rgba(15, 23, 42, 0.05);
+  --lg-shadow-lens:
+    0 4px 14px -4px rgba(0, 98, 204, 0.20),
+    0 1px 3px rgba(15, 23, 42, 0.07),
+    inset 0 1px 1px rgba(255, 255, 255, 0.96),
+    inset 0 -1px 1px rgba(15, 23, 42, 0.04);
+  --lg-shadow-panel:
+    0 16px 38px -12px rgba(15, 23, 42, 0.15),
+    0 2px 8px -2px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.92),
+    inset 0 -1px 0.5px rgba(15, 23, 42, 0.04);
+  --lg-segmented-track: rgba(15, 23, 42, 0.055);
+  --lg-segmented-inset: rgba(15, 23, 42, 0.06);
+  --lg-segmented-active-bg: #FFFFFF;
+  --lg-segmented-active-shadow:
+    0 2px 8px -2px rgba(15, 23, 42, 0.14),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  --lg-scroll-edge-color: rgba(237, 242, 248, 0.88);
+  --lg-mat-glow: rgba(255, 255, 255, 0.42);
+  --lg-mat-top: #E9EFF7;
+  --lg-mat-inset-shadow: rgba(15, 23, 42, 0.12);
+  --lg-mat-inset-highlight: rgba(255, 255, 255, 0.65);
+  --lg-page-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.07),
+    0 12px 28px -10px rgba(15, 23, 42, 0.18);
+
+  /* Shared glass aliases consumed across workspace & editor chrome */
   --pdfy-glass-bg: #FFFFFF;
   --pdfy-glass-strong: #FFFFFF;
-  --pdfy-glass-subtle: rgba(255, 255, 255, 0.62);
-  --pdfy-glass-border: rgba(255, 255, 255, 0.80);
+  --pdfy-glass-subtle: rgba(255, 255, 255, 0.64);
+  --pdfy-glass-border: rgba(255, 255, 255, 0.82);
   --pdfy-glass-hairline: rgba(15, 23, 42, 0.09);
-  --pdfy-glass-highlight: rgba(255, 255, 255, 0.92);
-  --pdfy-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.24));
+  --pdfy-glass-highlight: rgba(255, 255, 255, 0.94);
+  --pdfy-glass-sheen: var(--lg-surface-sheen);
   --pdfy-glass-active-bg: #E0ECFA;
   --pdfy-glass-active-shadow:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.96),
     0 2px 8px -2px rgba(0, 98, 204, 0.18);
-  --pdfy-glass-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 2px 6px rgba(15, 23, 42, 0.05),
-    0 16px 38px -14px rgba(15, 23, 42, 0.14),
-    inset 0 1px 0.5px var(--pdfy-glass-highlight),
-    inset 0 -1px 0 rgba(15, 23, 42, 0.04);
-  --pdfy-glass-dock-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.07),
-    0 4px 12px rgba(15, 23, 42, 0.09),
-    0 18px 42px -12px rgba(15, 23, 42, 0.22),
-    inset 0 1px 1px var(--pdfy-glass-highlight),
-    inset 0 -1px 0 rgba(15, 23, 42, 0.05);
+  --pdfy-glass-shadow: var(--lg-shadow-panel);
+  --pdfy-glass-dock-shadow: var(--lg-shadow-pill);
+
   accent-color: var(--pdfy-accent);
   scrollbar-color: var(--pdfy-scrollbar-thumb) var(--pdfy-scrollbar-track);
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --lg-spring-snappy: linear(
+      0, 0.012, 0.048 2.4%, 0.19 5.3%, 0.62 12.5%, 0.88 18%,
+      1.015 24%, 1.058 29.5%, 1.062 34%, 1.042 41%, 1.014 49%,
+      0.996 58%, 0.994 67%, 1.001 80%, 1
+    );
+    --lg-spring-smooth: linear(
+      0, 0.004, 0.016 2.5%, 0.063 5.5%, 0.25 12%, 0.53 20%,
+      0.76 29%, 0.91 39%, 0.985 50%, 1.012 61%, 1.008 72%,
+      1.001 86%, 1
+    );
+  }
 }
 
 @supports (background: linear-gradient(in oklab, white, black)) {
@@ -48,9 +105,23 @@
 
 @supports (color: color-mix(in oklab, white, black)) {
   :root {
+    --lg-fill-regular: color-mix(in oklab, #FFFFFF 72%, transparent);
+    --lg-fill-panel: color-mix(in oklab, #FFFFFF 80%, transparent);
+    --lg-fill-lens: color-mix(in oklab, #FFFFFF 76%, var(--pdfy-accent) 8%);
+    --lg-shadow-pill:
+      0 12px 32px -8px color-mix(in oklab, #0F172A 13%, transparent),
+      0 2px 6px -1px color-mix(in oklab, #0F172A 6%, transparent),
+      inset 0 1px 0.5px color-mix(in oklab, #FFFFFF 90%, transparent),
+      inset 0 -1px 0.5px color-mix(in oklab, #0F172A 6%, transparent);
+    --lg-shadow-panel:
+      0 16px 40px -12px color-mix(in oklab, #0F172A 14%, transparent),
+      0 2px 8px -2px color-mix(in oklab, #0F172A 6%, transparent),
+      inset 0 1px 0.5px color-mix(in oklab, #FFFFFF 92%, transparent),
+      inset 0 -1px 0.5px color-mix(in oklab, #0F172A 5%, transparent);
+    --lg-scroll-edge-color: color-mix(in oklab, var(--pdfy-canvas) 88%, transparent);
     --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 74%, transparent);
-    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 82%, transparent);
-    --pdfy-glass-subtle: color-mix(in oklab, var(--pdfy-paper) 60%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 84%, transparent);
+    --pdfy-glass-subtle: color-mix(in oklab, var(--pdfy-paper) 62%, transparent);
     --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 12%, var(--pdfy-paper));
   }
 }
@@ -59,7 +130,7 @@
   :root {
     --pdfy-paper: #161B26;
     --pdfy-canvas: #0A0D14;
-    --pdfy-mat-bg: #0D111A;
+    --pdfy-mat-bg: #0C1019;
     --pdfy-mat-dot: #232C3F;
     --pdfy-border: rgba(255, 255, 255, 0.12);
     --pdfy-accent: #5AA9FF;
@@ -69,27 +140,62 @@
     --pdfy-ink-muted: #9FAAC0;
     --pdfy-scrollbar-track: #101520;
     --pdfy-scrollbar-thumb: #475569;
+
+    --lg-fill-regular: rgba(26, 32, 46, 0.68);
+    --lg-fill-panel: rgba(24, 30, 44, 0.78);
+    --lg-fill-lens: rgba(42, 54, 76, 0.68);
+    --lg-brightness-regular: 1.08;
+    --lg-brightness-lens: 1.12;
+    --lg-outer-hairline: rgba(255, 255, 255, 0.11);
+    --lg-rim-hi: rgba(255, 255, 255, 0.44);
+    --lg-rim-mid: rgba(255, 255, 255, 0.13);
+    --lg-rim-lo: rgba(255, 255, 255, 0.03);
+    --lg-rim-bounce: rgba(255, 255, 255, 0.22);
+    --lg-sheen-color: rgba(255, 255, 255, 0.18);
+    --lg-surface-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.015) 54%, rgba(255, 255, 255, 0.035) 100%);
+    --lg-lens-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0.09) 100%);
+    --lg-shadow-pill:
+      0 18px 42px -10px rgba(0, 0, 0, 0.56),
+      0 2px 8px rgba(0, 0, 0, 0.30),
+      inset 0 1px 0.5px rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0.5px rgba(0, 0, 0, 0.38);
+    --lg-shadow-lens:
+      0 6px 18px -4px rgba(0, 0, 0, 0.44),
+      inset 0 1px 0.75px rgba(255, 255, 255, 0.32),
+      inset 0 -1px 0.5px rgba(0, 0, 0, 0.30);
+    --lg-shadow-panel:
+      0 18px 44px -12px rgba(0, 0, 0, 0.68),
+      0 2px 8px rgba(0, 0, 0, 0.36),
+      inset 0 1px 0.5px rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0.5px rgba(0, 0, 0, 0.42);
+    --lg-segmented-track: rgba(255, 255, 255, 0.07);
+    --lg-segmented-inset: rgba(0, 0, 0, 0.36);
+    --lg-segmented-active-bg: #243248;
+    --lg-segmented-active-shadow:
+      0 2px 10px -2px rgba(0, 0, 0, 0.44),
+      inset 0 1px 0.5px rgba(255, 255, 255, 0.24);
+    --lg-scroll-edge-color: rgba(10, 13, 20, 0.90);
+    --lg-mat-glow: rgba(90, 169, 255, 0.06);
+    --lg-mat-top: #101522;
+    --lg-mat-inset-shadow: rgba(0, 0, 0, 0.48);
+    --lg-mat-inset-highlight: rgba(255, 255, 255, 0.05);
+    --lg-page-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.45),
+      0 16px 36px -10px rgba(0, 0, 0, 0.72);
+
     --pdfy-glass-bg: #161B26;
     --pdfy-glass-strong: #1A2130;
-    --pdfy-glass-subtle: rgba(26, 33, 48, 0.56);
+    --pdfy-glass-subtle: rgba(26, 33, 48, 0.58);
     --pdfy-glass-border: rgba(255, 255, 255, 0.16);
     --pdfy-glass-hairline: rgba(255, 255, 255, 0.10);
     --pdfy-glass-highlight: rgba(255, 255, 255, 0.24);
-    --pdfy-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.015));
+    --pdfy-glass-sheen: var(--lg-surface-sheen);
     --pdfy-glass-active-bg: #23344D;
     --pdfy-glass-active-shadow:
       inset 0 1px 0.5px rgba(255, 255, 255, 0.28),
       0 2px 10px -2px rgba(90, 169, 255, 0.28);
-    --pdfy-glass-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.36),
-      0 18px 42px -12px rgba(0, 0, 0, 0.68),
-      inset 0 1px 0.5px var(--pdfy-glass-highlight),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.42);
-    --pdfy-glass-dock-shadow:
-      0 6px 18px rgba(0, 0, 0, 0.48),
-      0 22px 48px -12px rgba(0, 0, 0, 0.78),
-      inset 0 1px 1px var(--pdfy-glass-highlight),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.46);
+    --pdfy-glass-shadow: var(--lg-shadow-panel);
+    --pdfy-glass-dock-shadow: var(--lg-shadow-pill);
   }
 }
 
@@ -97,9 +203,9 @@
   color-scheme: light;
   --pdfy-paper: #FFFFFF;
   --pdfy-canvas: #EDF2F8;
-  --pdfy-mat-bg: #E3EAF3;
+  --pdfy-mat-bg: #E4EBF4;
   --pdfy-mat-dot: #C2CEE0;
-  --pdfy-border: rgba(15, 23, 42, 0.11);
+  --pdfy-border: rgba(15, 23, 42, 0.10);
   --pdfy-accent: #0062CC;
   --pdfy-secondary: #4F46E5;
   --pdfy-cyan: #0EA5E9;
@@ -107,36 +213,71 @@
   --pdfy-ink-muted: #475569;
   --pdfy-scrollbar-track: #E5ECF5;
   --pdfy-scrollbar-thumb: #94A3B8;
+
+  --lg-fill-regular: rgba(255, 255, 255, 0.74);
+  --lg-fill-panel: rgba(255, 255, 255, 0.80);
+  --lg-fill-lens: rgba(255, 255, 255, 0.68);
+  --lg-brightness-regular: 1.03;
+  --lg-brightness-lens: 1.06;
+  --lg-outer-hairline: rgba(15, 23, 42, 0.08);
+  --lg-rim-hi: rgba(255, 255, 255, 0.96);
+  --lg-rim-mid: rgba(255, 255, 255, 0.36);
+  --lg-rim-lo: rgba(15, 23, 42, 0.08);
+  --lg-rim-bounce: rgba(255, 255, 255, 0.68);
+  --lg-sheen-color: rgba(255, 255, 255, 0.38);
+  --lg-surface-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.54) 0%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.24) 100%);
+  --lg-lens-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.26) 55%, rgba(255, 255, 255, 0.44) 100%);
+  --lg-shadow-pill:
+    0 12px 30px -8px rgba(15, 23, 42, 0.14),
+    0 2px 6px -1px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.90),
+    inset 0 -1px 0.5px rgba(15, 23, 42, 0.05);
+  --lg-shadow-lens:
+    0 4px 14px -4px rgba(0, 98, 204, 0.20),
+    0 1px 3px rgba(15, 23, 42, 0.07),
+    inset 0 1px 1px rgba(255, 255, 255, 0.96),
+    inset 0 -1px 1px rgba(15, 23, 42, 0.04);
+  --lg-shadow-panel:
+    0 16px 38px -12px rgba(15, 23, 42, 0.15),
+    0 2px 8px -2px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.92),
+    inset 0 -1px 0.5px rgba(15, 23, 42, 0.04);
+  --lg-segmented-track: rgba(15, 23, 42, 0.055);
+  --lg-segmented-inset: rgba(15, 23, 42, 0.06);
+  --lg-segmented-active-bg: #FFFFFF;
+  --lg-segmented-active-shadow:
+    0 2px 8px -2px rgba(15, 23, 42, 0.14),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  --lg-scroll-edge-color: rgba(237, 242, 248, 0.88);
+  --lg-mat-glow: rgba(255, 255, 255, 0.42);
+  --lg-mat-top: #E9EFF7;
+  --lg-mat-inset-shadow: rgba(15, 23, 42, 0.12);
+  --lg-mat-inset-highlight: rgba(255, 255, 255, 0.65);
+  --lg-page-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.07),
+    0 12px 28px -10px rgba(15, 23, 42, 0.18);
+
   --pdfy-glass-bg: #FFFFFF;
   --pdfy-glass-strong: #FFFFFF;
-  --pdfy-glass-subtle: rgba(255, 255, 255, 0.62);
-  --pdfy-glass-border: rgba(255, 255, 255, 0.80);
+  --pdfy-glass-subtle: rgba(255, 255, 255, 0.64);
+  --pdfy-glass-border: rgba(255, 255, 255, 0.82);
   --pdfy-glass-hairline: rgba(15, 23, 42, 0.09);
-  --pdfy-glass-highlight: rgba(255, 255, 255, 0.92);
-  --pdfy-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.24));
+  --pdfy-glass-highlight: rgba(255, 255, 255, 0.94);
+  --pdfy-glass-sheen: var(--lg-surface-sheen);
   --pdfy-glass-active-bg: #E0ECFA;
   --pdfy-glass-active-shadow:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.96),
     0 2px 8px -2px rgba(0, 98, 204, 0.18);
-  --pdfy-glass-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 2px 6px rgba(15, 23, 42, 0.05),
-    0 16px 38px -14px rgba(15, 23, 42, 0.14),
-    inset 0 1px 0.5px var(--pdfy-glass-highlight),
-    inset 0 -1px 0 rgba(15, 23, 42, 0.04);
-  --pdfy-glass-dock-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.07),
-    0 4px 12px rgba(15, 23, 42, 0.09),
-    0 18px 42px -12px rgba(15, 23, 42, 0.22),
-    inset 0 1px 1px var(--pdfy-glass-highlight),
-    inset 0 -1px 0 rgba(15, 23, 42, 0.05);
+  --pdfy-glass-shadow: var(--lg-shadow-panel);
+  --pdfy-glass-dock-shadow: var(--lg-shadow-pill);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
   --pdfy-paper: #161B26;
   --pdfy-canvas: #0A0D14;
-  --pdfy-mat-bg: #0D111A;
+  --pdfy-mat-bg: #0C1019;
   --pdfy-mat-dot: #232C3F;
   --pdfy-border: rgba(255, 255, 255, 0.12);
   --pdfy-accent: #5AA9FF;
@@ -146,43 +287,95 @@
   --pdfy-ink-muted: #9FAAC0;
   --pdfy-scrollbar-track: #101520;
   --pdfy-scrollbar-thumb: #475569;
+
+  --lg-fill-regular: rgba(26, 32, 46, 0.68);
+  --lg-fill-panel: rgba(24, 30, 44, 0.78);
+  --lg-fill-lens: rgba(42, 54, 76, 0.68);
+  --lg-brightness-regular: 1.08;
+  --lg-brightness-lens: 1.12;
+  --lg-outer-hairline: rgba(255, 255, 255, 0.11);
+  --lg-rim-hi: rgba(255, 255, 255, 0.44);
+  --lg-rim-mid: rgba(255, 255, 255, 0.13);
+  --lg-rim-lo: rgba(255, 255, 255, 0.03);
+  --lg-rim-bounce: rgba(255, 255, 255, 0.22);
+  --lg-sheen-color: rgba(255, 255, 255, 0.18);
+  --lg-surface-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.015) 54%, rgba(255, 255, 255, 0.035) 100%);
+  --lg-lens-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0.09) 100%);
+  --lg-shadow-pill:
+    0 18px 42px -10px rgba(0, 0, 0, 0.56),
+    0 2px 8px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0.5px rgba(0, 0, 0, 0.38);
+  --lg-shadow-lens:
+    0 6px 18px -4px rgba(0, 0, 0, 0.44),
+    inset 0 1px 0.75px rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0.5px rgba(0, 0, 0, 0.30);
+  --lg-shadow-panel:
+    0 18px 44px -12px rgba(0, 0, 0, 0.68),
+    0 2px 8px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0.5px rgba(0, 0, 0, 0.42);
+  --lg-segmented-track: rgba(255, 255, 255, 0.07);
+  --lg-segmented-inset: rgba(0, 0, 0, 0.36);
+  --lg-segmented-active-bg: #243248;
+  --lg-segmented-active-shadow:
+    0 2px 10px -2px rgba(0, 0, 0, 0.44),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.24);
+  --lg-scroll-edge-color: rgba(10, 13, 20, 0.90);
+  --lg-mat-glow: rgba(90, 169, 255, 0.06);
+  --lg-mat-top: #101522;
+  --lg-mat-inset-shadow: rgba(0, 0, 0, 0.48);
+  --lg-mat-inset-highlight: rgba(255, 255, 255, 0.05);
+  --lg-page-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    0 16px 36px -10px rgba(0, 0, 0, 0.72);
+
   --pdfy-glass-bg: #161B26;
   --pdfy-glass-strong: #1A2130;
-  --pdfy-glass-subtle: rgba(26, 33, 48, 0.56);
+  --pdfy-glass-subtle: rgba(26, 33, 48, 0.58);
   --pdfy-glass-border: rgba(255, 255, 255, 0.16);
   --pdfy-glass-hairline: rgba(255, 255, 255, 0.10);
   --pdfy-glass-highlight: rgba(255, 255, 255, 0.24);
-  --pdfy-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.015));
+  --pdfy-glass-sheen: var(--lg-surface-sheen);
   --pdfy-glass-active-bg: #23344D;
   --pdfy-glass-active-shadow:
     inset 0 1px 0.5px rgba(255, 255, 255, 0.28),
     0 2px 10px -2px rgba(90, 169, 255, 0.28);
-  --pdfy-glass-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 2px 8px rgba(0, 0, 0, 0.36),
-    0 18px 42px -12px rgba(0, 0, 0, 0.68),
-    inset 0 1px 0.5px var(--pdfy-glass-highlight),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.42);
-  --pdfy-glass-dock-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 6px 18px rgba(0, 0, 0, 0.48),
-    0 22px 48px -12px rgba(0, 0, 0, 0.78),
-    inset 0 1px 1px var(--pdfy-glass-highlight),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.46);
+  --pdfy-glass-shadow: var(--lg-shadow-panel);
+  --pdfy-glass-dock-shadow: var(--lg-shadow-pill);
 }
 
 @supports (color: color-mix(in oklab, white, black)) {
   [data-theme="light"] {
+    --lg-fill-regular: color-mix(in oklab, #FFFFFF 72%, transparent);
+    --lg-fill-panel: color-mix(in oklab, #FFFFFF 80%, transparent);
+    --lg-fill-lens: color-mix(in oklab, #FFFFFF 76%, var(--pdfy-accent) 8%);
+    --lg-shadow-pill:
+      0 12px 32px -8px color-mix(in oklab, #0F172A 13%, transparent),
+      0 2px 6px -1px color-mix(in oklab, #0F172A 6%, transparent),
+      inset 0 1px 0.5px color-mix(in oklab, #FFFFFF 90%, transparent),
+      inset 0 -1px 0.5px color-mix(in oklab, #0F172A 6%, transparent);
+    --lg-shadow-panel:
+      0 16px 40px -12px color-mix(in oklab, #0F172A 14%, transparent),
+      0 2px 8px -2px color-mix(in oklab, #0F172A 6%, transparent),
+      inset 0 1px 0.5px color-mix(in oklab, #FFFFFF 92%, transparent),
+      inset 0 -1px 0.5px color-mix(in oklab, #0F172A 5%, transparent);
+    --lg-scroll-edge-color: color-mix(in oklab, var(--pdfy-canvas) 88%, transparent);
     --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 74%, transparent);
-    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 82%, transparent);
-    --pdfy-glass-subtle: color-mix(in oklab, var(--pdfy-paper) 60%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 84%, transparent);
+    --pdfy-glass-subtle: color-mix(in oklab, var(--pdfy-paper) 62%, transparent);
     --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 12%, var(--pdfy-paper));
   }
 
   [data-theme="dark"] {
+    --lg-fill-regular: color-mix(in oklab, #1C2230 68%, transparent);
+    --lg-fill-panel: color-mix(in oklab, #181E2C 78%, transparent);
+    --lg-fill-lens: color-mix(in oklab, #2A364C 68%, transparent);
+    --lg-segmented-active-bg: color-mix(in oklab, var(--pdfy-accent) 16%, #1D2535);
+    --lg-scroll-edge-color: color-mix(in oklab, var(--pdfy-canvas) 90%, transparent);
     --pdfy-glass-bg: color-mix(in oklab, #1A2233 70%, transparent);
-    --pdfy-glass-strong: color-mix(in oklab, #1A2233 82%, transparent);
-    --pdfy-glass-subtle: color-mix(in oklab, #1A2233 56%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, #1A2233 84%, transparent);
+    --pdfy-glass-subtle: color-mix(in oklab, #1A2233 58%, transparent);
     --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 18%, #1A2233);
   }
 }
@@ -267,7 +460,7 @@ p {
   z-index: 1600;
   transform: translateY(-180%);
   padding: 12px 20px;
-  border-radius: 8px;
+  border-radius: 999px;
   border: 2px solid var(--pdfy-accent);
   background: var(--pdfy-paper);
   color: var(--pdfy-ink);
@@ -294,18 +487,60 @@ p {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
-/* Recessed cutting-mat surface exclusively for active document/preview frames */
+/* Soft recessed Apple Preview architectural document stage (no harsh CAD grid) */
 .pdfy-workbench-mat {
   background-color: var(--pdfy-mat-bg);
-  background-image: radial-gradient(circle, var(--pdfy-mat-dot) 1px, transparent 1px);
-  background-size: 18px 18px;
+  background-image:
+    radial-gradient(120% 80% at 50% 0%, var(--lg-mat-glow), transparent 72%),
+    linear-gradient(180deg, var(--lg-mat-top), var(--pdfy-mat-bg));
   border: 1px solid var(--pdfy-border);
+  box-shadow:
+    inset 0 2px 10px -4px var(--lg-mat-inset-shadow),
+    inset 0 1px 0 var(--lg-mat-inset-highlight);
   overscroll-behavior: contain;
+}
+
+.pdfy-workbench-mat .react-pdf__Page {
+  box-shadow: var(--lg-page-shadow);
 }
 
 .pdfy-scroll-region {
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
+}
+
+/* Subtle non-interactive scroll-edge top dissolve under floating chrome (hidden at scrollTop: 0) */
+.pdfy-scroll-edge-top {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+  margin-bottom: -22px;
+  pointer-events: none;
+  z-index: 5;
+  flex-shrink: 0;
+  opacity: 0;
+  background: linear-gradient(180deg, var(--lg-scroll-edge-color) 0%, transparent 100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    @keyframes pdfy-reveal-scroll-edge {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .pdfy-scroll-edge-top {
+      animation: pdfy-reveal-scroll-edge auto linear both;
+      animation-timeline: scroll(nearest block);
+      animation-range: 0px 24px;
+    }
+  }
 }
 
 .pdfy-page-tile {
@@ -322,7 +557,7 @@ p {
 /* Native <details>/<summary> collapsible sections per Modern Web Guidance (accordion) */
 .pdfy-details {
   border: 1px solid var(--pdfy-border);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--pdfy-paper);
 }
 
@@ -389,7 +624,7 @@ p {
   max-block-size: min(460px, 72vh);
   container-type: inline-size;
   border: 1px solid var(--pdfy-border);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--pdfy-paper);
 }
 
@@ -510,22 +745,28 @@ p {
   border-color: var(--pdfy-accent);
 }
 
-/* Apple-inspired Liquid Glass workspace canvas & specular frosted surfaces */
+/* ============================================================================
+   Apple WWDC25 Liquid Glass Material System (iOS 26 / macOS Tahoe)
+   Shared primitives: .lg-surface, .lg-pill, .lg-lens, .lg-orb, .lg-panel,
+   .lg-segmented, .lg-interactive
+   ============================================================================ */
+
+/* Ambient translucent backdrop behind floating Liquid Glass islands */
 .pdfy-workspace-shell {
   background-color: var(--pdfy-canvas);
   background-image:
-    radial-gradient(760px 460px at 6% -8%, rgba(56, 152, 255, 0.16), transparent 68%),
-    radial-gradient(660px 420px at 94% 4%, rgba(124, 108, 255, 0.13), transparent 70%),
+    radial-gradient(760px 460px at 6% -8%, rgba(56, 152, 255, 0.17), transparent 68%),
+    radial-gradient(660px 420px at 94% 4%, rgba(124, 108, 255, 0.14), transparent 70%),
     radial-gradient(560px 320px at 50% 106%, rgba(14, 165, 233, 0.14), transparent 68%),
-    linear-gradient(165deg var(--in-oklab), #F5F7FB, #E8EEF6);
+    linear-gradient(165deg var(--in-oklab), #F5F8FC, #E8EFF8);
 }
 
 [data-theme="dark"] .pdfy-workspace-shell {
   background-image:
-    radial-gradient(760px 460px at 8% -10%, rgba(56, 139, 253, 0.22), transparent 68%),
-    radial-gradient(660px 420px at 92% 4%, rgba(129, 140, 248, 0.17), transparent 70%),
-    radial-gradient(560px 320px at 50% 106%, rgba(56, 189, 248, 0.16), transparent 68%),
-    linear-gradient(165deg var(--in-oklab), #0A0D14, #101624);
+    radial-gradient(760px 460px at 8% -10%, rgba(56, 139, 253, 0.23), transparent 68%),
+    radial-gradient(660px 420px at 92% 4%, rgba(129, 140, 248, 0.18), transparent 70%),
+    radial-gradient(560px 320px at 50% 106%, rgba(56, 189, 248, 0.17), transparent 68%),
+    linear-gradient(165deg var(--in-oklab), #090C13, #101726);
 }
 
 @supports (color: color-mix(in oklab, white, black)) {
@@ -538,71 +779,276 @@ p {
   }
 }
 
+/* Zero-specificity default position so fixed/sticky/absolute surfaces never lose positioning */
+:where(.lg-surface) {
+  position: relative;
+}
+
+.lg-surface {
+  border: 1px solid var(--lg-outer-hairline);
+  isolation: isolate;
+  contain: layout paint;
+}
+
+/* Dual-catchlight diagonal specular bevel rim (top-left primary + bottom-right bounce) */
+.lg-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  z-index: 2;
+  background: conic-gradient(
+    from 215deg at 50% 50%,
+    var(--lg-rim-hi) 0deg,
+    var(--lg-rim-mid) 58deg,
+    var(--lg-rim-lo) 128deg,
+    var(--lg-rim-bounce) 205deg,
+    var(--lg-rim-lo) 280deg,
+    var(--lg-rim-hi) 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.lg-pill,
+.lg-surface.lg-pill,
+.MuiButton-root.lg-pill,
+.MuiButton-outlined.lg-pill {
+  border-radius: 9999px;
+  background-color: var(--lg-fill-regular);
+  background-image: var(--lg-surface-sheen);
+  -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(var(--lg-brightness-regular));
+  backdrop-filter: blur(22px) saturate(190%) brightness(var(--lg-brightness-regular));
+  box-shadow: var(--lg-shadow-pill);
+}
+
+.lg-lens,
+.lg-surface.lg-lens {
+  border-radius: 9999px;
+  background-color: var(--lg-fill-lens);
+  background-image: var(--lg-lens-sheen);
+  -webkit-backdrop-filter: blur(10px) saturate(200%) brightness(var(--lg-brightness-lens));
+  backdrop-filter: blur(10px) saturate(200%) brightness(var(--lg-brightness-lens));
+  box-shadow: var(--lg-shadow-lens);
+}
+
+.lg-orb,
+.lg-surface.lg-orb,
+.MuiIconButton-root.lg-orb {
+  border-radius: 9999px;
+  background-color: var(--lg-fill-regular);
+  background-image: var(--lg-surface-sheen);
+  -webkit-backdrop-filter: blur(22px) saturate(195%) brightness(var(--lg-brightness-regular));
+  backdrop-filter: blur(22px) saturate(195%) brightness(var(--lg-brightness-regular));
+  box-shadow: var(--lg-shadow-pill);
+}
+
+.lg-panel,
+.lg-surface.lg-panel {
+  border-radius: 22px;
+  background-color: var(--lg-fill-panel);
+  background-image: var(--lg-surface-sheen);
+  -webkit-backdrop-filter: blur(26px) saturate(190%) brightness(var(--lg-brightness-regular));
+  backdrop-filter: blur(26px) saturate(190%) brightness(var(--lg-brightness-regular));
+  box-shadow: var(--lg-shadow-panel);
+}
+
+/* Blink/Chromium optical convex-bezel refraction via SVG feDisplacementMap */
+[data-lg-refract="1"] .lg-pill,
+[data-lg-refract="1"] .lg-surface.lg-pill,
+[data-lg-refract="1"] .MuiButton-root.lg-pill {
+  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(var(--lg-brightness-regular)) url(#lg-pill);
+  backdrop-filter: blur(18px) saturate(190%) brightness(var(--lg-brightness-regular)) url(#lg-pill);
+}
+
+[data-lg-refract="1"] .lg-lens,
+[data-lg-refract="1"] .lg-surface.lg-lens {
+  -webkit-backdrop-filter: url(#lg-lens) blur(6px) saturate(200%) brightness(var(--lg-brightness-lens));
+  backdrop-filter: url(#lg-lens) blur(6px) saturate(200%) brightness(var(--lg-brightness-lens));
+}
+
+[data-lg-refract="1"] .lg-orb,
+[data-lg-refract="1"] .lg-surface.lg-orb,
+[data-lg-refract="1"] .MuiIconButton-root.lg-orb {
+  -webkit-backdrop-filter: blur(16px) saturate(195%) brightness(var(--lg-brightness-regular)) url(#lg-orb);
+  backdrop-filter: blur(16px) saturate(195%) brightness(var(--lg-brightness-regular)) url(#lg-orb);
+}
+
+[data-lg-refract="1"] .lg-panel,
+[data-lg-refract="1"] .lg-surface.lg-panel {
+  -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(var(--lg-brightness-regular)) url(#lg-panel);
+  backdrop-filter: blur(22px) saturate(190%) brightness(var(--lg-brightness-regular)) url(#lg-panel);
+}
+
+/* Apple capsule segmented control track (Zoom, Pages|Outline, Select|Pan|Draw) */
+.lg-segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9999px;
+  border: 1px solid var(--lg-outer-hairline);
+  background-color: var(--lg-segmented-track);
+  box-shadow: inset 0 1px 2px var(--lg-segmented-inset);
+}
+
+.lg-segmented .MuiToggleButton-root,
+.lg-segmented .MuiButton-root,
+.lg-segmented .MuiIconButton-root {
+  border: 0;
+  border-radius: 9999px;
+}
+
+.lg-segmented .MuiToggleButtonGroup-grouped {
+  border: 0 !important;
+  border-radius: 9999px !important;
+  margin: 0 !important;
+}
+
+.lg-segmented .MuiToggleButton-root.Mui-selected,
+.lg-segmented .MuiToggleButton-root.Mui-selected:hover,
+.lg-segmented [aria-pressed="true"] {
+  background-color: var(--lg-segmented-active-bg);
+  color: var(--pdfy-accent);
+  box-shadow: var(--lg-segmented-active-shadow);
+}
+
+/* Interactive specular pointer sheen & elastic spring tactile rebound */
+.lg-interactive {
+  transition:
+    background-color 150ms cubic-bezier(0.2, 0, 0, 1),
+    border-color 150ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 180ms cubic-bezier(0.2, 0, 0, 1),
+    color 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lg-interactive::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  background: radial-gradient(
+    130px circle at var(--lg-mx, 50%) var(--lg-my, 0%),
+    var(--lg-sheen-color),
+    transparent 70%
+  );
+  transition: opacity 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lg-interactive:hover::after {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button.lg-interactive,
+  a.lg-interactive,
+  [role="button"].lg-interactive {
+    transition:
+      scale 420ms var(--lg-spring-snappy),
+      background-color 150ms cubic-bezier(0.2, 0, 0, 1),
+      border-color 150ms cubic-bezier(0.2, 0, 0, 1),
+      box-shadow 180ms cubic-bezier(0.2, 0, 0, 1),
+      color 150ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  button.lg-interactive:active:not(:disabled),
+  a.lg-interactive:active:not(:disabled),
+  [role="button"].lg-interactive:active:not(:disabled) {
+    scale: 0.965;
+    transition:
+      scale 110ms cubic-bezier(0.2, 0, 0, 1),
+      background-color 150ms cubic-bezier(0.2, 0, 0, 1),
+      border-color 150ms cubic-bezier(0.2, 0, 0, 1),
+      box-shadow 180ms cubic-bezier(0.2, 0, 0, 1),
+      color 150ms cubic-bezier(0.2, 0, 0, 1);
+  }
+}
+
+/* Harmonized frosted chrome helpers used by editor bars & shared containers */
 .pdfy-glass {
   background-color: var(--pdfy-glass-bg);
   background-image: var(--pdfy-glass-sheen);
-  -webkit-backdrop-filter: blur(26px) saturate(195%);
-  backdrop-filter: blur(26px) saturate(195%);
+  -webkit-backdrop-filter: blur(26px) saturate(195%) brightness(var(--lg-brightness-regular));
+  backdrop-filter: blur(26px) saturate(195%) brightness(var(--lg-brightness-regular));
   box-shadow: inset 0 1px 0.5px var(--pdfy-glass-highlight);
 }
 
+/* Transparent scroll-under header hosting floating Liquid Glass islands */
 .pdfy-glass-header {
-  padding-top: max(6px, env(safe-area-inset-top, 0px));
-  padding-left: max(10px, env(safe-area-inset-left, 0px));
-  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-top: max(8px, env(safe-area-inset-top, 0px));
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
   padding-bottom: 6px;
+  background: linear-gradient(180deg, var(--lg-scroll-edge-color) 0%, transparent 100%);
+}
+
+@media (min-width: 600px) {
+  .pdfy-glass-header {
+    padding-top: max(10px, env(safe-area-inset-top, 0px));
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    padding-bottom: 6px;
+  }
 }
 
 .pdfy-glass-card {
-  background-color: var(--pdfy-glass-strong);
-  background-image: var(--pdfy-glass-sheen);
+  background-color: var(--lg-fill-panel);
+  background-image: var(--lg-surface-sheen);
   border-color: var(--pdfy-glass-border);
-  -webkit-backdrop-filter: blur(26px) saturate(190%);
-  backdrop-filter: blur(26px) saturate(190%);
-  box-shadow: var(--pdfy-glass-shadow);
+  -webkit-backdrop-filter: blur(26px) saturate(190%) brightness(var(--lg-brightness-regular));
+  backdrop-filter: blur(26px) saturate(190%) brightness(var(--lg-brightness-regular));
+  box-shadow: var(--lg-shadow-panel);
 }
 
 .pdfy-glass-subtle {
   background-color: var(--pdfy-glass-subtle);
   background-image: var(--pdfy-glass-sheen);
   border: 1px solid var(--pdfy-glass-border);
-  -webkit-backdrop-filter: blur(18px) saturate(170%);
-  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(175%);
+  backdrop-filter: blur(18px) saturate(175%);
   box-shadow:
     0 0 0 1px var(--pdfy-glass-hairline),
     inset 0 1px 0.5px var(--pdfy-glass-highlight);
 }
 
 .pdfy-glass-pill {
-  background-color: var(--pdfy-glass-strong);
-  background-image: var(--pdfy-glass-sheen);
-  border: 1px solid var(--pdfy-glass-border);
-  border-radius: 999px;
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  box-shadow: var(--pdfy-glass-dock-shadow);
+  background-color: var(--lg-fill-regular);
+  background-image: var(--lg-surface-sheen);
+  border: 1px solid var(--lg-outer-hairline);
+  border-radius: 9999px;
+  -webkit-backdrop-filter: blur(28px) saturate(205%) brightness(var(--lg-brightness-regular));
+  backdrop-filter: blur(28px) saturate(205%) brightness(var(--lg-brightness-regular));
+  box-shadow: var(--lg-shadow-pill);
 }
 
 .pdfy-glass-control {
-  background-color: var(--pdfy-glass-strong);
-  background-image: var(--pdfy-glass-sheen);
-  border-color: var(--pdfy-glass-border);
-  box-shadow:
-    0 0 0 1px var(--pdfy-glass-hairline),
-    inset 0 1px 0.5px var(--pdfy-glass-highlight);
+  background-color: var(--lg-fill-regular);
+  background-image: var(--lg-surface-sheen);
+  border-color: var(--lg-outer-hairline);
+  box-shadow: var(--lg-shadow-pill);
 }
 
 .pdfy-workspace-main {
-  scroll-padding-top: 1rem;
+  scroll-padding-top: 1.25rem;
   scroll-padding-bottom: 1.5rem;
 }
 
 @media (max-width: 899.95px) {
   .pdfy-workspace-main {
-    scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
+/* Authentic iOS 26 Floating Liquid Glass Mobile Dock + Sliding Optical Lens + Detached Orb */
 .pdfy-mobile-dock {
   position: fixed;
   left: 0;
@@ -611,22 +1057,60 @@ p {
   z-index: 1050;
   display: flex;
   justify-content: center;
-  padding: 0 max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  padding: 0 max(10px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
   pointer-events: none;
 }
 
 .pdfy-mobile-dock-bar {
-  pointer-events: auto;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
   align-items: center;
-  gap: 3px;
-  width: min(410px, 100%);
-  padding: 5px 6px;
+  gap: 8px;
+  width: min(414px, 100%);
+  pointer-events: none;
+}
+
+.pdfy-mobile-dock-capsule {
+  pointer-events: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+  padding: 4px;
+}
+
+.pdfy-mobile-dock-lens {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 4);
+  pointer-events: none;
+  z-index: 0;
+  transform: translateX(calc(var(--lg-active-index, 0) * 100%));
+  opacity: 1;
+  transition: opacity 150ms ease;
+}
+
+.pdfy-mobile-dock-lens[data-visible="false"] {
+  opacity: 0;
+  scale: 0.88;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pdfy-mobile-dock-lens {
+    transition:
+      transform 420ms var(--lg-spring-snappy),
+      scale 360ms var(--lg-spring-snappy),
+      opacity 150ms ease;
+  }
 }
 
 .pdfy-mobile-dock-btn {
   appearance: none;
+  position: relative;
+  z-index: 1;
   border: 0;
   background: transparent;
   color: var(--pdfy-ink-muted);
@@ -637,12 +1121,12 @@ p {
   justify-content: center;
   gap: 2px;
   min-width: 44px;
-  min-height: 46px;
+  min-height: 48px;
   padding: 4px 2px;
-  border-radius: 999px;
+  border-radius: 9999px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 160ms cubic-bezier(0.2, 0, 0, 1), color 160ms cubic-bezier(0.2, 0, 0, 1), box-shadow 160ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1);
+  transition: color 150ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .pdfy-mobile-dock-btn:hover {
@@ -650,13 +1134,21 @@ p {
 }
 
 .pdfy-mobile-dock-btn[aria-current="page"] {
-  background-color: var(--pdfy-glass-active-bg);
   color: var(--pdfy-accent);
-  box-shadow: var(--pdfy-glass-active-shadow);
 }
 
-.pdfy-mobile-dock-btn:active {
-  transform: scale(0.95);
+@media (prefers-reduced-motion: no-preference) {
+  .pdfy-mobile-dock-btn {
+    transition:
+      color 150ms cubic-bezier(0.2, 0, 0, 1),
+      scale 340ms var(--lg-spring-snappy);
+  }
+  .pdfy-mobile-dock-btn:active {
+    scale: 0.94;
+    transition:
+      color 150ms cubic-bezier(0.2, 0, 0, 1),
+      scale 100ms cubic-bezier(0.2, 0, 0, 1);
+  }
 }
 
 .pdfy-mobile-dock-label {
@@ -667,38 +1159,67 @@ p {
   white-space: nowrap;
 }
 
+.pdfy-mobile-dock-orb {
+  pointer-events: auto;
+  appearance: none;
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pdfy-ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pdfy-mobile-dock-orb[data-active="true"] {
+  color: var(--pdfy-accent);
+  background-color: var(--pdfy-glass-active-bg);
+  box-shadow: var(--pdfy-glass-active-shadow), var(--lg-shadow-pill);
+}
+
+@media (min-width: 380px) {
+  .pdfy-mobile-dock-bar {
+    gap: 10px;
+  }
+  .pdfy-mobile-dock-orb {
+    flex: 0 0 56px;
+    width: 56px;
+    height: 56px;
+  }
+}
+
 @media (max-height: 480px) {
   .pdfy-mobile-dock {
     display: none;
   }
 }
 
-/* Native <dialog> Command Palette (Spotlight Liquid Glass: light-dismiss, top-layer animation, scroll containment) */
+/* Native <dialog> Spotlight Tahoe Command Palette (light-dismiss, top-layer animation, scroll containment) */
 .pdfy-command-dialog {
+  position: fixed;
   margin: min(10vh, 72px) auto auto;
   padding: 0;
-  width: min(560px, calc(100vw - 24px));
+  width: min(580px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 32px);
-  border: 1px solid var(--pdfy-glass-border);
-  border-radius: 24px;
+  border-radius: 26px;
   color: var(--pdfy-ink);
-  background-color: var(--pdfy-glass-strong);
-  background-image: var(--pdfy-glass-sheen);
-  -webkit-backdrop-filter: blur(32px) saturate(210%);
-  backdrop-filter: blur(32px) saturate(210%);
-  box-shadow: var(--pdfy-glass-dock-shadow);
   overflow: hidden;
   opacity: 0;
   transition-property: opacity, transform, display, overlay;
-  transition-duration: 0.22s;
-  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  transition-duration: 0.22s, 0.38s, 0.22s, 0.22s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1), var(--lg-spring-smooth), cubic-bezier(0.2, 0, 0, 1), cubic-bezier(0.2, 0, 0, 1);
   transition-behavior: allow-discrete;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .pdfy-command-dialog {
-    transform: translateY(10px) scale(0.97);
+    transform: translateY(10px) scale(0.965);
   }
 }
 
@@ -729,14 +1250,14 @@ p {
     transform: translateY(0) scale(1);
 
     @starting-style {
-      transform: translateY(10px) scale(0.97);
+      transform: translateY(10px) scale(0.965);
     }
   }
 
   &::backdrop {
-    background-color: rgba(10, 13, 20, 0.36);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    backdrop-filter: blur(8px) saturate(140%);
+    background-color: rgba(10, 13, 20, 0.34);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
 
     @starting-style {
       background-color: rgba(10, 13, 20, 0);
@@ -746,12 +1267,29 @@ p {
   }
 }
 
-.pdfy-command-search-row {
-  transition: box-shadow 150ms cubic-bezier(0.2, 0, 0, 1);
+/* Spotlight Tahoe pill search well (replaces Material bottom underline) */
+.pdfy-command-search-well {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px 2px 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--lg-outer-hairline);
+  background-color: var(--lg-segmented-track);
+  box-shadow: inset 0 1px 2px var(--lg-segmented-inset);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 
-.pdfy-command-search-row:focus-within {
-  box-shadow: inset 0 -2px 0 var(--pdfy-accent);
+.pdfy-command-search-well:focus-within {
+  border-color: var(--pdfy-accent);
+  background-color: var(--pdfy-glass-subtle);
+  box-shadow: 0 0 0 3px rgba(0, 98, 204, 0.18);
+}
+
+@supports (color: color-mix(in oklab, white, black)) {
+  .pdfy-command-search-well:focus-within {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--pdfy-accent) 18%, transparent);
+  }
 }
 
 .pdfy-command-input {
@@ -774,6 +1312,11 @@ p {
   color: var(--pdfy-ink-muted);
 }
 
+.pdfy-command-list {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 22px), transparent 100%);
+}
+
 .pdfy-command-option {
   appearance: none;
   width: 100%;
@@ -783,12 +1326,15 @@ p {
   gap: 12px;
   padding: 8px 12px;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 15px;
   background: transparent;
   color: var(--pdfy-ink);
   font: inherit;
   cursor: pointer;
-  transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1), border-color 140ms cubic-bezier(0.2, 0, 0, 1), box-shadow 140ms cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 140ms cubic-bezier(0.2, 0, 0, 1),
+    border-color 140ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 140ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .pdfy-command-option[data-active="true"],
@@ -799,20 +1345,26 @@ p {
 }
 
 .pdfy-kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 0.72rem;
   font-weight: 600;
+  line-height: 1.3;
+  min-height: 20px;
   padding: 1px 6px;
-  border-radius: 6px;
-  border: 1px solid var(--pdfy-glass-hairline);
+  border-radius: 7px;
+  border: 1px solid var(--lg-outer-hairline);
   background-color: var(--pdfy-glass-subtle);
+  box-shadow: inset 0 1px 0 var(--pdfy-glass-highlight);
   color: var(--pdfy-ink-muted);
 }
 
 /* Scroll-driven reading progress bar & focus reading mode (scroll-progress-indicator) */
 .pdfy-reader-progress-track {
   position: sticky;
-  top: 0;
+  top: -16px;
   left: 0;
   right: 0;
   height: 3px;
@@ -868,38 +1420,108 @@ p {
   position: fixed;
   left: 50%;
   bottom: max(16px, env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
+  translate: -50% 0;
   z-index: 1260;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: calc(100vw - 24px);
-  padding: 4px 10px;
+  padding: 5px 10px;
 }
+
+/* ============================================================================
+   Accessibility Media Safeguards (WCAG 2.2 AA Mandatory)
+   ============================================================================ */
 
 @media (prefers-reduced-transparency: reduce) {
   :root,
   [data-theme="light"],
   [data-theme="dark"] {
+    --lg-fill-regular: var(--pdfy-paper);
+    --lg-fill-panel: var(--pdfy-paper);
+    --lg-fill-lens: var(--pdfy-glass-active-bg);
+    --lg-surface-sheen: none;
+    --lg-lens-sheen: none;
     --pdfy-glass-bg: var(--pdfy-paper);
     --pdfy-glass-strong: var(--pdfy-paper);
     --pdfy-glass-subtle: var(--pdfy-paper);
     --pdfy-glass-sheen: none;
   }
+
+  .lg-surface {
+    border-color: var(--pdfy-border);
+  }
+
+  .lg-surface::before,
+  .lg-interactive::after {
+    display: none;
+  }
+
+  .lg-pill,
+  .lg-surface.lg-pill,
+  .MuiButton-root.lg-pill,
+  .MuiButton-outlined.lg-pill,
+  .lg-lens,
+  .lg-surface.lg-lens,
+  .lg-orb,
+  .lg-surface.lg-orb,
+  .MuiIconButton-root.lg-orb,
+  .lg-panel,
+  .lg-surface.lg-panel,
+  [data-lg-refract="1"] .lg-pill,
+  [data-lg-refract="1"] .lg-surface.lg-pill,
+  [data-lg-refract="1"] .MuiButton-root.lg-pill,
+  [data-lg-refract="1"] .lg-lens,
+  [data-lg-refract="1"] .lg-surface.lg-lens,
+  [data-lg-refract="1"] .lg-orb,
+  [data-lg-refract="1"] .lg-surface.lg-orb,
+  [data-lg-refract="1"] .MuiIconButton-root.lg-orb,
+  [data-lg-refract="1"] .lg-panel,
+  [data-lg-refract="1"] .lg-surface.lg-panel,
   .pdfy-glass,
   .pdfy-glass-card,
   .pdfy-glass-subtle,
   .pdfy-glass-pill,
   .pdfy-command-dialog,
   .pdfy-command-dialog::backdrop {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --lg-fill-regular: var(--pdfy-paper);
+    --lg-fill-panel: var(--pdfy-paper);
+    --lg-outer-hairline: var(--pdfy-ink-muted);
+    --pdfy-glass-border: var(--pdfy-ink-muted);
+    --pdfy-glass-hairline: var(--pdfy-ink-muted);
+  }
+
+  @supports (color: color-mix(in oklab, white, black)) {
+    :root,
+    [data-theme="light"],
+    [data-theme="dark"] {
+      --lg-fill-regular: color-mix(in oklab, var(--pdfy-paper) 94%, transparent);
+      --lg-fill-panel: color-mix(in oklab, var(--pdfy-paper) 96%, transparent);
+    }
+  }
+
+  .lg-surface {
+    border-width: 1.5px;
+    border-color: var(--pdfy-ink-muted);
+  }
+
+  .lg-interactive::after {
+    display: none;
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .pdfy-panel-enter {
-    transition: opacity 160ms cubic-bezier(0.2, 0, 0, 1), translate 160ms cubic-bezier(0.2, 0, 0, 1);
+    transition: opacity 160ms cubic-bezier(0.2, 0, 0, 1), translate 220ms var(--lg-spring-smooth);
   }
   @starting-style {
     .pdfy-panel-enter {
@@ -908,7 +1530,10 @@ p {
     }
   }
   .pdfy-card-interactive {
-    transition: border-color 140ms cubic-bezier(0.2, 0, 0, 1), box-shadow 140ms cubic-bezier(0.2, 0, 0, 1), translate 140ms cubic-bezier(0.2, 0, 0, 1);
+    transition:
+      border-color 140ms cubic-bezier(0.2, 0, 0, 1),
+      box-shadow 140ms cubic-bezier(0.2, 0, 0, 1),
+      translate 220ms var(--lg-spring-smooth);
   }
   .pdfy-card-interactive:hover:not(:disabled) {
     translate: 0 -1px;
@@ -924,38 +1549,86 @@ p {
   ::view-transition-new(*) {
     animation: none;
   }
-  *,
-  *::before,
-  *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+  .pdfy-command-dialog,
+  .pdfy-command-dialog::backdrop {
+    transition-duration: 0.01ms;
+  }
+  .lg-interactive::after {
+    display: none;
   }
 }
 
 @media (forced-colors: active) {
-  .pdfy-workspace-shell {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --lg-fill-regular: Canvas;
+    --lg-fill-panel: Canvas;
+    --lg-fill-lens: Canvas;
+    --lg-surface-sheen: none;
+    --lg-lens-sheen: none;
+    --lg-shadow-pill: none;
+    --lg-shadow-lens: none;
+    --lg-shadow-panel: none;
+  }
+
+  .pdfy-workspace-shell,
+  .pdfy-glass-header,
+  .pdfy-scroll-edge-top {
     background-image: none;
   }
+
+  .lg-surface::before,
+  .lg-interactive::after,
+  .pdfy-mobile-dock-lens {
+    display: none;
+  }
+
+  .lg-surface,
+  .lg-pill,
+  .lg-surface.lg-pill,
+  .MuiButton-root.lg-pill,
+  .MuiButton-outlined.lg-pill,
+  .lg-lens,
+  .lg-surface.lg-lens,
+  .lg-orb,
+  .lg-surface.lg-orb,
+  .MuiIconButton-root.lg-orb,
+  .lg-panel,
+  .lg-surface.lg-panel,
+  .lg-segmented,
   .pdfy-glass,
   .pdfy-glass-card,
   .pdfy-glass-subtle,
   .pdfy-glass-pill,
   .pdfy-command-dialog {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     background-image: none;
     background-color: Canvas;
-    border-color: CanvasText;
+    color: CanvasText;
+    border: 1px solid CanvasText;
     box-shadow: none;
   }
-  .pdfy-mobile-dock-btn[aria-current="page"] {
+
+  .pdfy-command-list {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .pdfy-mobile-dock-btn[aria-current="page"],
+  .pdfy-mobile-dock-orb[data-active="true"],
+  .lg-segmented .MuiToggleButton-root.Mui-selected,
+  .lg-segmented [aria-pressed="true"] {
     border: 2px solid Highlight;
   }
+
   .pdfy-workbench-mat {
     background-image: none;
     border-color: CanvasText;
+    box-shadow: none;
   }
+
   :focus-visible {
     outline: 3px solid Highlight !important;
     outline-offset: 3px;

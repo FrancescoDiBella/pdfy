@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   Alert, Box, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
@@ -14,6 +14,7 @@ import {
 import PDFViewer from './components/PDFViewer';
 import AppearanceControl from './components/AppearanceControl';
 import CommandPalette, { type PaletteCommand } from './components/CommandPalette';
+import LiquidGlassFilters from './components/LiquidGlassFilters';
 import { preparePDFs } from './utils/pdfMerge';
 import { generateSamplePDF } from './utils/pdfSamples';
 import { isCommandPaletteShortcut } from './utils/commandPalette';
@@ -393,6 +394,7 @@ export default function App() {
   };
 
   const handoffLabel = navItems.find(item => item.mode === handoff?.mode)?.label ?? 'tool';
+  const activeDockIndex = mobileDockModes.indexOf(viewMode);
   const dropTargetMessage = viewMode === 'merge'
     ? 'Drop PDF(s) to add to Merge'
     : viewMode === 'convert'
@@ -400,24 +402,24 @@ export default function App() {
       : `Drop PDF to open in ${current.label}`;
 
   const navigation = (
-    <Box className="pdfy-scroll-region" sx={{ p: 1.15, pb: !desktop ? 'max(18px, env(safe-area-inset-bottom, 0px))' : 1.25, height: '100%', display: 'flex', flexDirection: 'column', gap: desktop ? 0.85 : 1.15, overflowY: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, pb: !desktop ? 0.75 : 0, borderBottom: !desktop ? 1 : 0, borderColor: 'var(--pdfy-glass-hairline)' }}>
+    <Box className="pdfy-scroll-region" sx={{ p: 1.15, pb: !desktop ? 'max(18px, env(safe-area-inset-bottom, 0px))' : 1.2, height: '100%', display: 'flex', flexDirection: 'column', gap: desktop ? 0.65 : 1, overflowY: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.1, pb: !desktop ? 0.65 : 0.1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {!desktop && <FolioMark size={24} />}
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.07em' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.07em', fontSize: '0.7rem' }}>
             {!desktop ? 'PDFY TOOLS' : 'PDF TOOLS'}
           </Typography>
         </Box>
         {!desktop && <IconButton aria-label="Close tools menu" onClick={() => setMenuOpen(false)}><Close /></IconButton>}
       </Box>
-      <Box component="nav" id="tools-navigation" aria-label="PDF tools" sx={{ display: 'flex', flexDirection: 'column', gap: desktop ? 0.85 : 1.15 }}>
-        {navGroups.map((group, groupIndex) => (
-          <Box key={group} sx={{ pt: groupIndex > 0 ? 0.75 : 0, borderTop: groupIndex > 0 ? 1 : 0, borderColor: 'var(--pdfy-glass-hairline)' }}>
+      <Box component="nav" id="tools-navigation" aria-label="PDF tools" sx={{ display: 'flex', flexDirection: 'column', gap: desktop ? 0.85 : 1.1 }}>
+        {navGroups.map(group => (
+          <Box key={group}>
             <Typography
               component="div"
               variant="caption"
               color="text.secondary"
-              sx={{ px: 1.25, pb: 0.35, fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.04em' }}
+              sx={{ px: 1.3, pb: 0.3, fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.05em' }}
             >
               {group}
             </Typography>
@@ -425,7 +427,7 @@ export default function App() {
               {navItems.filter(item => item.group === group).map(item => {
                 const active = viewMode === item.mode;
                 return (
-                  <ListItem key={item.mode} disablePadding sx={{ mb: desktop ? 0.2 : 0.3 }}>
+                  <ListItem key={item.mode} disablePadding sx={{ mb: desktop ? 0.15 : 0.25 }}>
                     <ListItemButton
                       component="button"
                       selected={active}
@@ -433,7 +435,7 @@ export default function App() {
                       onClick={() => navigate(item.mode)}
                       sx={{
                         width: '100%',
-                        minHeight: desktop ? 36 : 44,
+                        minHeight: desktop ? 35 : 44,
                         '@media (pointer: coarse)': { minHeight: 44 },
                         borderRadius: 999,
                         color: active ? 'primary.main' : 'text.primary',
@@ -447,7 +449,7 @@ export default function App() {
                         },
                         textAlign: 'left',
                         px: 1.35,
-                        py: desktop ? 0.45 : 0.65,
+                        py: desktop ? 0.35 : 0.65,
                       }}
                     >
                       <ListItemIcon sx={{ color: active ? 'primary.main' : 'text.secondary', minWidth: 30, '& svg': { fontSize: 19 } }}>{item.icon}</ListItemIcon>
@@ -463,8 +465,8 @@ export default function App() {
           </Box>
         ))}
       </Box>
-      <Box sx={{ mt: 'auto', px: 1.15, pt: 1.1, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.65, mb: 0.25 }}>
+      <Box sx={{ mt: 'auto', px: 1.25, pt: 1, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.65, mb: 0.2 }}>
           <LockOutlined sx={{ fontSize: 14, color: 'primary.main' }} />
           <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>100% on-device</Typography>
         </Box>
@@ -477,32 +479,90 @@ export default function App() {
 
   return (
     <>
+      <LiquidGlassFilters />
       <a className="skip-link" href={viewMode === 'edit' ? '#editor-session' : '#workspace-title'}>Skip to workspace</a>
       <Box hidden={viewMode === 'edit'} data-testid="workspace" data-theme={theme.palette.mode} className="pdfy-workspace-shell" sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', color: 'text.primary' }}>
-        <Box component="header" className="pdfy-glass pdfy-glass-header" sx={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, borderBottom: 1, borderColor: 'var(--pdfy-glass-hairline)', zIndex: 10 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-            {!desktop && <IconButton aria-label="Open tools menu" aria-expanded={menuOpen} aria-controls={menuOpen ? 'tools-navigation' : undefined} onClick={() => { setMenuSelected(false); setMenuOpen(true); }}><MenuIcon /></IconButton>}
-            <Box sx={{ display: 'flex', alignItems: 'center' }}><FolioMark size={26} /></Box>
-            <Typography component="span" sx={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.03em' }}>PDFy</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, pl: 1, borderLeft: 1, borderColor: 'var(--pdfy-glass-hairline)', fontWeight: 500 }}>
+        <Box
+          component="header"
+          className="pdfy-glass-header"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: { xs: 0.75, sm: 1.25 },
+            zIndex: 10,
+            flexShrink: 0,
+          }}
+        >
+          <Box
+            className="lg-surface lg-pill"
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: { xs: 0.5, sm: 0.9 },
+              minWidth: 0,
+              minHeight: 46,
+              pl: desktop ? 1.5 : 0.25,
+              pr: { xs: 1.25, sm: 1.75 },
+              py: desktop ? 0.6 : 0.125,
+            }}
+          >
+            {!desktop && (
+              <IconButton
+                aria-label="Open tools menu"
+                aria-expanded={menuOpen}
+                aria-controls={menuOpen ? 'tools-navigation' : undefined}
+                onClick={() => { setMenuSelected(false); setMenuOpen(true); }}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <FolioMark size={wideHeader ? 26 : 22} />
+            </Box>
+            <Typography component="span" sx={{ fontSize: { xs: '1.02rem', sm: '1.125rem' }, fontWeight: 700, letterSpacing: '-0.03em', whiteSpace: 'nowrap' }}>
+              PDFy
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                display: { xs: 'none', md: 'block' },
+                pl: 1,
+                borderLeft: 1,
+                borderColor: 'var(--pdfy-glass-hairline)',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+              }}
+            >
               Local PDF workbench
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.65, sm: 0.85 }, flexShrink: 0 }}>
             {wideHeader ? (
               <Button
                 variant="outlined"
                 size="small"
                 color="inherit"
-                className="pdfy-glass-control"
+                className="lg-surface lg-pill lg-interactive"
                 aria-keyshortcuts="Control+K Meta+K"
                 onClick={() => setPaletteOpen(true)}
                 sx={{
-                  borderColor: 'var(--pdfy-glass-border)',
+                  bgcolor: 'var(--lg-fill-regular)',
+                  backgroundImage: 'var(--lg-surface-sheen)',
+                  boxShadow: 'var(--lg-shadow-pill)',
+                  borderColor: 'var(--lg-outer-hairline)',
                   color: 'text.primary',
-                  borderRadius: 99,
-                  px: 1.5,
+                  borderRadius: 999,
+                  minHeight: 40,
+                  '@media (pointer: coarse)': { minHeight: 44 },
+                  px: 1.6,
                   gap: 1,
+                  '&:hover': {
+                    bgcolor: 'var(--lg-fill-panel)',
+                    boxShadow: 'var(--lg-shadow-pill)',
+                    borderColor: 'var(--lg-outer-hairline)',
+                  },
                 }}
               >
                 <SearchOutlined fontSize="small" aria-hidden="true" />
@@ -511,11 +571,22 @@ export default function App() {
               </Button>
             ) : (
               <IconButton
+                className="lg-surface lg-orb lg-interactive"
                 aria-label="Quick jump"
                 aria-keyshortcuts="Control+K Meta+K"
                 onClick={() => setPaletteOpen(true)}
+                sx={{
+                  color: 'text.primary',
+                  bgcolor: 'var(--lg-fill-regular)',
+                  backgroundImage: 'var(--lg-surface-sheen)',
+                  boxShadow: 'var(--lg-shadow-pill)',
+                  '&:hover': {
+                    bgcolor: 'var(--lg-fill-panel)',
+                    boxShadow: 'var(--lg-shadow-pill)',
+                  },
+                }}
               >
-                <SearchOutlined />
+                <SearchOutlined fontSize="small" />
               </IconButton>
             )}
             <AppearanceControl />
@@ -525,15 +596,14 @@ export default function App() {
           {desktop ? (
             <Box
               component="aside"
-              className="pdfy-glass-card"
+              className="lg-surface lg-panel"
               sx={{
                 width: 220,
                 flexShrink: 0,
                 m: 1.5,
+                mt: 0.75,
                 mr: 0,
-                borderRadius: '20px',
-                border: 1,
-                borderColor: 'var(--pdfy-glass-border)',
+                borderRadius: '24px',
                 overflow: 'hidden',
               }}
             >
@@ -546,14 +616,13 @@ export default function App() {
               ModalProps={{ disableRestoreFocus: menuSelected }}
               slotProps={{
                 paper: {
-                  className: 'pdfy-glass-card',
+                  className: 'lg-surface lg-panel',
                   sx: {
                     width: 276,
                     maxWidth: 'calc(100vw - 24px)',
-                    bgcolor: 'var(--pdfy-glass-strong)',
-                    borderRight: '1px solid var(--pdfy-glass-border)',
-                    borderTopRightRadius: 22,
-                    borderBottomRightRadius: 22,
+                    m: 1,
+                    height: 'calc(100% - 16px)',
+                    borderRadius: '24px',
                   },
                 },
                 transition: { onExited: () => { if (menuSelected) focusWorkspace(viewMode); } },
@@ -562,7 +631,7 @@ export default function App() {
               {navigation}
             </Drawer>
           )}
-          <Box component="main" className="pdfy-scroll-region pdfy-workspace-main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', containerType: 'inline-size', px: { xs: 1.5, sm: 2.5, lg: 3.5 }, pt: { xs: 1.25, sm: 2, lg: 2.25 }, pb: desktop ? { xs: 2.5, lg: 3.5 } : 'calc(88px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
+          <Box component="main" className="pdfy-scroll-region pdfy-workspace-main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', containerType: 'inline-size', px: { xs: 1.5, sm: 2.5, lg: 3.5 }, pt: { xs: 1, sm: 1.5, lg: 1.75 }, pb: desktop ? { xs: 2.5, lg: 3.5 } : 'calc(92px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ mb: { xs: 1.25, sm: 2 }, pb: { xs: 0.75, sm: 1.25 }, borderBottom: { xs: 0, sm: 1 }, borderColor: 'var(--pdfy-glass-hairline)', flexShrink: 0 }}>
                 <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: 0.25 }}>{current.title}</Typography>
@@ -606,35 +675,45 @@ export default function App() {
         </Box>
         {!desktop && (
           <Box component="nav" aria-label="Quick tools" className="pdfy-mobile-dock">
-            <Box className="pdfy-glass-pill pdfy-mobile-dock-bar">
-              {mobileDockModes.map(mode => {
-                const item = navItems.find(entry => entry.mode === mode)!;
-                const active = viewMode === mode;
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    className="pdfy-mobile-dock-btn"
-                    aria-current={active ? 'page' : undefined}
-                    onClick={() => navigate(mode)}
-                  >
-                    <Box component="span" aria-hidden="true" sx={{ display: 'inline-flex', '& svg': { fontSize: 20 } }}>
-                      {item.icon}
-                    </Box>
-                    <span className="pdfy-mobile-dock-label">{item.label}</span>
-                  </button>
-                );
-              })}
+            <Box className="pdfy-mobile-dock-bar">
+              <Box
+                className="lg-surface lg-pill pdfy-mobile-dock-capsule"
+                style={{ '--lg-active-index': Math.max(0, activeDockIndex) } as CSSProperties}
+              >
+                <span
+                  aria-hidden="true"
+                  className="lg-surface lg-lens pdfy-mobile-dock-lens"
+                  data-visible={activeDockIndex >= 0 ? 'true' : 'false'}
+                />
+                {mobileDockModes.map(mode => {
+                  const item = navItems.find(entry => entry.mode === mode)!;
+                  const active = viewMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      className="pdfy-mobile-dock-btn"
+                      aria-current={active ? 'page' : undefined}
+                      onClick={() => navigate(mode)}
+                    >
+                      <Box component="span" aria-hidden="true" sx={{ display: 'inline-flex', '& svg': { fontSize: 20 } }}>
+                        {item.icon}
+                      </Box>
+                      <span className="pdfy-mobile-dock-label">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </Box>
               <button
                 type="button"
-                className="pdfy-mobile-dock-btn"
+                className="lg-surface lg-orb lg-interactive pdfy-mobile-dock-orb"
                 aria-label="More tools"
                 aria-expanded={menuOpen}
                 aria-controls={menuOpen ? 'tools-navigation' : undefined}
+                data-active={activeDockIndex < 0 ? 'true' : 'false'}
                 onClick={() => { setMenuSelected(false); setMenuOpen(true); }}
               >
-                <MenuIcon aria-hidden="true" sx={{ fontSize: 20 }} />
-                <span className="pdfy-mobile-dock-label">More</span>
+                <MenuIcon aria-hidden="true" sx={{ fontSize: 21 }} />
               </button>
             </Box>
           </Box>
@@ -659,19 +738,19 @@ export default function App() {
             display: 'grid',
             placeItems: 'center',
             p: 3,
-            bgcolor: 'color-mix(in oklab, var(--pdfy-paper) 82%, transparent)',
-            backdropFilter: 'blur(4px)',
+            bgcolor: 'color-mix(in oklab, var(--pdfy-canvas) 66%, transparent)',
+            backdropFilter: 'blur(10px) saturate(140%)',
           }}
         >
           <Box
+            className="lg-surface lg-panel"
             sx={{
               px: 4,
               py: 3.5,
-              borderRadius: 3,
-              border: '2px dashed',
-              borderColor: 'primary.main',
-              bgcolor: 'background.paper',
-              boxShadow: 6,
+              borderRadius: '26px',
+              outline: '2px dashed',
+              outlineColor: 'primary.main',
+              outlineOffset: '-10px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
