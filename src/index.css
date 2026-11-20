@@ -252,6 +252,129 @@ p {
   }
 }
 
+/* Responsive data table per Modern Web Guidance (responsive-table) */
+.pdfy-responsive-table-wrapper {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(460px, 72vh);
+  container-type: inline-size;
+  border: 1px solid var(--pdfy-border);
+  border-radius: 10px;
+  background: var(--pdfy-paper);
+}
+
+.pdfy-responsive-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdfy-responsive-table caption {
+  text-align: left;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--pdfy-ink);
+  border-bottom: 1px solid var(--pdfy-border);
+  background: var(--pdfy-canvas);
+}
+
+.pdfy-responsive-table thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background: var(--pdfy-paper);
+}
+
+.pdfy-responsive-table thead th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  color: var(--pdfy-ink-muted);
+  border-bottom: 2px solid var(--pdfy-border);
+  white-space: nowrap;
+  background: var(--pdfy-paper);
+}
+
+.pdfy-responsive-table tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: var(--pdfy-ink);
+  background: var(--pdfy-paper);
+  border-bottom: 1px solid var(--pdfy-border);
+  overflow-wrap: anywhere;
+}
+
+.pdfy-responsive-table tbody td {
+  text-align: left;
+  padding: 10px 12px;
+  color: var(--pdfy-ink);
+  border-bottom: 1px solid var(--pdfy-border);
+  white-space: nowrap;
+}
+
+.pdfy-responsive-table tbody tr:last-child th,
+.pdfy-responsive-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+@container (width < 520px) {
+  .pdfy-responsive-table,
+  .pdfy-responsive-table thead,
+  .pdfy-responsive-table tbody,
+  .pdfy-responsive-table tr,
+  .pdfy-responsive-table th,
+  .pdfy-responsive-table td {
+    display: block;
+  }
+
+  .pdfy-responsive-table thead {
+    display: none;
+  }
+
+  .pdfy-responsive-table tbody tr {
+    border-bottom: 1px solid var(--pdfy-border);
+  }
+
+  .pdfy-responsive-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .pdfy-responsive-table tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: var(--pdfy-canvas);
+    border-bottom: 1px solid var(--pdfy-border);
+    padding: 9px 12px;
+  }
+
+  .pdfy-responsive-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    border-bottom: 0;
+    padding: 6px 12px;
+  }
+
+  .pdfy-responsive-table tbody td::before {
+    content: var(--col-label) ": ";
+    color: var(--pdfy-ink-muted);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+}
+
 .pdfy-page-tile:focus-visible,
 .pdfy-card-interactive:hover:not(:disabled) {
   border-color: var(--pdfy-accent);
