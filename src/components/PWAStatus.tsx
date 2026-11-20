@@ -47,10 +47,28 @@ export default function PWAStatus() {
 
   return (
     <>
-      <Snackbar open={offlineReady || hasUpdate || registrationFailed} transitionDuration={prefersReducedMotion ? 0 : undefined} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} sx={{ zIndex: theme => theme.zIndex.modal - 1, bottom: { xs: 'calc(64px + env(safe-area-inset-bottom))', sm: 24 }, maxHeight: 'calc(100dvh - 120px)', overflow: 'auto' }}>
+      <Snackbar
+        open={offlineReady || hasUpdate || registrationFailed}
+        transitionDuration={prefersReducedMotion ? 0 : undefined}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        sx={{
+          zIndex: theme => theme.zIndex.modal - 1,
+          left: { xs: 12, md: 6 },
+          right: { xs: 12, md: 'auto' },
+          bottom: { xs: 'calc(78px + env(safe-area-inset-bottom, 0px))', md: 8 },
+          maxWidth: { xs: 'calc(100vw - 24px)', md: 216 },
+          maxHeight: 'calc(100dvh - 120px)',
+          overflow: 'auto',
+        }}
+      >
         <Alert
           severity={registrationFailed ? 'warning' : 'info'}
-          sx={{ flexWrap: 'wrap', '& .MuiAlert-message': { flex: '1 1 160px' }, '& .MuiAlert-action': { flexWrap: 'wrap' } }}
+          sx={{
+            width: '100%',
+            flexWrap: 'wrap',
+            '& .MuiAlert-message': { flex: '1 1 130px' },
+            '& .MuiAlert-action': { flexWrap: 'wrap', pl: 0 },
+          }}
           onClose={dismiss}
           action={hasUpdate && !registrationFailed ? (
             <>

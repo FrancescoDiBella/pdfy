@@ -22,6 +22,7 @@ export default function AppearanceControl() {
         variant="outlined"
         size="small"
         color="inherit"
+        className="pdfy-glass-control"
         startIcon={selected.icon}
         endIcon={<ExpandMore fontSize="small" />}
         aria-label={`Appearance: ${selected.label}`}
@@ -29,7 +30,7 @@ export default function AppearanceControl() {
         aria-expanded={Boolean(anchor)}
         aria-controls={anchor ? menuId : undefined}
         onClick={event => setAnchor(event.currentTarget)}
-        sx={{ borderColor: 'divider', color: 'text.primary', borderRadius: 99 }}
+        sx={{ borderColor: 'var(--pdfy-glass-border)', color: 'text.primary', borderRadius: 99, px: 1.5 }}
       >
         {selected.label}
       </Button>

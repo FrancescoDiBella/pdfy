@@ -16,20 +16,20 @@ export const workspaceTheme = createTheme({
     },
     dark: {
       palette: {
-        primary: { main: '#F08B5E', contrastText: '#1A110B' },
-        secondary: { main: '#7AB6D6', contrastText: '#0F181E' },
+        primary: { main: '#F08B5E', dark: '#F4A27D', light: '#F7B89B', contrastText: '#1A110B' },
+        secondary: { main: '#7AB6D6', dark: '#97C7E1', light: '#B0D5E9', contrastText: '#0F181E' },
         background: { default: '#131210', paper: '#1D1B18' },
         text: { primary: '#F4EFE6', secondary: '#BFB7A8' },
         divider: '#464137',
       },
     },
   },
-  shape: { borderRadius: 10 },
+  shape: { borderRadius: 12 },
   typography: {
     fontFamily: UI_SANS,
     h1: {
       fontFamily: DISPLAY_SERIF,
-      fontSize: 'clamp(1.5rem, 1.25rem + 1vw, 1.95rem)',
+      fontSize: 'clamp(1.35rem, 1.15rem + 0.85vw, 1.75rem)',
       fontWeight: 700,
       lineHeight: 1.18,
       letterSpacing: '-0.02em',
