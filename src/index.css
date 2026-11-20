@@ -183,6 +183,12 @@ p {
   contain-intrinsic-size: 240px 320px;
 }
 
+.pdfy-bookmark-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+  view-transition-name: match-element;
+}
+
 .pdfy-page-tile:focus-visible,
 .pdfy-card-interactive:hover:not(:disabled) {
   border-color: var(--pdfy-accent);
@@ -209,6 +215,11 @@ p {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
   }
   *,
   *::before,
