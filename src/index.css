@@ -189,6 +189,69 @@ p {
   view-transition-name: match-element;
 }
 
+/* Native <details>/<summary> collapsible sections per Modern Web Guidance (accordion) */
+.pdfy-details {
+  border: 1px solid var(--pdfy-border);
+  border-radius: 10px;
+  background: var(--pdfy-paper);
+}
+
+.pdfy-details > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.65ch;
+  padding: 12px 14px;
+  min-height: 44px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--pdfy-ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.pdfy-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pdfy-details > summary::before {
+  content: "";
+  inline-size: 1em;
+  block-size: 1em;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain;
+  rotate: -90deg;
+}
+
+.pdfy-details > summary:dir(rtl)::before {
+  rotate: 90deg;
+}
+
+.pdfy-details[open] > summary::before {
+  rotate: 0deg;
+}
+
+.pdfy-details::details-content {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  contain: layout;
+}
+
+.pdfy-details:not([open])::details-content {
+  block-size: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pdfy-details > summary::before {
+    transition: rotate 0.2s ease;
+  }
+  .pdfy-details::details-content {
+    transition: block-size 0.25s ease-in-out, content-visibility 0.25s ease-in-out;
+    transition-behavior: allow-discrete;
+  }
+}
+
 .pdfy-page-tile:focus-visible,
 .pdfy-card-interactive:hover:not(:disabled) {
   border-color: var(--pdfy-accent);
