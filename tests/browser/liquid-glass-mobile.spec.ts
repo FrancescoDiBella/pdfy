@@ -62,6 +62,14 @@ test('mobile thumb-zone Liquid Glass dock navigates tools, respects 44px touch t
   await page.getByRole('button', { name: 'Return to workspace', exact: true }).click();
   await expect(dock).toBeVisible();
 
+  // Verify streamlined mobile Read toolbar groups secondary handoff actions cleanly into More document actions menu.
+  await page.getByRole('button', { name: 'Try a sample PDF', exact: true }).click();
+  await expect(page.locator('.react-pdf__Page__canvas').first()).toBeVisible();
+  await page.getByRole('button', { name: 'More document actions', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: 'Open another PDF', exact: true })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Download .txt', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(dock).toBeHidden();
 

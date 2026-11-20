@@ -1,58 +1,60 @@
 import { createTheme } from '@mui/material/styles';
 
-const DISPLAY_SERIF = '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, ui-serif, serif';
-const UI_SANS = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const APPLE_DISPLAY = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", system-ui, sans-serif';
+const APPLE_UI = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif';
 
 export const workspaceTheme = createTheme({
   colorSchemes: {
     light: {
       palette: {
-        primary: { main: '#B43C18', contrastText: '#FFFFFF' },
-        secondary: { main: '#1D4E68', contrastText: '#FFFFFF' },
-        background: { default: '#F6F3EC', paper: '#FFFEFA' },
-        text: { primary: '#1A1916', secondary: '#544E43' },
-        divider: '#CFC7B6',
+        primary: { main: '#0062CC', dark: '#004EA3', light: '#2A80E0', contrastText: '#FFFFFF' },
+        secondary: { main: '#4F46E5', dark: '#3F37C9', light: '#6D66EE', contrastText: '#FFFFFF' },
+        background: { default: '#EDF2F8', paper: '#FFFFFF' },
+        text: { primary: '#0F172A', secondary: '#475569' },
+        divider: 'rgba(15, 23, 42, 0.10)',
       },
     },
     dark: {
       palette: {
-        primary: { main: '#F08B5E', dark: '#F4A27D', light: '#F7B89B', contrastText: '#1A110B' },
-        secondary: { main: '#7AB6D6', dark: '#97C7E1', light: '#B0D5E9', contrastText: '#0F181E' },
-        background: { default: '#131210', paper: '#1D1B18' },
-        text: { primary: '#F4EFE6', secondary: '#BFB7A8' },
-        divider: '#464137',
+        primary: { main: '#5AA9FF', dark: '#7BBCFF', light: '#93C9FF', contrastText: '#061325' },
+        secondary: { main: '#A5B4FC', dark: '#C4CFFE', light: '#D8E0FF', contrastText: '#0D1026' },
+        background: { default: '#0A0D14', paper: '#161B26' },
+        text: { primary: '#F3F6FC', secondary: '#9FAAC0' },
+        divider: 'rgba(255, 255, 255, 0.12)',
       },
     },
   },
-  shape: { borderRadius: 12 },
+  shape: { borderRadius: 14 },
   typography: {
-    fontFamily: UI_SANS,
+    fontFamily: APPLE_UI,
     h1: {
-      fontFamily: DISPLAY_SERIF,
-      fontSize: 'clamp(1.35rem, 1.15rem + 0.85vw, 1.75rem)',
+      fontFamily: APPLE_DISPLAY,
+      fontSize: 'clamp(1.375rem, 1.15rem + 0.85vw, 1.75rem)',
       fontWeight: 700,
-      lineHeight: 1.18,
-      letterSpacing: '-0.02em',
+      lineHeight: 1.16,
+      letterSpacing: '-0.028em',
       textWrap: 'balance',
     },
     h2: {
-      fontSize: '1.25rem',
+      fontFamily: APPLE_DISPLAY,
+      fontSize: '1.1875rem',
       fontWeight: 650,
-      lineHeight: 1.28,
-      letterSpacing: '-0.015em',
+      lineHeight: 1.24,
+      letterSpacing: '-0.02em',
       textWrap: 'balance',
     },
     h3: {
-      fontSize: '1.0625rem',
-      fontWeight: 650,
-      lineHeight: 1.35,
-      letterSpacing: '-0.01em',
+      fontFamily: APPLE_DISPLAY,
+      fontSize: '1.03125rem',
+      fontWeight: 600,
+      lineHeight: 1.32,
+      letterSpacing: '-0.015em',
       textWrap: 'balance',
     },
-    body1: { fontSize: '1rem', lineHeight: 1.6 },
-    body2: { fontSize: '0.875rem', lineHeight: 1.55 },
-    caption: { fontSize: '0.8125rem', lineHeight: 1.45 },
-    button: { textTransform: 'none', fontWeight: 600, fontSize: '0.875rem' },
+    body1: { fontSize: '0.96875rem', lineHeight: 1.56 },
+    body2: { fontSize: '0.875rem', lineHeight: 1.5 },
+    caption: { fontSize: '0.8125rem', lineHeight: 1.42 },
+    button: { textTransform: 'none', fontWeight: 600, fontSize: '0.875rem', letterSpacing: '-0.008em' },
   },
   components: {
     MuiCssBaseline: {
@@ -63,8 +65,8 @@ export const workspaceTheme = createTheme({
           fontVariantNumeric: 'lining-nums',
         },
         ':focus-visible': {
-          outline: `3px solid ${theme.palette.primary.main}`,
-          outlineOffset: 3,
+          outline: `2.5px solid ${theme.palette.primary.main}`,
+          outlineOffset: 2,
         },
       }),
     },
@@ -72,10 +74,10 @@ export const workspaceTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          transition: 'border-color 140ms cubic-bezier(0.2, 0, 0, 1), background-color 140ms cubic-bezier(0.2, 0, 0, 1), box-shadow 140ms cubic-bezier(0.2, 0, 0, 1)',
+          transition: 'border-color 160ms cubic-bezier(0.2, 0, 0, 1), background-color 160ms cubic-bezier(0.2, 0, 0, 1), box-shadow 160ms cubic-bezier(0.2, 0, 0, 1)',
         },
         outlined: ({ theme }) => ({
-          borderColor: theme.palette.divider,
+          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.13)' : 'rgba(15, 23, 42, 0.10)',
         }),
       },
     },
@@ -84,26 +86,37 @@ export const workspaceTheme = createTheme({
       styleOverrides: {
         root: {
           minHeight: 44,
-          padding: '9px 18px',
-          lineHeight: 1.35,
-          transition: 'background-color 140ms cubic-bezier(0.2, 0, 0, 1), border-color 140ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1)',
+          padding: '8px 18px',
+          borderRadius: 999,
+          lineHeight: 1.32,
+          transition: 'background-color 150ms cubic-bezier(0.2, 0, 0, 1), border-color 150ms cubic-bezier(0.2, 0, 0, 1), box-shadow 150ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1)',
           '&:active:not(:disabled)': {
             '@media (prefers-reduced-motion: no-preference)': {
-              transform: 'scale(0.985)',
+              transform: 'scale(0.975)',
             },
           },
         },
+        contained: ({ theme }) => ({
+          boxShadow: theme.palette.mode === 'dark'
+            ? 'inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 14px -4px rgba(90, 169, 255, 0.45)'
+            : 'inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 4px 14px -4px rgba(0, 98, 204, 0.42)',
+        }),
         sizeSmall: {
           minHeight: 36,
-          padding: '6px 13px',
+          padding: '6px 14px',
           fontSize: '0.8125rem',
           '@media (pointer: coarse)': {
             minHeight: 44,
-            padding: '8px 14px',
+            padding: '8px 15px',
           },
         },
         outlined: ({ theme }) => ({
-          borderColor: theme.palette.mode === 'dark' ? '#8E8677' : '#767063',
+          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.20)' : 'rgba(15, 23, 42, 0.16)',
+          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.62)',
+          '&:hover': {
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.09)' : 'rgba(255, 255, 255, 0.88)',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.30)' : 'rgba(15, 23, 42, 0.24)',
+          },
         }),
       },
     },
@@ -112,11 +125,11 @@ export const workspaceTheme = createTheme({
         root: {
           minWidth: 44,
           minHeight: 44,
-          borderRadius: 9,
-          transition: 'background-color 140ms cubic-bezier(0.2, 0, 0, 1), color 140ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1)',
+          borderRadius: 999,
+          transition: 'background-color 150ms cubic-bezier(0.2, 0, 0, 1), color 150ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1)',
           '&:active:not(:disabled)': {
             '@media (prefers-reduced-motion: no-preference)': {
-              transform: 'scale(0.95)',
+              transform: 'scale(0.94)',
             },
           },
         },
@@ -124,17 +137,20 @@ export const workspaceTheme = createTheme({
     },
     MuiOutlinedInput: {
       styleOverrides: {
+        root: {
+          borderRadius: 12,
+        },
         notchedOutline: ({ theme }) => ({
-          borderColor: theme.palette.mode === 'dark' ? '#8E8677' : '#767063',
+          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(15, 23, 42, 0.20)',
         }),
       },
     },
     MuiListItemButton: {
       styleOverrides: {
         root: {
-          minHeight: 46,
-          borderRadius: 9,
-          transition: 'background-color 140ms cubic-bezier(0.2, 0, 0, 1), color 140ms cubic-bezier(0.2, 0, 0, 1)',
+          minHeight: 44,
+          borderRadius: 12,
+          transition: 'background-color 150ms cubic-bezier(0.2, 0, 0, 1), color 150ms cubic-bezier(0.2, 0, 0, 1), box-shadow 150ms cubic-bezier(0.2, 0, 0, 1)',
         },
       },
     },
@@ -143,18 +159,41 @@ export const workspaceTheme = createTheme({
         root: {
           minHeight: 44,
           minWidth: 44,
+          borderRadius: 12,
           textTransform: 'none',
-          transition: 'background-color 140ms cubic-bezier(0.2, 0, 0, 1), border-color 140ms cubic-bezier(0.2, 0, 0, 1)',
+          transition: 'background-color 150ms cubic-bezier(0.2, 0, 0, 1), border-color 150ms cubic-bezier(0.2, 0, 0, 1)',
         },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          borderRadius: 16,
+          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(24, 30, 44, 0.86)' : 'rgba(255, 255, 255, 0.86)',
+          backdropFilter: 'blur(26px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(26px) saturate(190%)',
+          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.78)'}`,
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 18px 40px -10px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.18)'
+            : '0 14px 36px -10px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+        }),
       },
     },
     MuiChip: {
       styleOverrides: {
         root: {
+          borderRadius: 999,
           fontVariantNumeric: 'tabular-nums',
         },
       },
     },
-    MuiTooltip: { styleOverrides: { tooltip: { fontSize: '0.8125rem' } } },
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: {
+          fontSize: '0.8125rem',
+          borderRadius: 10,
+        },
+      },
+    },
   },
 });

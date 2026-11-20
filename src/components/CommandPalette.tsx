@@ -212,12 +212,12 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
   return (
     <dialog
       ref={dialogRef}
-      className="pdfy-command-dialog pdfy-glass-card"
+      className="pdfy-command-dialog"
       aria-labelledby={titleId}
       {...({ closedby: 'any' } as Record<string, unknown>)}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: 'min(560px, calc(100dvh - 32px))' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.75, py: 1.25, borderBottom: 1, borderColor: 'var(--pdfy-glass-border)' }}>
+        <Box className="pdfy-command-search-row" sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25, borderBottom: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
           <SearchOutlined aria-hidden="true" sx={{ color: 'text.secondary', fontSize: 22, flexShrink: 0 }} />
           <label htmlFor={inputId} id={titleId} className="sr-only">
             Quick command palette
@@ -318,7 +318,7 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
           )}
         </Box>
 
-        <Box sx={{ px: 1.75, py: 0.85, borderTop: 1, borderColor: 'var(--pdfy-glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ px: 2, py: 0.9, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Typography variant="caption" color="text.secondary">
             Arrows to move · Enter to run · Esc to close
           </Typography>

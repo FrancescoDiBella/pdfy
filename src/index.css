@@ -1,30 +1,41 @@
 :root {
   color-scheme: light dark;
   --in-oklab: ;
-  --pdfy-paper: #FFFEFA;
-  --pdfy-canvas: #F6F3EC;
-  --pdfy-mat-bg: #EAE4D7;
-  --pdfy-mat-dot: #CFC7B6;
-  --pdfy-border: #CFC7B6;
-  --pdfy-accent: #B43C18;
-  --pdfy-secondary: #1D4E68;
-  --pdfy-ink: #1A1916;
-  --pdfy-ink-muted: #544E43;
-  --pdfy-scrollbar-track: #ECE7DC;
-  --pdfy-scrollbar-thumb: #767063;
-  --pdfy-glass-bg: #FFFEFA;
-  --pdfy-glass-strong: #FFFEFA;
-  --pdfy-glass-border: #CFC7B6;
-  --pdfy-glass-highlight: rgba(255, 255, 255, 0.72);
-  --pdfy-glass-active-bg: #F5E8E2;
+  --pdfy-paper: #FFFFFF;
+  --pdfy-canvas: #EDF2F8;
+  --pdfy-mat-bg: #E3EAF3;
+  --pdfy-mat-dot: #C2CEE0;
+  --pdfy-border: rgba(15, 23, 42, 0.11);
+  --pdfy-accent: #0062CC;
+  --pdfy-secondary: #4F46E5;
+  --pdfy-cyan: #0EA5E9;
+  --pdfy-ink: #0F172A;
+  --pdfy-ink-muted: #475569;
+  --pdfy-scrollbar-track: #E5ECF5;
+  --pdfy-scrollbar-thumb: #94A3B8;
+  --pdfy-glass-bg: #FFFFFF;
+  --pdfy-glass-strong: #FFFFFF;
+  --pdfy-glass-subtle: rgba(255, 255, 255, 0.62);
+  --pdfy-glass-border: rgba(255, 255, 255, 0.80);
+  --pdfy-glass-hairline: rgba(15, 23, 42, 0.09);
+  --pdfy-glass-highlight: rgba(255, 255, 255, 0.92);
+  --pdfy-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.24));
+  --pdfy-glass-active-bg: #E0ECFA;
+  --pdfy-glass-active-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
+    0 2px 8px -2px rgba(0, 98, 204, 0.18);
   --pdfy-glass-shadow:
-    0 1px 2px rgba(26, 25, 22, 0.05),
-    0 10px 26px -10px rgba(26, 25, 22, 0.12),
-    inset 0 1px 0 var(--pdfy-glass-highlight);
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 16px 38px -14px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0.5px var(--pdfy-glass-highlight),
+    inset 0 -1px 0 rgba(15, 23, 42, 0.04);
   --pdfy-glass-dock-shadow:
-    0 2px 6px rgba(26, 25, 22, 0.08),
-    0 14px 32px -10px rgba(26, 25, 22, 0.18),
-    inset 0 1px 0 var(--pdfy-glass-highlight);
+    0 0 0 1px rgba(15, 23, 42, 0.07),
+    0 4px 12px rgba(15, 23, 42, 0.09),
+    0 18px 42px -12px rgba(15, 23, 42, 0.22),
+    inset 0 1px 1px var(--pdfy-glass-highlight),
+    inset 0 -1px 0 rgba(15, 23, 42, 0.05);
   accent-color: var(--pdfy-accent);
   scrollbar-color: var(--pdfy-scrollbar-thumb) var(--pdfy-scrollbar-track);
 }
@@ -37,112 +48,142 @@
 
 @supports (color: color-mix(in oklab, white, black)) {
   :root {
-    --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 84%, transparent);
-    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 90%, transparent);
-    --pdfy-glass-border: color-mix(in oklab, var(--pdfy-ink) 14%, transparent);
-    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 10%, var(--pdfy-paper));
+    --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 74%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 82%, transparent);
+    --pdfy-glass-subtle: color-mix(in oklab, var(--pdfy-paper) 60%, transparent);
+    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 12%, var(--pdfy-paper));
   }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --pdfy-paper: #1D1B18;
-    --pdfy-canvas: #131210;
-    --pdfy-mat-bg: #0F0E0C;
-    --pdfy-mat-dot: #2E2B24;
-    --pdfy-border: #464137;
-    --pdfy-accent: #F08B5E;
-    --pdfy-secondary: #7AB6D6;
-    --pdfy-ink: #F4EFE6;
-    --pdfy-ink-muted: #BFB7A8;
-    --pdfy-scrollbar-track: #181613;
-    --pdfy-scrollbar-thumb: #8E8677;
-    --pdfy-glass-bg: #1D1B18;
-    --pdfy-glass-strong: #1D1B18;
-    --pdfy-glass-border: #464137;
-    --pdfy-glass-highlight: rgba(255, 255, 255, 0.12);
-    --pdfy-glass-active-bg: #322620;
+    --pdfy-paper: #161B26;
+    --pdfy-canvas: #0A0D14;
+    --pdfy-mat-bg: #0D111A;
+    --pdfy-mat-dot: #232C3F;
+    --pdfy-border: rgba(255, 255, 255, 0.12);
+    --pdfy-accent: #5AA9FF;
+    --pdfy-secondary: #A5B4FC;
+    --pdfy-cyan: #38BDF8;
+    --pdfy-ink: #F3F6FC;
+    --pdfy-ink-muted: #9FAAC0;
+    --pdfy-scrollbar-track: #101520;
+    --pdfy-scrollbar-thumb: #475569;
+    --pdfy-glass-bg: #161B26;
+    --pdfy-glass-strong: #1A2130;
+    --pdfy-glass-subtle: rgba(26, 33, 48, 0.56);
+    --pdfy-glass-border: rgba(255, 255, 255, 0.16);
+    --pdfy-glass-hairline: rgba(255, 255, 255, 0.10);
+    --pdfy-glass-highlight: rgba(255, 255, 255, 0.24);
+    --pdfy-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.015));
+    --pdfy-glass-active-bg: #23344D;
+    --pdfy-glass-active-shadow:
+      inset 0 1px 0.5px rgba(255, 255, 255, 0.28),
+      0 2px 10px -2px rgba(90, 169, 255, 0.28);
     --pdfy-glass-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.28),
-      0 12px 28px -10px rgba(0, 0, 0, 0.48),
-      inset 0 1px 0 var(--pdfy-glass-highlight);
-    --pdfy-glass-dock-shadow:
       0 2px 8px rgba(0, 0, 0, 0.36),
-      0 16px 36px -10px rgba(0, 0, 0, 0.62),
-      inset 0 1px 0 var(--pdfy-glass-highlight);
+      0 18px 42px -12px rgba(0, 0, 0, 0.68),
+      inset 0 1px 0.5px var(--pdfy-glass-highlight),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.42);
+    --pdfy-glass-dock-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.48),
+      0 22px 48px -12px rgba(0, 0, 0, 0.78),
+      inset 0 1px 1px var(--pdfy-glass-highlight),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.46);
   }
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --pdfy-paper: #FFFEFA;
-  --pdfy-canvas: #F6F3EC;
-  --pdfy-mat-bg: #EAE4D7;
-  --pdfy-mat-dot: #CFC7B6;
-  --pdfy-border: #CFC7B6;
-  --pdfy-accent: #B43C18;
-  --pdfy-secondary: #1D4E68;
-  --pdfy-ink: #1A1916;
-  --pdfy-ink-muted: #544E43;
-  --pdfy-scrollbar-track: #ECE7DC;
-  --pdfy-scrollbar-thumb: #767063;
-  --pdfy-glass-bg: #FFFEFA;
-  --pdfy-glass-strong: #FFFEFA;
-  --pdfy-glass-border: #CFC7B6;
-  --pdfy-glass-highlight: rgba(255, 255, 255, 0.72);
-  --pdfy-glass-active-bg: #F5E8E2;
+  --pdfy-paper: #FFFFFF;
+  --pdfy-canvas: #EDF2F8;
+  --pdfy-mat-bg: #E3EAF3;
+  --pdfy-mat-dot: #C2CEE0;
+  --pdfy-border: rgba(15, 23, 42, 0.11);
+  --pdfy-accent: #0062CC;
+  --pdfy-secondary: #4F46E5;
+  --pdfy-cyan: #0EA5E9;
+  --pdfy-ink: #0F172A;
+  --pdfy-ink-muted: #475569;
+  --pdfy-scrollbar-track: #E5ECF5;
+  --pdfy-scrollbar-thumb: #94A3B8;
+  --pdfy-glass-bg: #FFFFFF;
+  --pdfy-glass-strong: #FFFFFF;
+  --pdfy-glass-subtle: rgba(255, 255, 255, 0.62);
+  --pdfy-glass-border: rgba(255, 255, 255, 0.80);
+  --pdfy-glass-hairline: rgba(15, 23, 42, 0.09);
+  --pdfy-glass-highlight: rgba(255, 255, 255, 0.92);
+  --pdfy-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.24));
+  --pdfy-glass-active-bg: #E0ECFA;
+  --pdfy-glass-active-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
+    0 2px 8px -2px rgba(0, 98, 204, 0.18);
   --pdfy-glass-shadow:
-    0 1px 2px rgba(26, 25, 22, 0.05),
-    0 10px 26px -10px rgba(26, 25, 22, 0.12),
-    inset 0 1px 0 var(--pdfy-glass-highlight);
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 16px 38px -14px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0.5px var(--pdfy-glass-highlight),
+    inset 0 -1px 0 rgba(15, 23, 42, 0.04);
   --pdfy-glass-dock-shadow:
-    0 2px 6px rgba(26, 25, 22, 0.08),
-    0 14px 32px -10px rgba(26, 25, 22, 0.18),
-    inset 0 1px 0 var(--pdfy-glass-highlight);
+    0 0 0 1px rgba(15, 23, 42, 0.07),
+    0 4px 12px rgba(15, 23, 42, 0.09),
+    0 18px 42px -12px rgba(15, 23, 42, 0.22),
+    inset 0 1px 1px var(--pdfy-glass-highlight),
+    inset 0 -1px 0 rgba(15, 23, 42, 0.05);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --pdfy-paper: #1D1B18;
-  --pdfy-canvas: #131210;
-  --pdfy-mat-bg: #0F0E0C;
-  --pdfy-mat-dot: #2E2B24;
-  --pdfy-border: #464137;
-  --pdfy-accent: #F08B5E;
-  --pdfy-secondary: #7AB6D6;
-  --pdfy-ink: #F4EFE6;
-  --pdfy-ink-muted: #BFB7A8;
-  --pdfy-scrollbar-track: #181613;
-  --pdfy-scrollbar-thumb: #8E8677;
-  --pdfy-glass-bg: #1D1B18;
-  --pdfy-glass-strong: #1D1B18;
-  --pdfy-glass-border: #464137;
-  --pdfy-glass-highlight: rgba(255, 255, 255, 0.12);
-  --pdfy-glass-active-bg: #322620;
+  --pdfy-paper: #161B26;
+  --pdfy-canvas: #0A0D14;
+  --pdfy-mat-bg: #0D111A;
+  --pdfy-mat-dot: #232C3F;
+  --pdfy-border: rgba(255, 255, 255, 0.12);
+  --pdfy-accent: #5AA9FF;
+  --pdfy-secondary: #A5B4FC;
+  --pdfy-cyan: #38BDF8;
+  --pdfy-ink: #F3F6FC;
+  --pdfy-ink-muted: #9FAAC0;
+  --pdfy-scrollbar-track: #101520;
+  --pdfy-scrollbar-thumb: #475569;
+  --pdfy-glass-bg: #161B26;
+  --pdfy-glass-strong: #1A2130;
+  --pdfy-glass-subtle: rgba(26, 33, 48, 0.56);
+  --pdfy-glass-border: rgba(255, 255, 255, 0.16);
+  --pdfy-glass-hairline: rgba(255, 255, 255, 0.10);
+  --pdfy-glass-highlight: rgba(255, 255, 255, 0.24);
+  --pdfy-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.015));
+  --pdfy-glass-active-bg: #23344D;
+  --pdfy-glass-active-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.28),
+    0 2px 10px -2px rgba(90, 169, 255, 0.28);
   --pdfy-glass-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.28),
-    0 12px 28px -10px rgba(0, 0, 0, 0.48),
-    inset 0 1px 0 var(--pdfy-glass-highlight);
-  --pdfy-glass-dock-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
     0 2px 8px rgba(0, 0, 0, 0.36),
-    0 16px 36px -10px rgba(0, 0, 0, 0.62),
-    inset 0 1px 0 var(--pdfy-glass-highlight);
+    0 18px 42px -12px rgba(0, 0, 0, 0.68),
+    inset 0 1px 0.5px var(--pdfy-glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.42);
+  --pdfy-glass-dock-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 6px 18px rgba(0, 0, 0, 0.48),
+    0 22px 48px -12px rgba(0, 0, 0, 0.78),
+    inset 0 1px 1px var(--pdfy-glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.46);
 }
 
 @supports (color: color-mix(in oklab, white, black)) {
-  [data-theme="light"],
-  [data-theme="dark"] {
-    --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 84%, transparent);
-    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 90%, transparent);
-    --pdfy-glass-border: color-mix(in oklab, var(--pdfy-ink) 14%, transparent);
-    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 10%, var(--pdfy-paper));
+  [data-theme="light"] {
+    --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 74%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 82%, transparent);
+    --pdfy-glass-subtle: color-mix(in oklab, var(--pdfy-paper) 60%, transparent);
+    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 12%, var(--pdfy-paper));
   }
 
   [data-theme="dark"] {
-    --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 82%, transparent);
-    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 88%, transparent);
-    --pdfy-glass-border: color-mix(in oklab, var(--pdfy-ink) 16%, transparent);
-    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 14%, var(--pdfy-paper));
+    --pdfy-glass-bg: color-mix(in oklab, #1A2233 70%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, #1A2233 82%, transparent);
+    --pdfy-glass-subtle: color-mix(in oklab, #1A2233 56%, transparent);
+    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 18%, #1A2233);
   }
 }
 
@@ -185,9 +226,9 @@ p {
 }
 
 ::highlight(pdfy-search-active) {
-  background-color: rgba(180, 60, 24, 0.36);
+  background-color: rgba(0, 98, 204, 0.28);
   color: transparent;
-  text-decoration: underline 2px solid #B43C18;
+  text-decoration: underline 2px solid #0062CC;
 }
 
 .pdfy-search-snippet-mark {
@@ -469,36 +510,40 @@ p {
   border-color: var(--pdfy-accent);
 }
 
-/* Liquid Glass workspace canvas & frosted chrome surfaces */
+/* Apple-inspired Liquid Glass workspace canvas & specular frosted surfaces */
 .pdfy-workspace-shell {
   background-color: var(--pdfy-canvas);
   background-image:
-    radial-gradient(640px 380px at 8% -6%, rgba(180, 60, 24, 0.06), transparent 70%),
-    radial-gradient(560px 360px at 94% 4%, rgba(29, 78, 104, 0.05), transparent 72%),
-    linear-gradient(160deg var(--in-oklab), var(--pdfy-canvas), var(--pdfy-canvas));
+    radial-gradient(760px 460px at 6% -8%, rgba(56, 152, 255, 0.16), transparent 68%),
+    radial-gradient(660px 420px at 94% 4%, rgba(124, 108, 255, 0.13), transparent 70%),
+    radial-gradient(560px 320px at 50% 106%, rgba(14, 165, 233, 0.14), transparent 68%),
+    linear-gradient(165deg var(--in-oklab), #F5F7FB, #E8EEF6);
 }
 
 [data-theme="dark"] .pdfy-workspace-shell {
   background-image:
-    radial-gradient(640px 380px at 8% -6%, rgba(240, 139, 94, 0.08), transparent 70%),
-    radial-gradient(560px 360px at 94% 4%, rgba(122, 182, 214, 0.07), transparent 72%),
-    linear-gradient(160deg var(--in-oklab), var(--pdfy-canvas), var(--pdfy-canvas));
+    radial-gradient(760px 460px at 8% -10%, rgba(56, 139, 253, 0.22), transparent 68%),
+    radial-gradient(660px 420px at 92% 4%, rgba(129, 140, 248, 0.17), transparent 70%),
+    radial-gradient(560px 320px at 50% 106%, rgba(56, 189, 248, 0.16), transparent 68%),
+    linear-gradient(165deg var(--in-oklab), #0A0D14, #101624);
 }
 
 @supports (color: color-mix(in oklab, white, black)) {
   .pdfy-workspace-shell {
     background-image:
-      radial-gradient(640px 380px at 8% -6%, color-mix(in oklab, var(--pdfy-accent) 7%, transparent), transparent 70%),
-      radial-gradient(560px 360px at 94% 4%, color-mix(in oklab, var(--pdfy-secondary) 6%, transparent), transparent 72%),
-      linear-gradient(160deg var(--in-oklab), var(--pdfy-canvas), color-mix(in oklab, var(--pdfy-mat-bg) 35%, var(--pdfy-canvas)));
+      radial-gradient(760px 460px at 6% -8%, color-mix(in oklab, var(--pdfy-accent) 16%, transparent), transparent 68%),
+      radial-gradient(660px 420px at 94% 4%, color-mix(in oklab, var(--pdfy-secondary) 14%, transparent), transparent 70%),
+      radial-gradient(560px 320px at 50% 106%, color-mix(in oklab, var(--pdfy-cyan) 15%, transparent), transparent 68%),
+      linear-gradient(165deg var(--in-oklab), var(--pdfy-canvas), color-mix(in oklab, var(--pdfy-mat-bg) 52%, var(--pdfy-canvas)));
   }
 }
 
 .pdfy-glass {
   background-color: var(--pdfy-glass-bg);
-  -webkit-backdrop-filter: blur(18px) saturate(165%);
-  backdrop-filter: blur(18px) saturate(165%);
-  box-shadow: inset 0 1px 0 var(--pdfy-glass-highlight);
+  background-image: var(--pdfy-glass-sheen);
+  -webkit-backdrop-filter: blur(26px) saturate(195%);
+  backdrop-filter: blur(26px) saturate(195%);
+  box-shadow: inset 0 1px 0.5px var(--pdfy-glass-highlight);
 }
 
 .pdfy-glass-header {
@@ -510,25 +555,41 @@ p {
 
 .pdfy-glass-card {
   background-color: var(--pdfy-glass-strong);
+  background-image: var(--pdfy-glass-sheen);
   border-color: var(--pdfy-glass-border);
-  -webkit-backdrop-filter: blur(16px) saturate(155%);
-  backdrop-filter: blur(16px) saturate(155%);
+  -webkit-backdrop-filter: blur(26px) saturate(190%);
+  backdrop-filter: blur(26px) saturate(190%);
   box-shadow: var(--pdfy-glass-shadow);
+}
+
+.pdfy-glass-subtle {
+  background-color: var(--pdfy-glass-subtle);
+  background-image: var(--pdfy-glass-sheen);
+  border: 1px solid var(--pdfy-glass-border);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  box-shadow:
+    0 0 0 1px var(--pdfy-glass-hairline),
+    inset 0 1px 0.5px var(--pdfy-glass-highlight);
 }
 
 .pdfy-glass-pill {
   background-color: var(--pdfy-glass-strong);
+  background-image: var(--pdfy-glass-sheen);
   border: 1px solid var(--pdfy-glass-border);
   border-radius: 999px;
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
   box-shadow: var(--pdfy-glass-dock-shadow);
 }
 
 .pdfy-glass-control {
   background-color: var(--pdfy-glass-strong);
+  background-image: var(--pdfy-glass-sheen);
   border-color: var(--pdfy-glass-border);
-  box-shadow: inset 0 1px 0 var(--pdfy-glass-highlight);
+  box-shadow:
+    0 0 0 1px var(--pdfy-glass-hairline),
+    inset 0 1px 0.5px var(--pdfy-glass-highlight);
 }
 
 .pdfy-workspace-main {
@@ -538,7 +599,7 @@ p {
 
 @media (max-width: 899.95px) {
   .pdfy-workspace-main {
-    scroll-padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -550,7 +611,7 @@ p {
   z-index: 1050;
   display: flex;
   justify-content: center;
-  padding: 0 max(8px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  padding: 0 max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
   pointer-events: none;
 }
 
@@ -559,9 +620,9 @@ p {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
-  gap: 2px;
-  width: min(440px, 100%);
-  padding: 4px 6px;
+  gap: 3px;
+  width: min(410px, 100%);
+  padding: 5px 6px;
 }
 
 .pdfy-mobile-dock-btn {
@@ -581,7 +642,7 @@ p {
   border-radius: 999px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1), color 140ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 160ms cubic-bezier(0.2, 0, 0, 1), color 160ms cubic-bezier(0.2, 0, 0, 1), box-shadow 160ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .pdfy-mobile-dock-btn:hover {
@@ -591,16 +652,17 @@ p {
 .pdfy-mobile-dock-btn[aria-current="page"] {
   background-color: var(--pdfy-glass-active-bg);
   color: var(--pdfy-accent);
-  box-shadow: inset 0 1px 0 var(--pdfy-glass-highlight);
+  box-shadow: var(--pdfy-glass-active-shadow);
 }
 
 .pdfy-mobile-dock-btn:active {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }
 
 .pdfy-mobile-dock-label {
   font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   line-height: 1.1;
   white-space: nowrap;
 }
@@ -611,7 +673,7 @@ p {
   }
 }
 
-/* Native <dialog> Command Palette (light-dismiss, top-layer animation, scroll containment) */
+/* Native <dialog> Command Palette (Spotlight Liquid Glass: light-dismiss, top-layer animation, scroll containment) */
 .pdfy-command-dialog {
   margin: min(10vh, 72px) auto auto;
   padding: 0;
@@ -619,9 +681,13 @@ p {
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 32px);
   border: 1px solid var(--pdfy-glass-border);
-  border-radius: 16px;
+  border-radius: 24px;
   color: var(--pdfy-ink);
   background-color: var(--pdfy-glass-strong);
+  background-image: var(--pdfy-glass-sheen);
+  -webkit-backdrop-filter: blur(32px) saturate(210%);
+  backdrop-filter: blur(32px) saturate(210%);
+  box-shadow: var(--pdfy-glass-dock-shadow);
   overflow: hidden;
   opacity: 0;
   transition-property: opacity, transform, display, overlay;
@@ -643,7 +709,7 @@ p {
 .pdfy-command-dialog::backdrop {
   overflow: hidden;
   overscroll-behavior: contain;
-  background-color: rgba(19, 18, 16, 0);
+  background-color: rgba(10, 13, 20, 0);
   -webkit-backdrop-filter: blur(0px);
   backdrop-filter: blur(0px);
   transition-property: background-color, backdrop-filter, display, overlay;
@@ -668,27 +734,39 @@ p {
   }
 
   &::backdrop {
-    background-color: rgba(19, 18, 16, 0.42);
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
+    background-color: rgba(10, 13, 20, 0.36);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    backdrop-filter: blur(8px) saturate(140%);
 
     @starting-style {
-      background-color: rgba(19, 18, 16, 0);
+      background-color: rgba(10, 13, 20, 0);
       -webkit-backdrop-filter: blur(0px);
       backdrop-filter: blur(0px);
     }
   }
 }
 
+.pdfy-command-search-row {
+  transition: box-shadow 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.pdfy-command-search-row:focus-within {
+  box-shadow: inset 0 -2px 0 var(--pdfy-accent);
+}
+
 .pdfy-command-input {
   flex: 1;
   min-width: 0;
-  min-height: 40px;
+  min-height: 42px;
   border: 0;
   background: transparent;
   color: var(--pdfy-ink);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: 0.96875rem;
+  outline: none;
+}
+
+.pdfy-command-input:focus-visible {
   outline: none;
 }
 
@@ -705,27 +783,29 @@ p {
   gap: 12px;
   padding: 8px 12px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 14px;
   background: transparent;
   color: var(--pdfy-ink);
   font: inherit;
   cursor: pointer;
-  transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1), border-color 120ms cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1), border-color 140ms cubic-bezier(0.2, 0, 0, 1), box-shadow 140ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .pdfy-command-option[data-active="true"],
 .pdfy-command-option:hover {
   background-color: var(--pdfy-glass-active-bg);
   border-color: var(--pdfy-glass-border);
+  box-shadow: var(--pdfy-glass-active-shadow);
 }
 
 .pdfy-kbd-hint {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 6px;
-  border: 1px solid var(--pdfy-glass-border);
+  border: 1px solid var(--pdfy-glass-hairline);
+  background-color: var(--pdfy-glass-subtle);
   color: var(--pdfy-ink-muted);
 }
 
@@ -803,10 +883,14 @@ p {
   [data-theme="dark"] {
     --pdfy-glass-bg: var(--pdfy-paper);
     --pdfy-glass-strong: var(--pdfy-paper);
+    --pdfy-glass-subtle: var(--pdfy-paper);
+    --pdfy-glass-sheen: none;
   }
   .pdfy-glass,
   .pdfy-glass-card,
+  .pdfy-glass-subtle,
   .pdfy-glass-pill,
+  .pdfy-command-dialog,
   .pdfy-command-dialog::backdrop {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -855,9 +939,12 @@ p {
   }
   .pdfy-glass,
   .pdfy-glass-card,
-  .pdfy-glass-pill {
+  .pdfy-glass-subtle,
+  .pdfy-glass-pill,
+  .pdfy-command-dialog {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+    background-image: none;
     background-color: Canvas;
     border-color: CanvasText;
     box-shadow: none;
