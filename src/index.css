@@ -611,6 +611,124 @@ p {
   }
 }
 
+/* Native <dialog> Command Palette (light-dismiss, top-layer animation, scroll containment) */
+.pdfy-command-dialog {
+  margin: min(10vh, 72px) auto auto;
+  padding: 0;
+  width: min(560px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 32px);
+  border: 1px solid var(--pdfy-glass-border);
+  border-radius: 16px;
+  color: var(--pdfy-ink);
+  background-color: var(--pdfy-glass-strong);
+  overflow: hidden;
+  opacity: 0;
+  transition-property: opacity, transform, display, overlay;
+  transition-duration: 0.22s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  transition-behavior: allow-discrete;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pdfy-command-dialog {
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+.pdfy-command-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+.pdfy-command-dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(19, 18, 16, 0);
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition-property: background-color, backdrop-filter, display, overlay;
+  transition-duration: 0.22s;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+.pdfy-command-dialog[open]:where(:not([data-closing])) {
+  opacity: 1;
+
+  @starting-style {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transform: translateY(0) scale(1);
+
+    @starting-style {
+      transform: translateY(10px) scale(0.97);
+    }
+  }
+
+  &::backdrop {
+    background-color: rgba(19, 18, 16, 0.42);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+
+    @starting-style {
+      background-color: rgba(19, 18, 16, 0);
+      -webkit-backdrop-filter: blur(0px);
+      backdrop-filter: blur(0px);
+    }
+  }
+}
+
+.pdfy-command-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--pdfy-ink);
+  font: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.pdfy-command-input::placeholder {
+  color: var(--pdfy-ink-muted);
+}
+
+.pdfy-command-option {
+  appearance: none;
+  width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--pdfy-ink);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 120ms cubic-bezier(0.2, 0, 0, 1), border-color 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.pdfy-command-option[data-active="true"],
+.pdfy-command-option:hover {
+  background-color: var(--pdfy-glass-active-bg);
+  border-color: var(--pdfy-glass-border);
+}
+
+.pdfy-kbd-hint {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--pdfy-glass-border);
+  color: var(--pdfy-ink-muted);
+}
+
 @media (prefers-reduced-transparency: reduce) {
   :root,
   [data-theme="light"],
@@ -620,7 +738,8 @@ p {
   }
   .pdfy-glass,
   .pdfy-glass-card,
-  .pdfy-glass-pill {
+  .pdfy-glass-pill,
+  .pdfy-command-dialog::backdrop {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

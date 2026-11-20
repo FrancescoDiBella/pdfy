@@ -4,15 +4,19 @@ import {
   Button, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
   CircularProgress, Snackbar, useMediaQuery,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { useColorScheme, useTheme } from '@mui/material/styles';
 import {
   DescriptionOutlined, MergeType, CallSplit, EditOutlined, DashboardCustomizeOutlined,
   InfoOutlined, PrintOutlined, AssignmentOutlined, PermMediaOutlined, CompressOutlined,
   CompareArrowsOutlined, BookmarksOutlined, Menu as MenuIcon, Close, LockOutlined, CloudUploadOutlined,
+  SearchOutlined, BrightnessAutoOutlined, LightModeOutlined, DarkModeOutlined, AutoAwesomeOutlined,
 } from '@mui/icons-material';
 import PDFViewer from './components/PDFViewer';
 import AppearanceControl from './components/AppearanceControl';
+import CommandPalette, { type PaletteCommand } from './components/CommandPalette';
 import { preparePDFs } from './utils/pdfMerge';
+import { generateSamplePDF } from './utils/pdfSamples';
+import { isCommandPaletteShortcut } from './utils/commandPalette';
 
 const PDFMerger = lazy(() => import('./components/PDFMerger'));
 const PDFSplitter = lazy(() => import('./components/PDFSplitter'));
@@ -68,6 +72,21 @@ const navGroups = ['Workspace', 'Pages & Files', 'Optimize & Output'] as const;
 
 const mobileDockModes: ReadonlyArray<ViewMode> = ['view', 'edit', 'organize', 'compare'];
 
+const toolKeywords: Record<ViewMode, readonly string[]> = {
+  view: ['read', 'viewer', 'find', 'search', 'outline', 'thumbnails', 'text'],
+  edit: ['edit', 'annotate', 'sign', 'signature', 'draw', 'text', 'redact', 'crop'],
+  forms: ['forms', 'fill', 'acroform', 'flatten', 'checkbox', 'fields'],
+  compare: ['compare', 'diff', 'visual', 'versions', 'changes'],
+  bookmarks: ['bookmarks', 'toc', 'table of contents', 'outline', 'headings'],
+  organize: ['organize', 'reorder', 'rotate', 'watermark', 'bates', 'headers', 'footers', 'page numbers'],
+  merge: ['merge', 'combine', 'join', 'append'],
+  split: ['split', 'extract', 'chunks', 'zip', 'separate'],
+  convert: ['convert', 'images', 'png', 'jpeg', 'scan', 'table', 'csv', 'tsv', 'markdown', 'json', 'excel'],
+  compress: ['compress', 'shrink', 'optimize', 'size', 'smaller'],
+  print: ['print', 'booklet', 'n-up', 'handout', 'ink'],
+  inspect: ['info', 'metadata', 'privacy', 'audit', 'sanitize', 'strip', 'properties'],
+};
+
 function FolioMark({ size = 30 }: { size?: number }) {
   return (
     <Box
@@ -91,13 +110,16 @@ function focusWorkspace(mode: ViewMode) {
 
 export default function App() {
   const theme = useTheme();
+  const { mode: colorMode, setMode: setColorMode } = useColorScheme();
   const desktop = useMediaQuery('(min-width:900px) and (min-height:600px)');
+  const wideHeader = useMediaQuery('(min-width:600px)');
   const [viewMode, setViewMode] = useState<ViewMode>('view');
   const [sharedFile, setSharedFile] = useState<File | null>(null);
   const [sessions, setSessions] = useState<Partial<Record<ViewMode, Session>>>({ view: { file: null, version: 0 } });
   const [activeDocs, setActiveDocs] = useState<Partial<Record<ViewMode, boolean>>>({});
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuSelected, setMenuSelected] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [handoffConfirmed, setHandoffConfirmed] = useState(false);
@@ -278,6 +300,79 @@ export default function App() {
     });
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isCommandPaletteShortcut(event)) {
+        event.preventDefault();
+        setPaletteOpen(current => !current);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const paletteCommands = useMemo<PaletteCommand[]>(() => {
+    const toolEntries: PaletteCommand[] = navItems.map(item => ({
+      id: `tool:${item.mode}`,
+      label: item.title,
+      subtitle: item.description,
+      category: 'Tools',
+      keywords: [item.label, item.group, ...toolKeywords[item.mode]],
+      badge: viewMode === item.mode ? 'Active' : item.group,
+      icon: item.icon,
+      onSelect: () => navigate(item.mode),
+    }));
+
+    const quickEntries: PaletteCommand[] = [
+      {
+        id: 'action:sample-read',
+        label: 'Load sample PDF in Read',
+        subtitle: 'Generate the local Executive Brief sample document offline.',
+        category: 'Quick actions',
+        keywords: ['sample', 'demo', 'example', 'executive', 'brief', 'read'],
+        icon: <AutoAwesomeOutlined />,
+        onSelect: () => {
+          void generateSamplePDF('executive-brief').then(sample => openInToolRef.current('view', sample));
+        },
+      },
+    ];
+
+    const appearanceEntries: PaletteCommand[] = [
+      {
+        id: 'theme:system',
+        label: 'Appearance: System',
+        subtitle: 'Follow your operating system light or dark preference.',
+        category: 'Appearance',
+        keywords: ['theme', 'appearance', 'auto', 'system'],
+        badge: colorMode === 'system' ? 'Current' : undefined,
+        icon: <BrightnessAutoOutlined />,
+        onSelect: () => setColorMode('system'),
+      },
+      {
+        id: 'theme:light',
+        label: 'Appearance: Light',
+        subtitle: 'Use warm light paper surfaces.',
+        category: 'Appearance',
+        keywords: ['theme', 'appearance', 'light', 'day'],
+        badge: colorMode === 'light' ? 'Current' : undefined,
+        icon: <LightModeOutlined />,
+        onSelect: () => setColorMode('light'),
+      },
+      {
+        id: 'theme:dark',
+        label: 'Appearance: Dark',
+        subtitle: 'Use low-glare dark workspace surfaces.',
+        category: 'Appearance',
+        keywords: ['theme', 'appearance', 'dark', 'night'],
+        badge: colorMode === 'dark' ? 'Current' : undefined,
+        icon: <DarkModeOutlined />,
+        onSelect: () => setColorMode('dark'),
+      },
+    ];
+
+    return [...toolEntries, ...quickEntries, ...appearanceEntries];
+  }, [colorMode, navigate, setColorMode, viewMode]);
+
   const replaceSession = () => {
     if (!handoff) return;
     if (handoff.mode === 'view') {
@@ -386,6 +481,35 @@ export default function App() {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+            {wideHeader ? (
+              <Button
+                variant="outlined"
+                size="small"
+                color="inherit"
+                className="pdfy-glass-control"
+                aria-keyshortcuts="Control+K Meta+K"
+                onClick={() => setPaletteOpen(true)}
+                sx={{
+                  borderColor: 'var(--pdfy-glass-border)',
+                  color: 'text.primary',
+                  borderRadius: 99,
+                  px: 1.5,
+                  gap: 1,
+                }}
+              >
+                <SearchOutlined fontSize="small" aria-hidden="true" />
+                <span>Quick jump</span>
+                <kbd aria-hidden="true" className="pdfy-kbd-hint">⌘K</kbd>
+              </Button>
+            ) : (
+              <IconButton
+                aria-label="Quick jump"
+                aria-keyshortcuts="Control+K Meta+K"
+                onClick={() => setPaletteOpen(true)}
+              >
+                <SearchOutlined />
+              </IconButton>
+            )}
             <AppearanceControl />
           </Box>
         </Box>
@@ -553,6 +677,7 @@ export default function App() {
           </Alert>
         ) : undefined}
       </Snackbar>
+      <CommandPalette open={paletteOpen} commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} aria-labelledby="replace-title" aria-describedby="replace-description" disableRestoreFocus={handoffConfirmed} slotProps={{ transition: { onExited: () => { if (handoffConfirmed) focusWorkspace(viewMode); } } }}>
         <DialogTitle id="replace-title">Replace the {handoffLabel} document?</DialogTitle>
         <DialogContent>
