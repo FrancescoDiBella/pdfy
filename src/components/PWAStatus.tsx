@@ -47,7 +47,7 @@ export default function PWAStatus() {
 
   return (
     <>
-      <Snackbar open={offlineReady || hasUpdate || registrationFailed} transitionDuration={prefersReducedMotion ? 0 : undefined} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} sx={{ zIndex: theme => theme.zIndex.modal - 1, bottom: { xs: 'calc(64px + env(safe-area-inset-bottom))', sm: 24 }, maxHeight: 'calc(100dvh - 120px)', overflow: 'auto' }}>
+      <Snackbar open={offlineReady || hasUpdate || registrationFailed} transitionDuration={prefersReducedMotion ? 0 : undefined} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} sx={{ zIndex: theme => theme.zIndex.modal - 1, bottom: { xs: 'calc(78px + env(safe-area-inset-bottom, 0px))', md: 24 }, maxHeight: 'calc(100dvh - 120px)', overflow: 'auto' }}>
         <Alert
           severity={registrationFailed ? 'warning' : 'info'}
           sx={{ flexWrap: 'wrap', '& .MuiAlert-message': { flex: '1 1 160px' }, '& .MuiAlert-action': { flexWrap: 'wrap' } }}

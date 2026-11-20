@@ -66,6 +66,8 @@ const navItems = [
 
 const navGroups = ['Workspace', 'Pages & Files', 'Optimize & Output'] as const;
 
+const mobileDockModes: ReadonlyArray<ViewMode> = ['view', 'edit', 'organize', 'compare'];
+
 function FolioMark({ size = 30 }: { size?: number }) {
   return (
     <Box
@@ -295,8 +297,8 @@ export default function App() {
       : `Drop PDF to open in ${current.label}`;
 
   const navigation = (
-    <Box className="pdfy-scroll-region" sx={{ p: 1.75, height: '100%', display: 'flex', flexDirection: 'column', gap: 1.5, overflowY: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, pb: !desktop ? 1 : 0, borderBottom: !desktop ? 1 : 0, borderColor: 'divider' }}>
+    <Box className="pdfy-scroll-region" sx={{ p: 1.25, pb: !desktop ? 'max(16px, env(safe-area-inset-bottom, 0px))' : 1.5, height: '100%', display: 'flex', flexDirection: 'column', gap: 1.25, overflowY: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, pb: !desktop ? 0.75 : 0, borderBottom: !desktop ? 1 : 0, borderColor: 'var(--pdfy-glass-border)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {!desktop && <FolioMark size={24} />}
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.08em' }}>
@@ -305,9 +307,9 @@ export default function App() {
         </Box>
         {!desktop && <IconButton aria-label="Close tools menu" onClick={() => setMenuOpen(false)}><Close /></IconButton>}
       </Box>
-      <Box component="nav" id="tools-navigation" aria-label="PDF tools" sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Box component="nav" id="tools-navigation" aria-label="PDF tools" sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
         {navGroups.map((group, groupIndex) => (
-          <Box key={group} sx={{ pt: groupIndex > 0 ? 1 : 0, borderTop: groupIndex > 0 ? 1 : 0, borderColor: 'divider' }}>
+          <Box key={group} sx={{ pt: groupIndex > 0 ? 1 : 0, borderTop: groupIndex > 0 ? 1 : 0, borderColor: 'var(--pdfy-glass-border)' }}>
             <Typography
               component="div"
               variant="caption"
@@ -320,7 +322,7 @@ export default function App() {
               {navItems.filter(item => item.group === group).map(item => {
                 const active = viewMode === item.mode;
                 return (
-                  <ListItem key={item.mode} disablePadding sx={{ mb: 0.5 }}>
+                  <ListItem key={item.mode} disablePadding sx={{ mb: 0.35 }}>
                     <ListItemButton
                       component="button"
                       selected={active}
@@ -328,18 +330,27 @@ export default function App() {
                       onClick={() => navigate(item.mode)}
                       sx={{
                         width: '100%',
+                        minHeight: 44,
+                        borderRadius: 2.5,
                         color: active ? 'primary.main' : 'text.primary',
                         borderInlineStart: '3px solid',
                         borderColor: active ? 'primary.main' : 'transparent',
-                        bgcolor: active ? 'action.selected' : 'transparent',
+                        bgcolor: active ? 'var(--pdfy-glass-active-bg)' : 'transparent',
+                        '&.Mui-selected': {
+                          bgcolor: 'var(--pdfy-glass-active-bg)',
+                        },
+                        '&.Mui-selected:hover': {
+                          bgcolor: 'var(--pdfy-glass-active-bg)',
+                        },
                         textAlign: 'left',
                         px: 1.25,
+                        py: 0.75,
                       }}
                     >
-                      <ListItemIcon sx={{ color: active ? 'primary.main' : 'text.secondary', minWidth: 36 }}>{item.icon}</ListItemIcon>
+                      <ListItemIcon sx={{ color: active ? 'primary.main' : 'text.secondary', minWidth: 34 }}>{item.icon}</ListItemIcon>
                       <ListItemText
                         primary={item.label}
-                        slotProps={{ primary: { sx: { fontWeight: 600, fontSize: '0.9rem' } } }}
+                        slotProps={{ primary: { sx: { fontWeight: 600, fontSize: '0.875rem' } } }}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -349,13 +360,13 @@ export default function App() {
           </Box>
         ))}
       </Box>
-      <Box sx={{ mt: 'auto', p: 1.25, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
-          <LockOutlined sx={{ fontSize: 17, color: 'primary.main' }} />
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>Your files stay on your device</Typography>
+      <Box sx={{ mt: 'auto', p: 1.15, pt: 1.5, borderTop: 1, borderColor: 'var(--pdfy-glass-border)' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.35 }}>
+          <LockOutlined sx={{ fontSize: 16, color: 'primary.main' }} />
+          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>100% on-device</Typography>
         </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.5 }}>
-          Switch tools without losing your place. Download your work before closing or reloading this tab.
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.45 }}>
+          Files never leave this tab. Download your work before closing.
         </Typography>
       </Box>
     </Box>
@@ -364,29 +375,49 @@ export default function App() {
   return (
     <>
       <a className="skip-link" href={viewMode === 'edit' ? '#editor-session' : '#workspace-title'}>Skip to workspace</a>
-      <Box hidden={viewMode === 'edit'} data-testid="workspace" data-theme={theme.palette.mode} sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', bgcolor: 'background.default', color: 'text.primary' }}>
-        <Box component="header" sx={{ px: { xs: 1, md: 3 }, py: 0.75, minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+      <Box hidden={viewMode === 'edit'} data-testid="workspace" data-theme={theme.palette.mode} className="pdfy-workspace-shell" sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', color: 'text.primary' }}>
+        <Box component="header" className="pdfy-glass pdfy-glass-header" sx={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, borderBottom: 1, borderColor: 'var(--pdfy-glass-border)', zIndex: 10 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
             {!desktop && <IconButton aria-label="Open tools menu" aria-expanded={menuOpen} aria-controls={menuOpen ? 'tools-navigation' : undefined} onClick={() => { setMenuSelected(false); setMenuOpen(true); }}><MenuIcon /></IconButton>}
-            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}><FolioMark size={30} /></Box>
-            <Typography component="span" sx={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif', fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.025em' }}>PDFy</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, pl: 1, borderLeft: 1, borderColor: 'divider' }}>
+            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}><FolioMark size={26} /></Box>
+            <Typography component="span" sx={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif', fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.025em' }}>PDFy</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, pl: 1, borderLeft: 1, borderColor: 'var(--pdfy-glass-border)', fontWeight: 500 }}>
               Local PDF workbench
             </Typography>
           </Box>
-          <AppearanceControl />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+            <AppearanceControl />
+          </Box>
         </Box>
         <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
           {desktop ? (
-            <Box component="aside" sx={{ width: 236, flexShrink: 0, bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider' }}>{navigation}</Box>
+            <Box component="aside" className="pdfy-glass" sx={{ width: 224, flexShrink: 0, borderRight: 1, borderColor: 'var(--pdfy-glass-border)' }}>{navigation}</Box>
           ) : (
-            <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} ModalProps={{ disableRestoreFocus: menuSelected }} slotProps={{ paper: { sx: { width: 280, maxWidth: 'calc(100vw - 24px)' } }, transition: { onExited: () => { if (menuSelected) focusWorkspace(viewMode); } } }}>{navigation}</Drawer>
+            <Drawer
+              open={menuOpen}
+              onClose={() => setMenuOpen(false)}
+              ModalProps={{ disableRestoreFocus: menuSelected }}
+              slotProps={{
+                paper: {
+                  className: 'pdfy-glass',
+                  sx: {
+                    width: 276,
+                    maxWidth: 'calc(100vw - 24px)',
+                    bgcolor: 'var(--pdfy-glass-strong)',
+                    borderRight: '1px solid var(--pdfy-glass-border)',
+                  },
+                },
+                transition: { onExited: () => { if (menuSelected) focusWorkspace(viewMode); } },
+              }}
+            >
+              {navigation}
+            </Drawer>
           )}
-          <Box component="main" className="pdfy-scroll-region" sx={{ flex: 1, minWidth: 0, overflow: 'auto', containerType: 'inline-size', scrollPaddingTop: 2, p: { xs: 1.5, sm: 3, lg: 4 }, display: 'flex', flexDirection: 'column' }}>
+          <Box component="main" className="pdfy-scroll-region pdfy-workspace-main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', containerType: 'inline-size', px: { xs: 1.25, sm: 2.5, lg: 3.5 }, pt: { xs: 1.25, sm: 2, lg: 2.5 }, pb: desktop ? { xs: 2.5, lg: 3.5 } : 'calc(84px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ mb: { xs: 2, sm: 3 }, pb: 2, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
-                <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: 0.75 }}>{current.title}</Typography>
-                <Typography color="text.secondary" sx={{ maxWidth: '62ch' }}>{current.description}</Typography>
+              <Box sx={{ mb: { xs: 1.5, sm: 2.25 }, pb: { xs: 1.25, sm: 1.75 }, borderBottom: 1, borderColor: 'var(--pdfy-glass-border)', flexShrink: 0 }}>
+                <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: 0.35 }}>{current.title}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '64ch' }}>{current.description}</Typography>
               </Box>
               {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
                 const session = sessions[item.mode]!;
@@ -424,6 +455,41 @@ export default function App() {
             </Box>
           </Box>
         </Box>
+        {!desktop && (
+          <Box component="nav" aria-label="Quick tools" className="pdfy-mobile-dock">
+            <Box className="pdfy-glass-pill pdfy-mobile-dock-bar">
+              {mobileDockModes.map(mode => {
+                const item = navItems.find(entry => entry.mode === mode)!;
+                const active = viewMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    className="pdfy-mobile-dock-btn"
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => navigate(mode)}
+                  >
+                    <Box component="span" aria-hidden="true" sx={{ display: 'inline-flex', '& svg': { fontSize: 20 } }}>
+                      {item.icon}
+                    </Box>
+                    <span className="pdfy-mobile-dock-label">{item.label}</span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                className="pdfy-mobile-dock-btn"
+                aria-label="More tools"
+                aria-expanded={menuOpen}
+                aria-controls={menuOpen ? 'tools-navigation' : undefined}
+                onClick={() => { setMenuSelected(false); setMenuOpen(true); }}
+              >
+                <MenuIcon aria-hidden="true" sx={{ fontSize: 20 }} />
+                <span className="pdfy-mobile-dock-label">More</span>
+              </button>
+            </Box>
+          </Box>
+        )}
       </Box>
       {sessions.edit && (
           <Box key={sessions.edit.version} component="main" id="editor-session" aria-label="Edit PDF" tabIndex={-1} hidden={viewMode !== 'edit'} sx={{ color: 'text.primary', minHeight: '100dvh' }}>

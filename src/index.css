@@ -1,17 +1,47 @@
 :root {
   color-scheme: light dark;
+  --in-oklab: ;
   --pdfy-paper: #FFFEFA;
   --pdfy-canvas: #F6F3EC;
   --pdfy-mat-bg: #EAE4D7;
   --pdfy-mat-dot: #CFC7B6;
   --pdfy-border: #CFC7B6;
   --pdfy-accent: #B43C18;
+  --pdfy-secondary: #1D4E68;
   --pdfy-ink: #1A1916;
   --pdfy-ink-muted: #544E43;
   --pdfy-scrollbar-track: #ECE7DC;
   --pdfy-scrollbar-thumb: #767063;
+  --pdfy-glass-bg: #FFFEFA;
+  --pdfy-glass-strong: #FFFEFA;
+  --pdfy-glass-border: #CFC7B6;
+  --pdfy-glass-highlight: rgba(255, 255, 255, 0.72);
+  --pdfy-glass-active-bg: #F5E8E2;
+  --pdfy-glass-shadow:
+    0 1px 2px rgba(26, 25, 22, 0.05),
+    0 10px 26px -10px rgba(26, 25, 22, 0.12),
+    inset 0 1px 0 var(--pdfy-glass-highlight);
+  --pdfy-glass-dock-shadow:
+    0 2px 6px rgba(26, 25, 22, 0.08),
+    0 14px 32px -10px rgba(26, 25, 22, 0.18),
+    inset 0 1px 0 var(--pdfy-glass-highlight);
   accent-color: var(--pdfy-accent);
   scrollbar-color: var(--pdfy-scrollbar-thumb) var(--pdfy-scrollbar-track);
+}
+
+@supports (background: linear-gradient(in oklab, white, black)) {
+  :root {
+    --in-oklab: in oklab;
+  }
+}
+
+@supports (color: color-mix(in oklab, white, black)) {
+  :root {
+    --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 84%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 90%, transparent);
+    --pdfy-glass-border: color-mix(in oklab, var(--pdfy-ink) 14%, transparent);
+    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 10%, var(--pdfy-paper));
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,10 +52,24 @@
     --pdfy-mat-dot: #2E2B24;
     --pdfy-border: #464137;
     --pdfy-accent: #F08B5E;
+    --pdfy-secondary: #7AB6D6;
     --pdfy-ink: #F4EFE6;
     --pdfy-ink-muted: #BFB7A8;
     --pdfy-scrollbar-track: #181613;
     --pdfy-scrollbar-thumb: #8E8677;
+    --pdfy-glass-bg: #1D1B18;
+    --pdfy-glass-strong: #1D1B18;
+    --pdfy-glass-border: #464137;
+    --pdfy-glass-highlight: rgba(255, 255, 255, 0.12);
+    --pdfy-glass-active-bg: #322620;
+    --pdfy-glass-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.28),
+      0 12px 28px -10px rgba(0, 0, 0, 0.48),
+      inset 0 1px 0 var(--pdfy-glass-highlight);
+    --pdfy-glass-dock-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.36),
+      0 16px 36px -10px rgba(0, 0, 0, 0.62),
+      inset 0 1px 0 var(--pdfy-glass-highlight);
   }
 }
 
@@ -37,10 +81,24 @@
   --pdfy-mat-dot: #CFC7B6;
   --pdfy-border: #CFC7B6;
   --pdfy-accent: #B43C18;
+  --pdfy-secondary: #1D4E68;
   --pdfy-ink: #1A1916;
   --pdfy-ink-muted: #544E43;
   --pdfy-scrollbar-track: #ECE7DC;
   --pdfy-scrollbar-thumb: #767063;
+  --pdfy-glass-bg: #FFFEFA;
+  --pdfy-glass-strong: #FFFEFA;
+  --pdfy-glass-border: #CFC7B6;
+  --pdfy-glass-highlight: rgba(255, 255, 255, 0.72);
+  --pdfy-glass-active-bg: #F5E8E2;
+  --pdfy-glass-shadow:
+    0 1px 2px rgba(26, 25, 22, 0.05),
+    0 10px 26px -10px rgba(26, 25, 22, 0.12),
+    inset 0 1px 0 var(--pdfy-glass-highlight);
+  --pdfy-glass-dock-shadow:
+    0 2px 6px rgba(26, 25, 22, 0.08),
+    0 14px 32px -10px rgba(26, 25, 22, 0.18),
+    inset 0 1px 0 var(--pdfy-glass-highlight);
 }
 
 [data-theme="dark"] {
@@ -51,10 +109,41 @@
   --pdfy-mat-dot: #2E2B24;
   --pdfy-border: #464137;
   --pdfy-accent: #F08B5E;
+  --pdfy-secondary: #7AB6D6;
   --pdfy-ink: #F4EFE6;
   --pdfy-ink-muted: #BFB7A8;
   --pdfy-scrollbar-track: #181613;
   --pdfy-scrollbar-thumb: #8E8677;
+  --pdfy-glass-bg: #1D1B18;
+  --pdfy-glass-strong: #1D1B18;
+  --pdfy-glass-border: #464137;
+  --pdfy-glass-highlight: rgba(255, 255, 255, 0.12);
+  --pdfy-glass-active-bg: #322620;
+  --pdfy-glass-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.28),
+    0 12px 28px -10px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 var(--pdfy-glass-highlight);
+  --pdfy-glass-dock-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.36),
+    0 16px 36px -10px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 var(--pdfy-glass-highlight);
+}
+
+@supports (color: color-mix(in oklab, white, black)) {
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 84%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 90%, transparent);
+    --pdfy-glass-border: color-mix(in oklab, var(--pdfy-ink) 14%, transparent);
+    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 10%, var(--pdfy-paper));
+  }
+
+  [data-theme="dark"] {
+    --pdfy-glass-bg: color-mix(in oklab, var(--pdfy-paper) 82%, transparent);
+    --pdfy-glass-strong: color-mix(in oklab, var(--pdfy-paper) 88%, transparent);
+    --pdfy-glass-border: color-mix(in oklab, var(--pdfy-ink) 16%, transparent);
+    --pdfy-glass-active-bg: color-mix(in oklab, var(--pdfy-accent) 14%, var(--pdfy-paper));
+  }
 }
 
 html, body, #root {
@@ -380,6 +469,163 @@ p {
   border-color: var(--pdfy-accent);
 }
 
+/* Liquid Glass workspace canvas & frosted chrome surfaces */
+.pdfy-workspace-shell {
+  background-color: var(--pdfy-canvas);
+  background-image:
+    radial-gradient(640px 380px at 8% -6%, rgba(180, 60, 24, 0.06), transparent 70%),
+    radial-gradient(560px 360px at 94% 4%, rgba(29, 78, 104, 0.05), transparent 72%),
+    linear-gradient(160deg var(--in-oklab), var(--pdfy-canvas), var(--pdfy-canvas));
+}
+
+[data-theme="dark"] .pdfy-workspace-shell {
+  background-image:
+    radial-gradient(640px 380px at 8% -6%, rgba(240, 139, 94, 0.08), transparent 70%),
+    radial-gradient(560px 360px at 94% 4%, rgba(122, 182, 214, 0.07), transparent 72%),
+    linear-gradient(160deg var(--in-oklab), var(--pdfy-canvas), var(--pdfy-canvas));
+}
+
+@supports (color: color-mix(in oklab, white, black)) {
+  .pdfy-workspace-shell {
+    background-image:
+      radial-gradient(640px 380px at 8% -6%, color-mix(in oklab, var(--pdfy-accent) 7%, transparent), transparent 70%),
+      radial-gradient(560px 360px at 94% 4%, color-mix(in oklab, var(--pdfy-secondary) 6%, transparent), transparent 72%),
+      linear-gradient(160deg var(--in-oklab), var(--pdfy-canvas), color-mix(in oklab, var(--pdfy-mat-bg) 35%, var(--pdfy-canvas)));
+  }
+}
+
+.pdfy-glass {
+  background-color: var(--pdfy-glass-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+  backdrop-filter: blur(18px) saturate(165%);
+  box-shadow: inset 0 1px 0 var(--pdfy-glass-highlight);
+}
+
+.pdfy-glass-header {
+  padding-top: max(6px, env(safe-area-inset-top, 0px));
+  padding-left: max(10px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-bottom: 6px;
+}
+
+.pdfy-glass-card {
+  background-color: var(--pdfy-glass-strong);
+  border-color: var(--pdfy-glass-border);
+  -webkit-backdrop-filter: blur(16px) saturate(155%);
+  backdrop-filter: blur(16px) saturate(155%);
+  box-shadow: var(--pdfy-glass-shadow);
+}
+
+.pdfy-glass-pill {
+  background-color: var(--pdfy-glass-strong);
+  border: 1px solid var(--pdfy-glass-border);
+  border-radius: 999px;
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  box-shadow: var(--pdfy-glass-dock-shadow);
+}
+
+.pdfy-glass-control {
+  background-color: var(--pdfy-glass-strong);
+  border-color: var(--pdfy-glass-border);
+  box-shadow: inset 0 1px 0 var(--pdfy-glass-highlight);
+}
+
+.pdfy-workspace-main {
+  scroll-padding-top: 1rem;
+  scroll-padding-bottom: 1.5rem;
+}
+
+@media (max-width: 899.95px) {
+  .pdfy-workspace-main {
+    scroll-padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.pdfy-mobile-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1050;
+  display: flex;
+  justify-content: center;
+  padding: 0 max(8px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  pointer-events: none;
+}
+
+.pdfy-mobile-dock-bar {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  gap: 2px;
+  width: min(440px, 100%);
+  padding: 4px 6px;
+}
+
+.pdfy-mobile-dock-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--pdfy-ink-muted);
+  font: inherit;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  min-height: 46px;
+  padding: 4px 2px;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1), color 140ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.pdfy-mobile-dock-btn:hover {
+  color: var(--pdfy-ink);
+}
+
+.pdfy-mobile-dock-btn[aria-current="page"] {
+  background-color: var(--pdfy-glass-active-bg);
+  color: var(--pdfy-accent);
+  box-shadow: inset 0 1px 0 var(--pdfy-glass-highlight);
+}
+
+.pdfy-mobile-dock-btn:active {
+  transform: scale(0.96);
+}
+
+.pdfy-mobile-dock-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+@media (max-height: 480px) {
+  .pdfy-mobile-dock {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --pdfy-glass-bg: var(--pdfy-paper);
+    --pdfy-glass-strong: var(--pdfy-paper);
+  }
+  .pdfy-glass,
+  .pdfy-glass-card,
+  .pdfy-glass-pill {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .pdfy-panel-enter {
     transition: opacity 160ms cubic-bezier(0.2, 0, 0, 1), translate 160ms cubic-bezier(0.2, 0, 0, 1);
@@ -417,6 +663,21 @@ p {
 }
 
 @media (forced-colors: active) {
+  .pdfy-workspace-shell {
+    background-image: none;
+  }
+  .pdfy-glass,
+  .pdfy-glass-card,
+  .pdfy-glass-pill {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+  .pdfy-mobile-dock-btn[aria-current="page"] {
+    border: 2px solid Highlight;
+  }
   .pdfy-workbench-mat {
     background-image: none;
     border-color: CanvasText;

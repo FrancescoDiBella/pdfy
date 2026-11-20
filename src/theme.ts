@@ -24,12 +24,12 @@ export const workspaceTheme = createTheme({
       },
     },
   },
-  shape: { borderRadius: 10 },
+  shape: { borderRadius: 12 },
   typography: {
     fontFamily: UI_SANS,
     h1: {
       fontFamily: DISPLAY_SERIF,
-      fontSize: 'clamp(1.5rem, 1.25rem + 1vw, 1.95rem)',
+      fontSize: 'clamp(1.35rem, 1.15rem + 0.85vw, 1.75rem)',
       fontWeight: 700,
       lineHeight: 1.18,
       letterSpacing: '-0.02em',
