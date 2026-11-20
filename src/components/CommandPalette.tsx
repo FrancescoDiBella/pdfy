@@ -62,8 +62,13 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const onCloseRef = useRef(onClose);
+  const closeTokenRef = useRef(0);
+  const instantUnmountRef = useRef(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [unmountPending, setUnmountPending] = useState(false);
+
+  const shouldRender = open || unmountPending;
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -86,6 +91,8 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (open) {
+      closeTokenRef.current += 1;
+      instantUnmountRef.current = false;
       dialog.removeAttribute('data-closing');
       if (!dialog.open) {
         dialog.showModal();
@@ -97,7 +104,7 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
     } else if (dialog.open) {
       void closeTopLayerDialog(dialog);
     }
-  }, [open]);
+  }, [open, shouldRender]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -113,6 +120,22 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
       setQuery('');
       setSelectedIndex(0);
       onCloseRef.current();
+
+      const token = ++closeTokenRef.current;
+      const animations = instantUnmountRef.current ? [] : dialog.getAnimations({ subtree: true });
+      if (animations.length === 0) {
+        setUnmountPending(false);
+        return;
+      }
+      setUnmountPending(true);
+      void Promise.race([
+        Promise.allSettled(animations.map(animation => animation.finished)),
+        new Promise(resolve => setTimeout(resolve, 400)),
+      ]).then(() => {
+        if (closeTokenRef.current === token) {
+          setUnmountPending(false);
+        }
+      });
     };
 
     dialog.addEventListener('cancel', handleCancel);
@@ -144,9 +167,10 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
         dialog.removeEventListener('click', handleBackdropClick);
       }
     };
-  }, []);
+  }, [shouldRender]);
 
   const runCommand = (command: PaletteCommand) => {
+    instantUnmountRef.current = true;
     const dialog = dialogRef.current;
     if (dialog?.open) {
       dialog.removeAttribute('data-closing');
@@ -182,6 +206,8 @@ export default function CommandPalette({ open, commands, onClose }: Props) {
     filtered.forEach((item, index) => map.set(item.id, index));
     return map;
   }, [filtered]);
+
+  if (!shouldRender) return null;
 
   return (
     <dialog
