@@ -10,6 +10,10 @@ test('install manifest references real icons with the declared dimensions', asyn
   assert.ok(manifest.icons.some(icon => icon.sizes === '192x192'));
   assert.ok(manifest.icons.some(icon => icon.sizes === '512x512' && icon.purpose === 'maskable'));
   assert.ok(Array.isArray(manifest.file_handlers) && manifest.file_handlers.some(handler => handler.action === './' && handler.accept?.['application/pdf']?.includes('.pdf')));
+  assert.equal(manifest.share_target?.action, './share-target');
+  assert.equal(manifest.share_target?.method, 'POST');
+  assert.equal(manifest.share_target?.enctype, 'multipart/form-data');
+  assert.ok(manifest.share_target?.params?.files?.some(entry => entry.name === 'pdf' && entry.accept.includes('application/pdf') && entry.accept.includes('.pdf')));
   for (const icon of manifest.icons) {
     const png = await readFile(`dist/${icon.src}`);
     assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, icon.sizes);
@@ -30,4 +34,6 @@ test('every PDF rendering resource is copied intact and precached at its runtime
   const worker = (await readdir('dist/assets')).find(name => /^pdf\.worker.*\.mjs$/.test(name));
   assert.ok(worker);
   assert.ok(sw.includes(JSON.stringify(`assets/${worker}`)));
+  assert.ok(sw.includes('share-target-sw.js'));
+  assert.ok((await readFile('dist/share-target-sw.js', 'utf8')).includes('PDFY_CONSUME_SHARED_FILES'));
 });

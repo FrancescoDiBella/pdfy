@@ -65,6 +65,24 @@ test('Read supports Ctrl+F text search navigation, outline sidebar, and plain-te
   expect(content).toContain('Executive Summary');
   expect(content).toContain('--- Page 2 ---');
   expect(content).toContain('Appendix Reference');
+
+  // Verify direct Read handoffs to Fill forms, Split PDF, Edit bookmarks, and PDF info
+  await page.getByRole('button', { name: 'Split PDF', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Split PDF', exact: true })).toBeVisible();
+  await expect(page.locator('[data-tool="split"]').getByText('searchable-brief.pdf', { exact: true })).toBeVisible();
+
+  await page.getByRole('navigation', { name: 'PDF tools' }).getByRole('button', { name: 'Read', exact: true }).click();
+  await page.getByRole('button', { name: 'Fill forms', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Fill forms', exact: true })).toBeVisible();
+  await expect(page.locator('[data-tool="forms"]').getByText('searchable-brief.pdf', { exact: true })).toBeVisible();
+
+  await page.getByRole('navigation', { name: 'PDF tools' }).getByRole('button', { name: 'Read', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit bookmarks', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Edit bookmarks', exact: true })).toBeVisible();
+
+  await page.getByRole('navigation', { name: 'PDF tools' }).getByRole('button', { name: 'Read', exact: true }).click();
+  await page.getByRole('button', { name: 'PDF info', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Document info', exact: true })).toBeVisible();
 });
 
 for (const colorScheme of ['light', 'dark'] as const) {

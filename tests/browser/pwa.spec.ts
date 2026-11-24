@@ -39,6 +39,48 @@ test('reopens offline, renders a local PDF and merges without caching documents'
   expect(cacheURLs.every(url => new URL(url).origin === new URL(page.url()).origin)).toBe(true);
 });
 
+test('receives shared PDFs via Web Share Target POST without writing documents to CacheStorage', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('PDFy is ready for offline use. Export your work before closing.')).toBeVisible({ timeout: 30000 });
+  await page.reload();
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => navigator.serviceWorker.controller !== null));
+
+  const source = await PDFDocument.create();
+  const font = await source.embedFont(StandardFonts.Helvetica);
+  source.addPage([400, 560]).drawText('Android Shared PDF', { x: 32, y: 480, size: 16, font });
+  const bytes = Array.from(await source.save());
+
+  // Simulate Android WebAPK submitting a multipart/form-data POST to ./share-target
+  await page.evaluate(pdfBytes => {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = './share-target';
+    form.enctype = 'multipart/form-data';
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.name = 'pdf';
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array(pdfBytes)], 'android-shared.pdf', { type: 'application/pdf' }));
+    input.files = transfer.files;
+    form.append(input);
+    document.body.append(form);
+    form.submit();
+  }, bytes);
+
+  await expect(page.getByText('android-shared.pdf', { exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('.react-pdf__Page__canvas').first()).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.react-pdf__Page__textContent').getByText('Android Shared PDF').first()).toBeVisible();
+  expect(new URL(page.url()).searchParams.has('shared')).toBe(false);
+
+  // Shared documents must never end up in CacheStorage
+  const cacheURLs = await page.evaluate(async () => {
+    const keys = await caches.keys();
+    const requests = await Promise.all(keys.map(async key => (await caches.open(key)).keys()));
+    return requests.flat().map(request => request.url);
+  });
+  expect(cacheURLs.some(url => url.includes('android-shared') || /\/share-target(?:\?|$)/i.test(url) || /\.pdf(?:\?|$)/i.test(url))).toBe(false);
+});
+
 for (const initiallyControlled of [false, true]) {
   test(`an update reloads a ${initiallyControlled ? 'controlled' : 'first-visit'} tab only after consent and preserves other tabs`, async ({ page, context }, testInfo) => {
     // Isolated origin serves a changed worker without mutating the build used by other tests.
