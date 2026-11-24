@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 async function extractText(bytes: Uint8Array) {
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), disableWorker: true }).promise;
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
   try {
     const pages: string[] = [];
     for (let i = 1; i <= doc.numPages; i++) {
