@@ -1,7 +1,8 @@
 import { PDFDocument, StandardFonts, degrees, pushGraphicsState, popGraphicsState, rectangle, clip, endPath, rgb } from 'pdf-lib';
-import type { PDFPage } from 'pdf-lib';
+import type { PDFImage, PDFPage } from 'pdf-lib';
 import { parsePageRange } from './pageRanges.ts';
 import { pageGeometry } from './editorGeometry.ts';
+import { flattenDocumentAnnotations } from './pdfAnnotationFlatten.ts';
 
 export type PrintRangeMode = 'all' | 'custom';
 export type PrintParity = 'all' | 'odd' | 'even';
@@ -40,6 +41,22 @@ export interface ComposedPrintResult {
   sheetWidth: number;
   sheetHeight: number;
   orientation: 'portrait' | 'landscape';
+}
+
+export interface RasterizedPrintPage {
+  bytes: Uint8Array;
+  mimeType: 'image/png' | 'image/jpeg';
+  widthPt: number;
+  heightPt: number;
+}
+
+export interface ComposePrintHooks {
+  /**
+   * Optional high-DPI fallback renderer called only for pages whose annotations or form fields
+   * could not be faithfully flattened as vector XObjects (e.g., Unicode NeedAppearances fields
+   * or AP-less rich text / stamp annotations). Output image must already be upright and cropped.
+   */
+  renderFallbackPage?: (pageIndex: number) => Promise<RasterizedPrintPage | null>;
 }
 
 export const PAPER_DIMENSIONS_PT: Record<Exclude<PrintPaperSize, 'auto'>, { width: number; height: number; label: string }> = {
@@ -212,6 +229,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 export async function composePrintPDF(
   sourceBytes: Uint8Array | ArrayBuffer,
   options: PrintOptions,
+  hooks?: ComposePrintHooks,
 ): Promise<ComposedPrintResult> {
   const srcDoc = await PDFDocument.load(sourceBytes);
   const totalSourcePages = srcDoc.getPageCount();
@@ -238,9 +256,51 @@ export async function composePrintPDF(
       : selectedPages.map(index => [index]);
 
   const uniqueIndices = Array.from(new Set(selectedPages));
-  const embeddedByIndex = new Map<number, { embedded: Awaited<ReturnType<typeof outDoc.embedPage>>; rawWidth: number; rawHeight: number; visualWidth: number; visualHeight: number; rotation: number } | null>();
+
+  // Flatten interactive form fields and PDF annotations onto selected source pages before
+  // embedding, because PDFDocument.embedPage() only copies page /Contents and drops /Annots.
+  const { fallbackPages } = await flattenDocumentAnnotations(srcDoc, uniqueIndices);
+
+  type EmbeddedPrintSource =
+    | {
+        kind: 'page';
+        embedded: Awaited<ReturnType<typeof outDoc.embedPage>>;
+        rawWidth: number;
+        rawHeight: number;
+        visualWidth: number;
+        visualHeight: number;
+        rotation: number;
+      }
+    | {
+        kind: 'image';
+        image: PDFImage;
+        visualWidth: number;
+        visualHeight: number;
+      };
+
+  const embeddedByIndex = new Map<number, EmbeddedPrintSource | null>();
 
   for (const index of uniqueIndices) {
+    if (fallbackPages.has(index) && hooks?.renderFallbackPage) {
+      try {
+        const raster = await hooks.renderFallbackPage(index);
+        if (raster && raster.widthPt > 0 && raster.heightPt > 0) {
+          const image = raster.mimeType === 'image/jpeg'
+            ? await outDoc.embedJpg(raster.bytes)
+            : await outDoc.embedPng(raster.bytes);
+          embeddedByIndex.set(index, {
+            kind: 'image',
+            image,
+            visualWidth: raster.widthPt,
+            visualHeight: raster.heightPt,
+          });
+          continue;
+        }
+      } catch {
+        // Fall through to vector embedding if browser raster fallback fails.
+      }
+    }
+
     const srcPage = srcDoc.getPage(index);
     if (!srcPage.node.Contents()) {
       embeddedByIndex.set(index, null);
@@ -256,6 +316,7 @@ export async function composePrintPDF(
       });
       const sideways = geo.rotation === 90 || geo.rotation === 270;
       embeddedByIndex.set(index, {
+        kind: 'page',
         embedded,
         rawWidth: geo.width,
         rawHeight: geo.height,
@@ -327,8 +388,6 @@ export async function composePrintPDF(
 
       const drawnVisualW = item.visualWidth * scale;
       const drawnVisualH = item.visualHeight * scale;
-      const drawnRawW = item.rawWidth * scale;
-      const drawnRawH = item.rawHeight * scale;
       const cx = cellX + cellWidth / 2;
       const cy = cellY + cellHeight / 2;
 
@@ -340,31 +399,42 @@ export async function composePrintPDF(
         endPath(),
       );
 
-      let drawX = cx - drawnVisualW / 2;
-      let drawY = cy - drawnVisualH / 2;
-      let pdfRotate = 0;
+      if (item.kind === 'image') {
+        sheetPage.drawImage(item.image, {
+          x: cx - drawnVisualW / 2,
+          y: cy - drawnVisualH / 2,
+          width: drawnVisualW,
+          height: drawnVisualH,
+        });
+      } else {
+        const drawnRawW = item.rawWidth * scale;
+        const drawnRawH = item.rawHeight * scale;
+        let drawX = cx - drawnVisualW / 2;
+        let drawY = cy - drawnVisualH / 2;
+        let pdfRotate = 0;
 
-      if (item.rotation === 90) {
-        drawX = cx - drawnVisualW / 2;
-        drawY = cy + drawnVisualH / 2;
-        pdfRotate = -90;
-      } else if (item.rotation === 180) {
-        drawX = cx + drawnVisualW / 2;
-        drawY = cy + drawnVisualH / 2;
-        pdfRotate = 180;
-      } else if (item.rotation === 270) {
-        drawX = cx + drawnVisualW / 2;
-        drawY = cy - drawnVisualH / 2;
-        pdfRotate = 90;
+        if (item.rotation === 90) {
+          drawX = cx - drawnVisualW / 2;
+          drawY = cy + drawnVisualH / 2;
+          pdfRotate = -90;
+        } else if (item.rotation === 180) {
+          drawX = cx + drawnVisualW / 2;
+          drawY = cy + drawnVisualH / 2;
+          pdfRotate = 180;
+        } else if (item.rotation === 270) {
+          drawX = cx + drawnVisualW / 2;
+          drawY = cy - drawnVisualH / 2;
+          pdfRotate = 90;
+        }
+
+        sheetPage.drawPage(item.embedded, {
+          x: drawX,
+          y: drawY,
+          width: drawnRawW,
+          height: drawnRawH,
+          rotate: degrees(pdfRotate),
+        });
       }
-
-      sheetPage.drawPage(item.embedded, {
-        x: drawX,
-        y: drawY,
-        width: drawnRawW,
-        height: drawnRawH,
-        rotate: degrees(pdfRotate),
-      });
 
       sheetPage.pushOperators(popGraphicsState());
     }

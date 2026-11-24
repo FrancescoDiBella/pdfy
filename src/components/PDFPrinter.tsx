@@ -23,7 +23,7 @@ import {
   type PrintPresetId, type PrintScaleMode,
 } from '../utils/pdfPrint';
 import {
-  buildColorTransformedPDF, prepareAndInvokeOSPrint,
+  buildColorTransformedPDF, createPrintFallbackRenderer, prepareAndInvokeOSPrint,
 } from '../utils/pdfPrintSheetRenderer';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
@@ -183,8 +183,11 @@ function PrintWorkspace({
 
     const seq = ++composeSequence.current;
     const timer = window.setTimeout(async () => {
+      const fallback = createPrintFallbackRenderer(data.bytes);
       try {
-        const next = await composePrintPDF(data.bytes, geometryOptions);
+        const next = await composePrintPDF(data.bytes, geometryOptions, {
+          renderFallbackPage: fallback.renderPage,
+        });
         if (seq !== composeSequence.current) return;
         setComposeError(null);
         setComposedState({
@@ -199,6 +202,8 @@ function PrintWorkspace({
         setComposedState(null);
         setComposeError({ key: geometryKey, message });
         setFeedback({ severity: 'error', message });
+      } finally {
+        await fallback.dispose();
       }
     }, 90);
 
@@ -223,14 +228,21 @@ function PrintWorkspace({
 
   const ensureComposed = async (): Promise<ComposedPrintResult> => {
     if (composed) return composed;
-    const fresh = await composePrintPDF(data.bytes, geometryOptions);
-    setComposeError(null);
-    setComposedState({
-      key: geometryKey,
-      result: fresh,
-      blob: new Blob([fresh.bytes as BlobPart], { type: 'application/pdf' }),
-    });
-    return fresh;
+    const fallback = createPrintFallbackRenderer(data.bytes);
+    try {
+      const fresh = await composePrintPDF(data.bytes, geometryOptions, {
+        renderFallbackPage: fallback.renderPage,
+      });
+      setComposeError(null);
+      setComposedState({
+        key: geometryKey,
+        result: fresh,
+        blob: new Blob([fresh.bytes as BlobPart], { type: 'application/pdf' }),
+      });
+      return fresh;
+    } finally {
+      await fallback.dispose();
+    }
   };
 
   const handlePrintWithOS = async () => {
