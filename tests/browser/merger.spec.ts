@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { PDFDocument } from 'pdf-lib';
+import AxeBuilder from '@axe-core/playwright';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
 
 async function pdfFile(name: string, widths: number[]) {
@@ -101,4 +102,42 @@ test('same-row and cancelled drags preserve order; boundary buttons are disabled
   await expect(rows.nth(0)).toContainText('A.pdf');
   await expect(page.getByRole('button', { name: 'Move A.pdf up', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Move B.pdf down', exact: true })).toBeDisabled();
+});
+
+test('detects mixed page sizes from phone scans and normalizes merged pages to uniform A4', async ({ page }) => {
+  const a4Doc = await PDFDocument.create();
+  const a4Font = await a4Doc.embedFont(StandardFonts.Helvetica);
+  a4Doc.addPage([595.28, 841.89]).drawText('Standard A4', { x: 40, y: 780, size: 14, font: a4Font });
+
+  const scanDoc = await PDFDocument.create();
+  const scanFont = await scanDoc.embedFont(StandardFonts.Helvetica);
+  scanDoc.addPage([2480, 3508]).drawText('Phone Scan', { x: 100, y: 3300, size: 48, font: scanFont });
+
+  await page.getByLabel('PDF files to merge').setInputFiles([
+    { name: 'standard-a4.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await a4Doc.save()) },
+    { name: 'phone-scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await scanDoc.save()) },
+  ]);
+
+  const rows = page.getByRole('list', { name: 'Merge order' }).getByRole('listitem');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText('A4');
+  await expect(rows.nth(1)).toContainText('875 × 1238 mm');
+
+  const mixedNotice = page.getByRole('note');
+  await expect(mixedNotice).toContainText(/Mixed page sizes detected/);
+
+  const a11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+  expect(a11y.violations).toEqual([]);
+
+  await mixedNotice.getByRole('button', { name: 'Match first PDF', exact: true }).click();
+  await expect(mixedNotice).toHaveCount(0);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download merged PDF', exact: true }).click();
+  const download = await downloadPromise;
+  const merged = await PDFDocument.load(await readFile((await download.path())!));
+  expect(merged.getPages().map(p => [Math.round(p.getWidth()), Math.round(p.getHeight())])).toEqual([
+    [595, 842],
+    [595, 842],
+  ]);
 });

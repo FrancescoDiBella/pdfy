@@ -7,6 +7,7 @@ import {
   Paper,
   IconButton,
   CircularProgress,
+  MenuItem,
   TextField,
   Tooltip,
   Snackbar,
@@ -24,8 +25,14 @@ import {
 } from '@mui/icons-material';
 import ToolIntro from './ToolIntro';
 import { generateSamplePDF } from '../utils/pdfSamples';
-import { mergePDFs as mergeQueue, preparePDFs, reorderPDFs } from '../utils/pdfMerge';
-import type { QueuedPDF } from '../utils/pdfMerge';
+import {
+  detectMixedQueuePageSizes,
+  formatPageSizeLabel,
+  mergePDFs as mergeQueue,
+  preparePDFs,
+  reorderPDFs,
+} from '../utils/pdfMerge';
+import type { MergePageSizeMode, QueuedPDF } from '../utils/pdfMerge';
 
 const QUEUE_DRAG_TYPE = 'application/x-pdfy-queue-item';
 
@@ -38,6 +45,7 @@ export default function PDFMerger({
 }) {
   const [queue, setQueue] = useState<QueuedPDF[]>([]);
   const [outputName, setOutputName] = useState('Merged_Document');
+  const [pageSizeMode, setPageSizeMode] = useState<MergePageSizeMode>('original');
   const [isMerging, setIsMerging] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -181,9 +189,10 @@ export default function PDFMerger({
   };
 
   const totalPages = queue.reduce((acc, item) => acc + item.pageCount, 0);
+  const hasMixedSizes = detectMixedQueuePageSizes(queue);
 
   const buildMergedDocument = async () => {
-    const mergedBytes = await mergeQueue(queue);
+    const mergedBytes = await mergeQueue(queue, { pageSize: pageSizeMode });
     const cleanName = (outputName.trim() || 'merged').replace(/\.pdf$/i, '');
     return { mergedBytes, cleanName };
   };
@@ -334,6 +343,7 @@ export default function PDFMerger({
                   </Typography>
                   <Typography className="mono tabular-nums" sx={{ fontSize: 12, color: 'text.secondary' }}>
                     {item.pageCount} {item.pageCount === 1 ? 'page' : 'pages'} · {(item.file.size / 1024).toFixed(1)} KB
+                    {item.sampleSize ? ` · ${formatPageSizeLabel(item.sampleSize)}` : ''}
                   </Typography>
                 </Box>
 
@@ -362,40 +372,77 @@ export default function PDFMerger({
             ))}
           </Box>
 
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5, alignItems: { xs: 'stretch', md: 'center' }, pt: 1 }}>
+          {hasMixedSizes && pageSizeMode === 'original' && (
+            <Alert
+              severity="info"
+              role="note"
+              sx={{ alignItems: 'center' }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="body2">
+                  Mixed page sizes detected (common when combining standard PDFs with phone scans). Normalize page sizes so every page displays uniformly in Adobe Acrobat without re-encoding scan images.
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  <Button size="small" variant="outlined" disabled={isBusy} onClick={() => setPageSizeMode('match-first')}>
+                    Match first PDF
+                  </Button>
+                  <Button size="small" variant="outlined" disabled={isBusy} onClick={() => setPageSizeMode('a4')}>
+                    Fit all to A4
+                  </Button>
+                </Box>
+              </Box>
+            </Alert>
+          )}
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(0, 1fr) minmax(0, 240px)' }, gap: 1.5, pt: 1 }}>
             <TextField
               label="Download filename"
               size="small"
               value={outputName}
               disabled={isBusy}
               onChange={e => setOutputName(e.target.value)}
-              sx={{ flex: 1, minWidth: 0 }}
+              fullWidth
             />
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-              {onOpenInOrganizer && (
-                <Button
-                  ref={organizeButtonRef}
-                  variant="outlined"
-                  size="large"
-                  startIcon={isMerging ? <CircularProgress size={18} color="inherit" /> : <OrganizeIcon />}
-                  disabled={queue.length < 2 || isBusy}
-                  onClick={mergeAndOrganize}
-                  sx={{ py: 1.1, px: 2.5 }}
-                >
-                  Merge &amp; organize pages
-                </Button>
-              )}
+            <TextField
+              select
+              label="Page size"
+              size="small"
+              value={pageSizeMode}
+              disabled={isBusy}
+              onChange={e => setPageSizeMode(e.target.value as MergePageSizeMode)}
+              fullWidth
+            >
+              <MenuItem value="original">Original (keep each size)</MenuItem>
+              <MenuItem value="match-first">Match first PDF</MenuItem>
+              <MenuItem value="a4">A4 (210 × 297 mm)</MenuItem>
+              <MenuItem value="letter">US Letter (8.5 × 11 in)</MenuItem>
+            </TextField>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: { xs: 'stretch', sm: 'flex-end' } }}>
+            {onOpenInOrganizer && (
               <Button
-                variant="contained"
+                ref={organizeButtonRef}
+                variant="outlined"
                 size="large"
-                startIcon={isMerging ? <CircularProgress size={18} color="inherit" /> : <MergeIcon />}
+                startIcon={isMerging ? <CircularProgress size={18} color="inherit" /> : <OrganizeIcon />}
                 disabled={queue.length < 2 || isBusy}
-                onClick={mergePDFs}
-                sx={{ py: 1.1, px: 3 }}
+                onClick={mergeAndOrganize}
+                sx={{ py: 1.1, px: 2.5 }}
               >
-                {isMerging ? 'Preparing PDF…' : 'Download merged PDF'}
+                Merge &amp; organize pages
               </Button>
-            </Box>
+            )}
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={isMerging ? <CircularProgress size={18} color="inherit" /> : <MergeIcon />}
+              disabled={queue.length < 2 || isBusy}
+              onClick={mergePDFs}
+              sx={{ py: 1.1, px: 3 }}
+            >
+              {isMerging ? 'Preparing PDF…' : 'Download merged PDF'}
+            </Button>
           </Box>
         </Paper>
       )}
