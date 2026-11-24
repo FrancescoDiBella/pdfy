@@ -8,6 +8,7 @@ import {
   StandardFonts,
   rgb,
 } from 'pdf-lib';
+import { flattenDocumentAnnotations } from './pdfAnnotationFlatten.ts';
 
 export type FormFieldType = 'text' | 'checkbox' | 'radio' | 'dropdown' | 'optionList';
 
@@ -176,7 +177,7 @@ export async function applyPDFFormValues(
   }
 
   if (options.flatten) {
-    form.flatten();
+    await flattenDocumentAnnotations(pdf, undefined, { widgetsOnly: true });
   }
 
   return await pdf.save();

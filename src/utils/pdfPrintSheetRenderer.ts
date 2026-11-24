@@ -2,7 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import { pdfjs } from 'react-pdf';
 import { pdfDocumentOptions } from './pdfRendering.ts';
 import { applyColorTransformToImageData } from './pdfPrint.ts';
-import type { ComposedPrintResult, PrintColorMode } from './pdfPrint.ts';
+import type { ComposedPrintResult, PrintColorMode, RasterizedPrintPage } from './pdfPrint.ts';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
@@ -43,7 +43,12 @@ async function renderSheetCanvas(
     context.fillStyle = '#FFFFFF';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    await page.render({ canvas, canvasContext: context, viewport }).promise;
+    await page.render({
+      canvas,
+      canvasContext: context,
+      viewport,
+      annotationMode: pdfjs.AnnotationMode.ENABLE,
+    }).promise;
 
     if (colorMode !== 'color') {
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -55,6 +60,46 @@ async function renderSheetCanvas(
   } finally {
     page.cleanup();
   }
+}
+
+export function createPrintFallbackRenderer(sourceBytes: Uint8Array) {
+  let loadingTask: ReturnType<typeof pdfjs.getDocument> | null = null;
+  let pdfPromise: Promise<Awaited<ReturnType<typeof pdfjs.getDocument>['promise']>> | null = null;
+
+  const getPdf = () => {
+    if (!pdfPromise) {
+      loadingTask = pdfjs.getDocument({ data: sourceBytes.slice(), ...pdfDocumentOptions });
+      pdfPromise = loadingTask.promise;
+    }
+    return pdfPromise;
+  };
+
+  return {
+    renderPage: async (pageIndex: number): Promise<RasterizedPrintPage | null> => {
+      const pdf = await getPdf();
+      const { canvas, widthPt, heightPt } = await renderSheetCanvas(pdf, pageIndex + 1, 'color', 3);
+      try {
+        const blob = await canvasToBlob(canvas);
+        return {
+          bytes: new Uint8Array(await blob.arrayBuffer()),
+          mimeType: 'image/png',
+          widthPt,
+          heightPt,
+        };
+      } finally {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+    },
+    dispose: async (): Promise<void> => {
+      if (loadingTask) {
+        const task = loadingTask;
+        loadingTask = null;
+        pdfPromise = null;
+        await task.destroy().catch(() => {});
+      }
+    },
+  };
 }
 
 export async function buildColorTransformedPDF(
@@ -149,7 +194,13 @@ export async function prepareAndInvokeOSPrint(
       img.alt = '';
       img.src = url;
       const loaded = new Promise<void>(resolve => {
-        img.onload = () => resolve();
+        img.onload = () => {
+          if (typeof img.decode === 'function') {
+            void img.decode().catch(() => {}).finally(() => resolve());
+          } else {
+            resolve();
+          }
+        };
         img.onerror = () => resolve();
       });
       decodePromises.push(loaded);

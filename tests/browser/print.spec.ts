@@ -1,8 +1,48 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFString, StandardFonts } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+async function extractText(bytes: Uint8Array) {
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), disableWorker: true }).promise;
+  try {
+    const pages: string[] = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const tc = await page.getTextContent();
+      pages.push(tc.items.filter(item => 'str' in item).map(item => (item as { str: string }).str).join(' '));
+    }
+    return pages.join('\n').replace(/\s+/g, ' ');
+  } finally {
+    await doc.destroy();
+  }
+}
+
+async function annotatedFormPdfFile(name = 'annotated-form.pdf') {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([595, 842]);
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  page.drawText('Original Heading', { x: 48, y: 780, size: 16, font });
+
+  const form = pdf.getForm();
+  const field = form.createTextField('Applicant');
+  field.addToPage(page, { x: 48, y: 700, width: 220, height: 26 });
+  field.setText('Elena Ferrante');
+  form.updateFieldAppearances();
+
+  page.node.addAnnot(pdf.context.register(pdf.context.obj({
+    Type: 'Annot',
+    Subtype: 'FreeText',
+    Rect: [48, 620, 290, 660],
+    Contents: PDFString.of('External FreeText Annotation'),
+    DA: PDFString.of('/Helv 12 Tf 0 0 1 rg'),
+    F: 4,
+  })));
+
+  return { name, mimeType: 'application/pdf', buffer: Buffer.from(await pdf.save()) };
+}
 
 async function pdfFile(name = 'print-sample.pdf', count = 3) {
   const pdf = await PDFDocument.create();
@@ -129,6 +169,62 @@ test('print receives handoffs from Read, Edit, and Organize with session replace
   await page.getByRole('button', { name: 'Replace document', exact: true }).click();
   await expect(printTool.getByRole('heading', { name: 'organized_reader-source.pdf', exact: true })).toBeVisible();
   await expect(printTool.getByText('3 source pages · 3 output sheets (portrait)')).toBeVisible();
+});
+
+test('print preserves filled form fields, external PDF annotations, and editor text edits', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  // 1. Open PDF with unflattened filled text field + FreeText annotation directly in Print
+  await navigate(page, 'Print');
+  await page.locator('[data-tool="print"] input[type="file"]').setInputFiles(await annotatedFormPdfFile());
+  const printTool = page.locator('[data-tool="print"]');
+  await expect(printTool.getByRole('heading', { name: 'annotated-form.pdf', exact: true })).toBeVisible();
+  await expect(printTool.locator('[data-testid="print-preview-sheet"] .react-pdf__Page__canvas')).toBeVisible();
+
+  const directDownloadPromise = page.waitForEvent('download');
+  await printTool.getByRole('button', { name: 'Download print-ready PDF', exact: true }).click();
+  const directDownload = await directDownloadPromise;
+  const directBytes = new Uint8Array(await readFile((await directDownload.path())!));
+  const directText = await extractText(directBytes);
+  expect(directText).toContain('Original Heading');
+  expect(directText).toContain('Elena Ferrante');
+  expect(directText).toContain('External FreeText Annotation');
+
+  // 2. Open the same annotated+filled PDF in Edit, add a Text Block annotation & edit text, then Print PDF…
+  await navigate(page, 'Edit');
+  await page.getByLabel('PDF to edit', { exact: true }).setInputFiles(await annotatedFormPdfFile('edit-and-print.pdf'));
+  await expect(page.locator('#editor-session .react-pdf__Page__canvas')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Text Block', exact: true }).click();
+  await page.getByRole('button', { name: 'Properties', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Text content', exact: true }).fill('Editor Note For Print');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit Text', exact: true }).click();
+  await page.getByRole('button', { name: 'Original Heading', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Text content', exact: true }).fill('Edited Heading For Print');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Document actions', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Print PDF…', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Replace the Print document?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Replace document', exact: true }).click();
+
+  await expect(printTool.getByRole('heading', { name: 'edit-and-print.pdf', exact: true })).toBeVisible();
+  await expect(printTool.locator('[data-testid="print-preview-sheet"] .react-pdf__Page__canvas')).toBeVisible();
+
+  const editedDownloadPromise = page.waitForEvent('download');
+  await printTool.getByRole('button', { name: 'Download print-ready PDF', exact: true }).click();
+  const editedDownload = await editedDownloadPromise;
+  const editedBytes = new Uint8Array(await readFile((await editedDownload.path())!));
+  const editedText = await extractText(editedBytes);
+  expect(editedText).toContain('Elena Ferrante');
+  expect(editedText).toContain('External FreeText Annotation');
+  expect(editedText).toContain('Editor Note For Print');
+  expect(editedText).toContain('Edited Heading For Print');
 });
 
 for (const colorScheme of ['light', 'dark'] as const) {

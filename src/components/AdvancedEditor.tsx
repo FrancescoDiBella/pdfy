@@ -17,6 +17,7 @@ import type { InteractionMode } from './editor/EditorInteractionBar';
 import { pageGeometry, editorSize, sourceTextGeometry, sourceMaskBounds, textLayout, constrainBounds, updateGeometry } from '../utils/editorGeometry';
 import type { PageGeometry } from '../utils/editorGeometry';
 import { drawEditorElements } from '../utils/exportEditorElements';
+import { flattenPageAnnotations, prepareFormFieldAppearances } from '../utils/pdfAnnotationFlatten';
 import { getRedactedPageIndices } from '../utils/pdfRedaction';
 import { burnInPDFRedactions } from '../utils/pdfRedactionRunner';
 import { reduceEditorHistory } from '../utils/editorHistory';
@@ -495,12 +496,26 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
     return await doc.embedFont(fontEnum);
   };
 
-  const buildEditedPDFBytes = async () => {
+  const buildEditedPDFBytes = async (options?: { flattenExistingAnnotations?: boolean }) => {
     if (!originalBytes) throw new Error('No PDF loaded');
     const doc = await PDFDocument.load(originalBytes);
+    const redactedIndices = getRedactedPageIndices(elements, doc.getPageCount());
+    const pagesToFlatten = options?.flattenExistingAnnotations
+      ? doc.getPageIndices()
+      : burnInRedactions && redactedIndices.length > 0
+        ? redactedIndices
+        : [];
+    if (pagesToFlatten.length > 0 && elements.length > 0) {
+      // Flatten pre-existing annotations & form fields before drawing new editor elements so
+      // overlays, masks, and redactions preserve their visual z-order on top of existing fields.
+      const fallbackPages = await prepareFormFieldAppearances(doc, pagesToFlatten);
+      for (const pageIndex of pagesToFlatten) {
+        if (fallbackPages.has(pageIndex)) continue;
+        await flattenPageAnnotations(doc, doc.getPage(pageIndex), { preserveFallbackAnnotations: true });
+      }
+    }
     await drawEditorElements(doc, elements, resolveFont);
     const editedBytes = await doc.save();
-    const redactedIndices = getRedactedPageIndices(elements, doc.getPageCount());
     if (burnInRedactions && redactedIndices.length > 0) {
       return await burnInPDFRedactions(editedBytes, redactedIndices);
     }
@@ -551,7 +566,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
     if (!originalBytes || pageOperation.current || isLoading || transformingRef.current || !callback) return;
     setIsSaving(true);
     try {
-      const saved = await buildEditedPDFBytes();
+      const saved = await buildEditedPDFBytes({ flattenExistingAnnotations: target === 'print' });
       const name = `${(docTitle || 'document').replace(/\.pdf$/i, '')}.pdf`;
       pendingHandoffRef.current = { target, file: new File([saved as BlobPart], name, { type: 'application/pdf' }) };
     } catch (err) {
