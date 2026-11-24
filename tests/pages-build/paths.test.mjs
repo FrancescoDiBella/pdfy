@@ -18,6 +18,8 @@ test('Pages manifest start, scope, ID, and icons resolve inside the project', as
   const site = 'https://example.github.io/pdfy/';
   const manifest = JSON.parse(await readFile('dist/manifest.webmanifest', 'utf8'));
   for (const field of ['id', 'start_url', 'scope']) assert.equal(new URL(manifest[field], site).href, site);
+  assert.equal(new URL(manifest.share_target.action, site).href, `${site}share-target`);
+  await access('dist/share-target-sw.js');
   for (const icon of manifest.icons) {
     const url = new URL(icon.src, site);
     assert.ok(url.pathname.startsWith('/pdfy/'));

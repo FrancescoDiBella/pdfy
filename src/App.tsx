@@ -18,6 +18,7 @@ import LiquidGlassFilters from './components/LiquidGlassFilters';
 import { preparePDFs } from './utils/pdfMerge';
 import { generateSamplePDF } from './utils/pdfSamples';
 import { isCommandPaletteShortcut } from './utils/commandPalette';
+import { consumeSharedPdfFiles, extractSharedTokenFromSearch } from './utils/shareTarget';
 
 const PDFMerger = lazy(() => import('./components/PDFMerger'));
 const PDFSplitter = lazy(() => import('./components/PDFSplitter'));
@@ -307,6 +308,46 @@ export default function App() {
         setDropNotice({ severity: 'error', message: 'Could not open the launched PDF file.' });
       }
     });
+  }, []);
+
+  useEffect(() => {
+    const { token, cleanSearch } = extractSharedTokenFromSearch(window.location.search);
+    if (!token) return;
+    const cleanUrl = `${window.location.pathname}${cleanSearch}${window.location.hash}`;
+    window.history.replaceState(null, '', cleanUrl);
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const files = await consumeSharedPdfFiles(token);
+        if (cancelled) return;
+        if (!files.length) {
+          setDropNotice({ severity: 'warning', message: 'Could not receive the shared PDF. Try sharing it again.' });
+          return;
+        }
+        const candidate = files.find(isPdfCandidate) ?? files[0];
+        const { accepted } = await preparePDFs([candidate]);
+        if (cancelled) return;
+        if (!accepted.length) {
+          setDropNotice({
+            severity: isPdfCandidate(candidate) ? 'error' : 'warning',
+            message: isPdfCandidate(candidate)
+              ? `Could not open “${candidate.name}”. Choose a readable PDF with at least one page and no password protection.`
+              : 'The shared file is not a PDF document.',
+          });
+          return;
+        }
+        openInToolRef.current('view', accepted[0].file);
+      } catch {
+        if (!cancelled) {
+          setDropNotice({ severity: 'error', message: 'Could not open the shared PDF file.' });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -640,7 +681,20 @@ export default function App() {
               {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
                 const session = sessions[item.mode]!;
                 const content = item.mode === 'view' ? (
-                  <PDFViewer activeFile={sharedFile} active={viewMode === 'view'} onFileLoaded={setSharedFile} onOpenInEditor={file => openInTool('edit', file)} onOpenInOrganizer={file => openInTool('organize', file)} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} onOpenInCompare={file => openInTool('compare', file)} />
+                  <PDFViewer
+                    activeFile={sharedFile}
+                    active={viewMode === 'view'}
+                    onFileLoaded={setSharedFile}
+                    onOpenInEditor={file => openInTool('edit', file)}
+                    onOpenInForms={file => openInTool('forms', file)}
+                    onOpenInOrganizer={file => openInTool('organize', file)}
+                    onOpenInSplit={file => openInTool('split', file)}
+                    onOpenInBookmarks={file => openInTool('bookmarks', file)}
+                    onOpenInPrint={file => openInTool('print', file)}
+                    onOpenInCompress={file => openInTool('compress', file)}
+                    onOpenInCompare={file => openInTool('compare', file)}
+                    onOpenInInspect={file => openInTool('inspect', file)}
+                  />
                 ) : item.mode === 'forms' ? (
                   <PDFForms initialFile={session.file} active={viewMode === 'forms'} onSessionChange={sessionHandlers.forms} onOpenInPrint={file => openInTool('print', file)} onOpenInCompress={file => openInTool('compress', file)} onOpenInEditor={file => openInTool('edit', file)} />
                 ) : item.mode === 'compare' ? (

@@ -7,6 +7,7 @@ import {
 import {
   FolderOpenOutlined, ZoomIn, ZoomOut, RotateRight, ViewSidebarOutlined, EditOutlined,
   DashboardCustomizeOutlined, DescriptionOutlined, PrintOutlined, CompressOutlined, CompareArrowsOutlined,
+  AssignmentOutlined, CallSplit, BookmarksOutlined, InfoOutlined,
   SearchOutlined, TocOutlined, KeyboardArrowUp, KeyboardArrowDown, Close, ContentCopy, DownloadOutlined,
   MenuBookOutlined, FullscreenOutlined, FullscreenExitOutlined, MoreHoriz,
 } from '@mui/icons-material';
@@ -43,10 +44,25 @@ interface Props {
   active?: boolean;
   onFileLoaded: (file: File) => void;
   onOpenInEditor: (file: File) => void;
+  onOpenInForms?: (file: File) => void;
   onOpenInOrganizer: (file: File) => void;
+  onOpenInSplit?: (file: File) => void;
+  onOpenInBookmarks?: (file: File) => void;
   onOpenInPrint?: (file: File) => void;
   onOpenInCompress?: (file: File) => void;
   onOpenInCompare?: (file: File) => void;
+  onOpenInInspect?: (file: File) => void;
+}
+
+const fileKeys = new WeakMap<File, number>();
+let nextFileKey = 1;
+function getStableFileKey(file: File): number {
+  let id = fileKeys.get(file);
+  if (id === undefined) {
+    id = nextFileKey++;
+    fileKeys.set(file, id);
+  }
+  return id;
 }
 
 function ViewerPage({ viewRotation, ...props }: ComponentProps<typeof Page> & { viewRotation: number }) {
@@ -61,7 +77,20 @@ function clearReaderHighlights() {
   registry?.delete('pdfy-search-active');
 }
 
-export default function PDFViewer({ activeFile: file, active = true, onFileLoaded, onOpenInEditor, onOpenInOrganizer, onOpenInPrint, onOpenInCompress, onOpenInCompare }: Props) {
+export default function PDFViewer({
+  activeFile: file,
+  active = true,
+  onFileLoaded,
+  onOpenInEditor,
+  onOpenInForms,
+  onOpenInOrganizer,
+  onOpenInSplit,
+  onOpenInBookmarks,
+  onOpenInPrint,
+  onOpenInCompress,
+  onOpenInCompare,
+  onOpenInInspect,
+}: Props) {
   const compactToolbar = useMediaQuery('(max-width:639.95px)');
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1);
@@ -582,16 +611,34 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                       <ListItemIcon><DownloadOutlined fontSize="small" /></ListItemIcon>
                       <ListItemText>Download .txt</ListItemText>
                     </MenuItem>
+                    {onOpenInForms && (
+                      <MenuItem onClick={() => { setMoreActionsAnchor(null); onOpenInForms(file); }}>
+                        <ListItemIcon><AssignmentOutlined fontSize="small" /></ListItemIcon>
+                        <ListItemText>Fill forms</ListItemText>
+                      </MenuItem>
+                    )}
                     {onOpenInPrint && (
                       <MenuItem onClick={() => { setMoreActionsAnchor(null); onOpenInPrint(file); }}>
                         <ListItemIcon><PrintOutlined fontSize="small" /></ListItemIcon>
                         <ListItemText>Print PDF</ListItemText>
                       </MenuItem>
                     )}
+                    {onOpenInSplit && (
+                      <MenuItem onClick={() => { setMoreActionsAnchor(null); onOpenInSplit(file); }}>
+                        <ListItemIcon><CallSplit fontSize="small" /></ListItemIcon>
+                        <ListItemText>Split PDF</ListItemText>
+                      </MenuItem>
+                    )}
                     {onOpenInCompress && (
                       <MenuItem onClick={() => { setMoreActionsAnchor(null); onOpenInCompress(file); }}>
                         <ListItemIcon><CompressOutlined fontSize="small" /></ListItemIcon>
                         <ListItemText>Compress PDF</ListItemText>
+                      </MenuItem>
+                    )}
+                    {onOpenInBookmarks && (
+                      <MenuItem onClick={() => { setMoreActionsAnchor(null); onOpenInBookmarks(file); }}>
+                        <ListItemIcon><BookmarksOutlined fontSize="small" /></ListItemIcon>
+                        <ListItemText>Bookmarks</ListItemText>
                       </MenuItem>
                     )}
                     {onOpenInCompare && (
@@ -604,6 +651,12 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                       <ListItemIcon><DashboardCustomizeOutlined fontSize="small" /></ListItemIcon>
                       <ListItemText>Organize pages</ListItemText>
                     </MenuItem>
+                    {onOpenInInspect && (
+                      <MenuItem onClick={() => { setMoreActionsAnchor(null); onOpenInInspect(file); }}>
+                        <ListItemIcon><InfoOutlined fontSize="small" /></ListItemIcon>
+                        <ListItemText>Info &amp; sanitize</ListItemText>
+                      </MenuItem>
+                    )}
                   </Menu>
                 </Box>
               ) : (
@@ -774,10 +827,14 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                     <Button variant="outlined" size="small" startIcon={<DownloadOutlined />} disabled={isExtractingText || !fullPlainText} onClick={handleDownloadText}>Download .txt</Button>
                   </>
                 )}
+                {onOpenInForms && <Button variant="outlined" size="small" startIcon={<AssignmentOutlined />} onClick={() => onOpenInForms(file)}>Fill forms</Button>}
+                {onOpenInSplit && <Button variant="outlined" size="small" startIcon={<CallSplit />} onClick={() => onOpenInSplit(file)}>Split PDF</Button>}
+                {onOpenInBookmarks && <Button variant="outlined" size="small" startIcon={<BookmarksOutlined />} onClick={() => onOpenInBookmarks(file)}>Edit bookmarks</Button>}
                 {onOpenInCompare && <Button variant="outlined" size="small" startIcon={<CompareArrowsOutlined />} onClick={() => onOpenInCompare(file)}>Compare PDF</Button>}
                 <Button variant="outlined" size="small" startIcon={<DashboardCustomizeOutlined />} onClick={() => onOpenInOrganizer(file)}>Organize pages</Button>
                 {onOpenInCompress && <Button variant="outlined" size="small" startIcon={<CompressOutlined />} onClick={() => onOpenInCompress(file)}>Compress PDF</Button>}
                 {onOpenInPrint && <Button variant="outlined" size="small" startIcon={<PrintOutlined />} onClick={() => onOpenInPrint(file)}>Print PDF</Button>}
+                {onOpenInInspect && <Button variant="outlined" size="small" startIcon={<InfoOutlined />} onClick={() => onOpenInInspect(file)}>PDF info</Button>}
                 {!compactToolbar && (
                   <Button variant="contained" size="small" startIcon={<EditOutlined />} onClick={() => onOpenInEditor(file)}>Edit PDF</Button>
                 )}
@@ -920,7 +977,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                 </Box>
                 <Box className="pdfy-scroll-region" sx={{ flex: 1, minHeight: 0, overflow: 'auto', px: 1.25, pb: 1.25 }}>
                   {sidebarTab === 'thumbnails' ? (
-                    <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} loading="" error="" className="reader-thumbnails">
+                    <Document key={getStableFileKey(file)} options={pdfDocumentOptions} file={file} loading="" error="" className="reader-thumbnails">
                       <Box sx={{ display: 'flex', flexDirection: { xs: 'row', sm: 'column' }, gap: 1.5 }}>
                         {Array.from({ length: numPages }, (_, index) => (
                           <Box
@@ -1016,7 +1073,7 @@ export default function PDFViewer({ activeFile: file, active = true, onFileLoade
                   aria-hidden="true"
                 />
               </div>
-              <Document key={file.name + file.lastModified} options={pdfDocumentOptions} file={file} onLoadSuccess={handleDocumentLoad} onLoadError={() => setError('This PDF could not be displayed. Try opening another PDF.')} loading={<CircularProgress aria-label="Loading PDF pages" />} error="">
+              <Document key={getStableFileKey(file)} options={pdfDocumentOptions} file={file} onLoadSuccess={handleDocumentLoad} onLoadError={() => setError('This PDF could not be displayed. Try opening another PDF.')} loading={<CircularProgress aria-label="Loading PDF pages" />} error="">
                 {pageSpreads.map((row, rowIndex) => (
                   <Box
                     key={row.join('-')}
