@@ -24,7 +24,7 @@ export default function LeftToolboxPanel(props: Props) {
   const burnInHelpId = useId();
   const redactedPages = props.redactedPageCount ?? 0;
   return <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-    <Box><Typography variant="h3">Add to this page</Typography><Typography variant="body2" color="text.secondary">Choose a tool. Drag added items into place and use Edit for their details.</Typography></Box>
+    <Box><Typography variant="h3">Add to this page</Typography><Typography variant="body2" color="text.secondary">Pick a tool to insert, then drag or tap Edit.</Typography></Box>
     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
       {tools.map(tool => <Button key={tool.type} variant="outlined" onClick={() => props.onAdd(tool.type)} sx={tile}>{tool.icon}<span>{tool.label}</span></Button>)}
       <Button variant="outlined" onClick={props.onOpenSignature} sx={tile}><Gesture /><span>Signature</span></Button>
@@ -45,7 +45,7 @@ export default function LeftToolboxPanel(props: Props) {
     {props.isEditTextMode && <><Typography variant="h3">Text in this PDF</Typography>{!props.pdfText.length && <Typography color="text.secondary">No selectable text was found. Use Text Block to add your own.</Typography>}{props.pdfText.map(item => <Button key={item.index} variant="outlined" onClick={() => props.onEditPDFText(item.index)} sx={{ justifyContent: 'flex-start', textAlign: 'left', borderRadius: '14px', overflowWrap: 'anywhere' }}>{item.text}</Button>)}</>}
     <Divider sx={{ borderColor: 'var(--pdfy-glass-hairline)' }} />
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><LayersOutlined sx={{ color: 'text.secondary' }} /><Typography variant="h3">Items on this page</Typography></Box>
-    {!props.elements.length && <Typography color="text.secondary">Your added items appear here. Select one to move, resize, or edit it.</Typography>}
+    {!props.elements.length && <Typography color="text.secondary">Added items appear here.</Typography>}
     {props.elements.map((element, index) => {
       const label = element.label || tools.find(tool => tool.type === element.type)?.label || (element.type === 'draw' ? 'Drawing' : 'Edited text');
       const selected = props.selectedId === element.id;

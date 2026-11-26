@@ -67,7 +67,7 @@ export default function PDFInspector({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-      {!replacement.session && <ToolIntro icon={<InfoOutlined />} title="Understand and sanitize your document" description="Review page sizes, inspect hidden privacy metadata, edit document properties, or export a deeply sanitized copy."><Typography color="text.secondary">All checks and sanitization run 100% locally. Your original file stays unchanged.</Typography></ToolIntro>}
+      {!replacement.session && <ToolIntro icon={<InfoOutlined />} title="Inspect & sanitize metadata" description="Check page sizes, edit document fields, or strip hidden metadata and scripts." />}
       <PDFSessionControls tool="Info" active={active} hasSession={!!replacement.session} busy={replacement.isReading || isExporting} pendingName={replacement.pending?.file.name} error={replacement.error}
         onOpen={replacement.open} onSample={() => replacement.open(() => generateSamplePDF('executive-brief'))} onCancel={replacement.cancel} onConfirm={replacement.confirm} />
       {replacement.session && (

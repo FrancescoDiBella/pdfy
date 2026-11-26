@@ -78,10 +78,8 @@ export default function PDFSplitter({
         <ToolIntro
           icon={<CallSplit />}
           title="Keep the pages you need"
-          description="Extract selected pages, split into equal page chunks, or split automatically by document bookmarks — then download as PDFs or a single ZIP archive."
-        >
-          <Typography color="text.secondary">Your original file stays unchanged.</Typography>
-        </ToolIntro>
+          description="Extract selected pages, fixed chunks, or outline chapters as PDFs or a ZIP archive."
+        />
       )}
       <PDFSessionControls
         tool="Split"

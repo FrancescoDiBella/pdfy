@@ -87,12 +87,8 @@ export default function PDFForms({
         <ToolIntro
           icon={<AssignmentOutlined />}
           title="Fill interactive PDF forms"
-          description="Detect text boxes, checkboxes, radio groups, and dropdowns automatically. Save editable copies or flatten values permanently."
-        >
-          <Typography color="text.secondary">
-            All form data stays on your device. Try the built-in request form sample to test every field type right away.
-          </Typography>
-        </ToolIntro>
+          description="Fill text boxes, checkboxes, radios, and dropdowns, then save editable or flattened."
+        />
       )}
       <PDFSessionControls
         tool="Forms"

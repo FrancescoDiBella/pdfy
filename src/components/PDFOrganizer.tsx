@@ -127,7 +127,7 @@ export default function PDFOrganizer({
   }, [replacement.session, onSessionChange]);
 
   return <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-    {!replacement.session && <ToolIntro icon={<DashboardCustomizeOutlined />} title="Put your pages in order" description="Move, rotate, trim margins, copy, add another PDF, or remove pages. Add a watermark or page numbers when you need them."><Typography color="text.secondary">Open a PDF to get started, or merge multiple PDFs first.</Typography></ToolIntro>}
+    {!replacement.session && <ToolIntro icon={<DashboardCustomizeOutlined />} title="Put your pages in order" description="Reorder, rotate, crop, duplicate, remove, or watermark pages." />}
     <PDFSessionControls tool="Organize" active={active} hasSession={!!replacement.session} busy={replacement.isReading || isExporting} pendingName={replacement.pending?.file.name} error={replacement.error} onOpen={replacement.open} onSample={() => replacement.open(() => generateSamplePDF('multi-page-report'))} onCancel={replacement.cancel} onConfirm={replacement.confirm} />
     {replacement.session && <Box component="fieldset" disabled={replacement.isReading || !!replacement.pending} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}><legend className="sr-only">Organize workspace</legend><OrganizerWorkspace key={replacement.session.id} session={replacement.session} active={active} onExporting={setIsExporting} onOpenInPrint={onOpenInPrint} onOpenInCompress={onOpenInCompress} onOpenInEditor={onOpenInEditor} /></Box>}
   </Box>;

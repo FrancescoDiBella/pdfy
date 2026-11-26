@@ -18,7 +18,7 @@ async function expectAccessible(page: Page) {
   expect(results.violations).toEqual([]);
 }
 
-test('mobile thumb-zone Liquid Glass dock navigates tools, respects 44px touch targets, and hides in Edit or short landscape', async ({ page }) => {
+test('mobile thumb-zone Liquid Glass dock navigates tools, stays visible in Edit, respects 44px touch targets, and hides in short landscape', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await dismissOfflineNotice(page);
@@ -58,9 +58,20 @@ test('mobile thumb-zone Liquid Glass dock navigates tools, respects 44px touch t
   await page.keyboard.press('Escape');
 
   await dock.getByRole('button', { name: 'Edit', exact: true }).click();
-  await expect(dock).toBeHidden();
+  await expect(dock).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'Edit', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expectAccessible(page);
+  await page.getByRole('button', { name: 'New blank PDF', exact: true }).click();
+  await expect(page.locator('#editor-session .react-pdf__Page__canvas').first()).toBeVisible();
+  await expect(dock).toBeVisible();
+  const editFooterBox = await page.getByLabel('Document view', { exact: true }).boundingBox();
+  const editDockBox = await dock.locator('.pdfy-mobile-dock-bar').boundingBox();
+  expect(editFooterBox).not.toBeNull();
+  expect(editDockBox).not.toBeNull();
+  expect(editFooterBox!.y + editFooterBox!.height).toBeLessThanOrEqual(editDockBox!.y + 1);
   await page.getByRole('button', { name: 'Return to workspace', exact: true }).click();
   await expect(dock).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'Read', exact: true })).toHaveAttribute('aria-current', 'page');
 
   // Verify streamlined mobile Read toolbar groups secondary handoff actions cleanly into More document actions menu.
   await page.getByRole('button', { name: 'Try a sample PDF', exact: true }).click();

@@ -92,7 +92,7 @@ async function swipe(page: Page, from: { x: number; y: number }, dx: number, dy:
 
 test('an unselected text item moves on its first touch, with one-step undo and redo', async ({ page }, info) => {
   await start(page); await add(page, 'Text Block');
-  await page.getByRole('button', { name: 'Edit', exact: true }).tap();
+  await page.getByRole('toolbar', { name: 'Selected item actions', exact: true }).getByRole('button', { name: 'Edit', exact: true }).tap();
   await page.getByRole('textbox', { name: 'Text content', exact: true }).fill('Moved by touch');
   await page.getByRole('button', { name: 'Close item properties', exact: true }).tap();
   const target = page.getByRole('button', { name: 'Select text item', exact: true });
@@ -243,7 +243,7 @@ test('freehand Escape rolls back, and selecting a near-edge drawing does not shi
 
 test('phone selection controls fit at the page edge and source-text mode exits through Select', async ({ page }, info) => {
   await start(page); await page.setViewportSize({ width: 320, height: 568 }); await add(page, 'Rectangle');
-  await page.getByRole('button', { name: 'Edit', exact: true }).tap();
+  await page.getByRole('toolbar', { name: 'Selected item actions', exact: true }).getByRole('button', { name: 'Edit', exact: true }).tap();
   for (const [name, value] of [['Width', '80'], ['Height', '80'], ['Horizontal position', '714'], ['Vertical position', '1043']]) await page.getByRole('spinbutton', { name, exact: true }).fill(value);
   await page.getByRole('button', { name: 'Close item properties', exact: true }).tap();
   await page.getByRole('button', { name: 'Resize', exact: true }).tap();
@@ -261,7 +261,7 @@ test('phone selection controls fit at the page edge and source-text mode exits t
 
 test('orientation change cancels an in-progress transform without a stale commit', async ({ page }) => {
   await start(page); await add(page, 'Rectangle');
-  await page.getByRole('button', { name: 'Edit', exact: true }).tap();
+  await page.getByRole('toolbar', { name: 'Selected item actions', exact: true }).getByRole('button', { name: 'Edit', exact: true }).tap();
   const x = await page.getByRole('spinbutton', { name: 'Horizontal position', exact: true }).inputValue();
   const y = await page.getByRole('spinbutton', { name: 'Vertical position', exact: true }).inputValue();
   await page.getByRole('button', { name: 'Close item properties', exact: true }).tap();
@@ -271,7 +271,7 @@ test('orientation change cancels an in-progress transform without a stale commit
     await expect.poll(async () => (await bounds(page.getByRole('region', { name: 'PDF editing canvas', exact: true }))).width).toBeGreaterThan(600);
   }
   finally { await end(gesture.client); }
-  await page.getByRole('button', { name: 'Edit', exact: true }).tap();
+  await page.getByRole('toolbar', { name: 'Selected item actions', exact: true }).getByRole('button', { name: 'Edit', exact: true }).tap();
   await expect(page.getByRole('spinbutton', { name: 'Horizontal position', exact: true })).toHaveValue(x);
   await expect(page.getByRole('spinbutton', { name: 'Vertical position', exact: true })).toHaveValue(y);
   await page.getByRole('button', { name: 'Close item properties', exact: true }).tap();
@@ -317,7 +317,7 @@ test('original text on a rotated page keeps its displayed orientation after edit
 for (const rotation of [0, 90, 180, 270]) {
   test(`a moved shape exports to the displayed position on a cropped ${rotation}-degree page`, async ({ page }) => {
     await start(page, await source(rotation, true)); await add(page, 'Rectangle');
-    await page.getByRole('button', { name: 'Edit', exact: true }).tap();
+    await page.getByRole('toolbar', { name: 'Selected item actions', exact: true }).getByRole('button', { name: 'Edit', exact: true }).tap();
     await page.getByLabel('Fill color', { exact: true }).fill('#ff0000');
     await page.getByRole('slider', { name: 'Item opacity', exact: true }).press('End');
     await page.getByRole('button', { name: 'Close item properties', exact: true }).tap();

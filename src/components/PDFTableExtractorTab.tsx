@@ -91,12 +91,8 @@ export default function PDFTableExtractorTab({
         <ToolIntro
           icon={<TableChartOutlined />}
           title="Extract tables to CSV, Excel, or JSON"
-          description="Detect aligned multi-column tables from invoices, statements, and reports completely offline. Copy as TSV for spreadsheets or download as CSV, JSON, or Markdown."
-        >
-          <Typography color="text.secondary">
-            Works on selectable PDF text layers without uploading files to any server.
-          </Typography>
-        </ToolIntro>
+          description="Detect aligned columns in selectable PDFs and copy as TSV or export as CSV, JSON, or Markdown."
+        />
       )}
       <PDFSessionControls
         tool="Convert tables"

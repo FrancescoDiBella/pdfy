@@ -22,7 +22,7 @@ export default function RightPropertiesPanel({ element, onUpdate, onDelete, onDu
     return (
       <Box sx={{ p: 2 }}>
         <Box sx={{ p: 2, borderRadius: '16px', border: 1, borderColor: 'var(--pdfy-glass-hairline)', bgcolor: 'var(--pdfy-glass-subtle)' }}>
-          <Typography variant="body2">Select an item on the page or in Tools, then edit its text, position, and appearance here.</Typography>
+          <Typography variant="body2">Select an item on the page or in Tools to edit its properties.</Typography>
         </Box>
       </Box>
     );
@@ -49,8 +49,8 @@ export default function RightPropertiesPanel({ element, onUpdate, onDelete, onDu
           />
           <Typography id={burnInHelpId} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
             {burnInRedactions
-              ? `Flattens ${redactedPageCount > 1 ? `all ${redactedPageCount} redacted pages` : 'this redacted page'} at ${REDACTION_BURN_IN_DPI} DPI during export so underlying text streams cannot be selected or extracted. Unredacted pages stay vectorized.`
-              : 'Draws a visual cover rectangle only; underlying text streams remain in the exported PDF.'}
+              ? `Flattens ${redactedPageCount > 1 ? `all ${redactedPageCount} redacted pages` : 'this redacted page'} at ${REDACTION_BURN_IN_DPI} DPI so hidden text is removed; other pages stay vector.`
+              : 'Visual cover only; underlying text stays in the PDF.'}
           </Typography>
         </Box>
       )}

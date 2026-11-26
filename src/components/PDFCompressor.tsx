@@ -78,12 +78,8 @@ export default function PDFCompressor({
         <ToolIntro
           icon={<CompressOutlined />}
           title="Shrink PDF size offline"
-          description="Analyze document size, strip redundant metadata or object bloat losslessly, or downsample heavy scans with live Before/After quality preview."
-        >
-          <Typography color="text.secondary">
-            Compare exact byte savings and inspect every output page before downloading. Nothing leaves your device.
-          </Typography>
-        </ToolIntro>
+          description="Optimize streams losslessly or downsample scans with a live quality preview."
+        />
       )}
       <PDFSessionControls
         tool="Compress"

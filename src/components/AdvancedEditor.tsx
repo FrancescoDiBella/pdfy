@@ -3,7 +3,6 @@ import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
-  ArrowBack as BackIcon,
   Add as AddIcon,
   EditOutlined,
   ReceiptLong as InvoiceIcon,
@@ -26,7 +25,6 @@ import type { EditorElement, ElementType, StrokePoint } from './editor/types';
 import TopNavigationBar, { EditorViewControls } from './editor/TopNavigationBar';
 import ToolPanel from './ToolPanel';
 import { useEditorPan } from '../hooks/useEditorPan';
-import { useVisibleViewport } from '../hooks/useVisibleViewport';
 import LeftToolboxPanel from './editor/LeftToolboxPanel';
 import RightPropertiesPanel from './editor/RightPropertiesPanel';
 import DrawingCanvas from './editor/DrawingCanvas';
@@ -78,20 +76,20 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   const pageOperation = useRef(false);
   const [pageDims, setPageDims] = useState({ width: 0, height: 0 });
   const [manualZoom, setManualZoom] = useState<number | null>(null);
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth - 24);
+  const [viewportWidth, setViewportWidth] = useState(() => (window.innerWidth >= 900 && window.innerHeight >= 600 ? Math.max(240, window.innerWidth - 256) : Math.max(240, window.innerWidth - 24)));
   const [panelState, setPanelState] = useState<{ view: 'tools' | 'properties'; open: boolean }>({ view: 'tools', open: false });
   const panel = panelState.open ? panelState.view : null;
   const openPanel = (view: 'tools' | 'properties') => setPanelState({ view, open: true });
   const closePanel = () => setPanelState(previous => ({ ...previous, open: false }));
   const [confirmAction, setConfirmAction] = useState<'clear' | 'page' | null>(null);
   const [isLoading, setIsLoading] = useState(!!initialFile);
-  const viewport = useVisibleViewport();
   const [mode, setMode] = useState<InteractionMode>('select');
   const [resizing, setResizing] = useState(false);
   const [returnToCanvas, setReturnToCanvas] = useState(false);
   const [transforming, setTransforming] = useState(false);
   const transformingRef = useRef(false);
   const onGesture = useCallback((value: boolean) => { transformingRef.current = value; setTransforming(value); }, []);
+  const splashPdfInput = useRef<HTMLInputElement>(null);
   const pdfInput = useRef<HTMLInputElement>(null);
   const actionsButton = useRef<HTMLButtonElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
@@ -119,13 +117,18 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   useEffect(() => {
     const element = viewportRef.current;
     if (!element) return;
+    if (active && element.clientWidth > 0) {
+      const style = getComputedStyle(element);
+      const innerWidth = element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      if (innerWidth > 0) setViewportWidth(innerWidth);
+    }
     const observer = new ResizeObserver(entries => {
       const width = entries[0]?.contentRect.width;
       if (width > 0) setViewportWidth(width);
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [fileBlob]);
+  }, [fileBlob, active]);
 
   // Multi-page states
   const [numPages, setNumPages] = useState(1);
@@ -137,7 +140,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   const controlsBusy = busy || transforming;
   const currentGeometry = pdfPageDimsMap[currentPageIndex] ?? DEFAULT_PAGE_GEOMETRY;
   const pageSize = editorSize(currentGeometry);
-  const context = `${currentPageIndex}:${mode}:${zoom}:${viewportWidth}:${viewport.height}:${viewport.top}:${panelState.open}:${busy}:${active}`;
+  const context = `${currentPageIndex}:${mode}:${zoom}:${viewportWidth}:${panelState.open}:${busy}:${active}`;
   const panEvents = useEditorPan(active && !busy && mode === 'pan', context, onGesture, () => transformingRef.current);
   const [parsedText, setParsedText] = useState<{ source: Uint8Array; page: number; items: (TextItem & { color?: number[] })[]; styles: Record<string, TextStyle> } | null>(null);
   const currentText = parsedText?.source === originalBytes && parsedText?.page === currentPageIndex ? parsedText : null;
@@ -585,17 +588,18 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   if (!fileBlob) {
     return (
       <Box
-        className="pdfy-workspace-shell"
+        className="pdfy-scroll-region"
         sx={{
           width: '100%',
-          height: viewport.height,
-          position: 'fixed', top: viewport.top, left: 0, right: 0,
+          flex: 1,
+          minHeight: 0,
           overflow: 'auto',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-start',
           flexDirection: 'column',
-          p: { xs: 2, sm: 3 },
+          px: { xs: 1.5, sm: 2.5, lg: 3.5 },
+          py: { xs: 1.5, sm: 3 },
         }}
       >
         <Paper
@@ -603,19 +607,19 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
           className="pdfy-panel-enter"
           sx={{
             my: 'auto',
-            p: { xs: 2.5, sm: 4 },
+            p: { xs: 2.25, sm: 3.5 },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 2.25,
+            gap: 2,
             border: 1,
             borderColor: 'var(--pdfy-glass-hairline)',
-            borderRadius: '24px',
+            borderRadius: '22px',
             bgcolor: 'background.paper',
             boxShadow: theme => theme.palette.mode === 'dark'
               ? '0 20px 50px -16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
-              : '0 20px 50px -16px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
-            maxWidth: 540,
+              : '0 20px 50px -16px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.90)',
+            maxWidth: 520,
             flexShrink: 0,
             width: '100%',
           }}
@@ -623,9 +627,9 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
           <Box
             aria-hidden="true"
             sx={{
-              width: 56,
-              height: 56,
-              borderRadius: '16px',
+              width: 52,
+              height: 52,
+              borderRadius: '15px',
               display: 'grid',
               placeItems: 'center',
               bgcolor: 'var(--pdfy-glass-active-bg)',
@@ -637,51 +641,57 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
           >
             <EditOutlined fontSize="large" />
           </Box>
-          <Typography variant="h1" sx={{ fontSize: 26, textAlign: 'center' }}>
-            Edit your PDF
-          </Typography>
-          <Typography variant="body1" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-            Open a PDF or start a blank page. Add text, images, shapes, drawings, and signatures.
-          </Typography>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h1" sx={{ fontSize: { xs: 22, sm: 26 }, mb: 0.5 }}>
+              Edit PDF
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Add text, images, drawings, redactions, or signatures.
+            </Typography>
+          </Box>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5, width: '100%', mt: 0.5 }}>
+          <input
+            ref={splashPdfInput}
+            type="file"
+            hidden
+            accept="application/pdf"
+            aria-label="PDF to edit"
+            disabled={isLoading}
+            onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void loadFile(file); }}
+          />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.25, width: '100%' }}>
             <Button
               variant="contained"
               size="large"
               startIcon={<AddIcon />}
               onClick={createBlank} disabled={isLoading}
-              sx={{ py: 1.4, whiteSpace: 'nowrap' }}
+              sx={{ py: 1.25, whiteSpace: 'nowrap' }}
             >
               New blank PDF
             </Button>
             <Button
               variant="outlined"
               size="large"
-              component="label" disabled={isLoading}
+              disabled={isLoading}
               startIcon={<UploadIcon />}
-              sx={{ py: 1.4 }}
+              onClick={() => splashPdfInput.current?.click()}
+              sx={{ py: 1.25 }}
             >
               Open PDF
-              <input
-                type="file"
-                hidden
-                accept="application/pdf"
-                aria-label="PDF to edit" disabled={isLoading} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void loadFile(file); }}
-              />
             </Button>
           </Box>
 
-          <Box sx={{ width: '100%', pt: 2, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1.25, textAlign: 'center' }}>
-              Or launch immediately with a sample template:
+          <Box sx={{ width: '100%', pt: 1.75, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1, textAlign: 'center' }}>
+              Or try a sample:
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.25 }}>
               <Button
                 variant="outlined"
                 size="small"
                 startIcon={<InvoiceIcon />}
                 disabled={isLoading} onClick={() => loadSampleTemplate('service-invoice')}
-                sx={{ py: 1, whiteSpace: 'nowrap' }}
+                sx={{ py: 0.9, whiteSpace: 'nowrap' }}
               >
                 Sample Invoice
               </Button>
@@ -690,18 +700,15 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
                 size="small"
                 startIcon={<BriefIcon />}
                 disabled={isLoading} onClick={() => loadSampleTemplate('executive-brief')}
-                sx={{ py: 1, whiteSpace: 'nowrap' }}
+                sx={{ py: 0.9, whiteSpace: 'nowrap' }}
               >
-                Sample brief (3 pages)
+                Sample Brief (3 pages)
               </Button>
             </Box>
           </Box>
 
           {isLoading && <CircularProgress aria-label="Preparing PDF" />}
           {toast && <Alert severity={toast.severity}>{toast.message}</Alert>}
-          <Button startIcon={<BackIcon />} variant="text" size="small" onClick={onBack} sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Return to workspace
-          </Button>
         </Paper>
       </Box>
     );
@@ -712,7 +719,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   const canvasHeight = pageSize.height * zoom;
 
   return (
-    <Box ref={editorRef} className="pdfy-workspace-shell" sx={{ width: '100%', height: viewport.height, position: 'fixed', top: viewport.top, left: 0, right: 0, display: 'flex', flexDirection: 'column', color: 'text.primary', overflow: 'hidden' }}>
+    <Box ref={editorRef} sx={{ width: '100%', flex: 1, minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column', color: 'text.primary', overflow: 'hidden' }}>
       <input ref={pdfInput} type="file" accept="application/pdf" aria-label="Replacement PDF for Edit" hidden onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void loadFile(file); }} />
       <input ref={imageInput} type="file" accept="image/png,image/jpeg" aria-label="Image to insert" hidden onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void insertImage(file); }} />
       <h1 className="sr-only">Edit PDF</h1>
@@ -1047,7 +1054,10 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
         autoHideDuration={3200}
         onClose={() => setToast(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        sx={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}
+        sx={{
+          bottom: 'calc(var(--pdfy-toast-bottom) + 54px)',
+          '@media (min-width: 600px)': { bottom: 'calc(var(--pdfy-toast-bottom) + 54px)' },
+        }}
       >
         {toast ? (
           <Alert severity={toast.severity} onClose={() => setToast(null)} sx={{ borderRadius: '14px' }}>

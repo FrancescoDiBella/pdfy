@@ -260,7 +260,7 @@ export default function PDFMerger({
         {announcement}
       </Box>
       {queue.length === 0 ? (
-        <ToolIntro icon={<MergeIcon fontSize="large" />} title="Start with two or more PDFs" description="Add your files, arrange them in order, and download or immediately organize every page.">
+        <ToolIntro icon={<MergeIcon fontSize="large" />} title="Combine PDFs in order" description="Add two or more PDFs, arrange their order, and export or organize pages.">
           {fileActions}
         </ToolIntro>
       ) : (
@@ -279,7 +279,7 @@ export default function PDFMerger({
           </Box>
 
           <Typography id="merge-order-help" variant="body2" color="text.secondary">
-            Drag a handle onto another document to change its position, or use the Move up and Move down buttons.
+            Drag a handle to reorder, or use Move up and Move down.
           </Typography>
           <Box component="ol" aria-label="Merge order" aria-describedby="merge-order-help" sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, listStyle: 'none', m: 0, p: 0 }}>
             {queue.map((item, idx) => (
@@ -452,6 +452,10 @@ export default function PDFMerger({
         autoHideDuration={3500}
         onClose={() => setToast(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        sx={{
+          bottom: 'var(--pdfy-toast-bottom)',
+          '@media (min-width: 600px)': { bottom: 'var(--pdfy-toast-bottom)' },
+        }}
       >
         {toast ? (
           <Alert severity={toast.severity} onClose={() => setToast(null)} sx={{ borderRadius: 2 }}>

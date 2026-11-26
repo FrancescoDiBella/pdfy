@@ -55,7 +55,8 @@ export default function PWAStatus() {
           zIndex: theme => theme.zIndex.modal - 1,
           left: { xs: 12, md: 12 },
           right: { xs: 12, md: 'auto' },
-          bottom: { xs: 'calc(84px + env(safe-area-inset-bottom, 0px))', md: 12 },
+          bottom: 'var(--pdfy-toast-bottom)',
+          '@media (min-width: 600px)': { bottom: 'var(--pdfy-toast-bottom)' },
           maxWidth: { xs: 'calc(100vw - 24px)', md: 220 },
         }}
       >

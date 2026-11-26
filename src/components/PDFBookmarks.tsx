@@ -104,10 +104,8 @@ export default function PDFBookmarks({
         <ToolIntro
           icon={<BookmarksOutlined />}
           title="Build a clickable table of contents"
-          description="Inspect existing PDF bookmarks, auto-detect headings from page typography, nest chapters and sub-sections, and export a PDF with an interactive outline."
-        >
-          <Typography color="text.secondary">All outline detection and writing runs 100% locally. Your original file stays unchanged.</Typography>
-        </ToolIntro>
+          description="Edit existing bookmarks or auto-detect headings to embed a nested PDF outline."
+        />
       )}
       <PDFSessionControls
         tool="Bookmarks"

@@ -10,8 +10,15 @@ interface Props {
   status?: string; mode: InteractionMode; selected: EditorElement | null; resizing: boolean; disabled: boolean;
   onMode: (mode: InteractionMode) => void; onResize: () => void; onEdit: () => void; onDuplicate: () => void; onDelete: () => void;
 }
+const rowInteractionBarStyles = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 1.5,
+  '& .editor-mode-controls': { flex: '0 0 288px' },
+} as const;
+
 export default function EditorInteractionBar(props: Props) {
-  const hint = props.mode === 'pan' ? 'Swipe anywhere on the page to scroll.' : props.mode === 'draw' ? 'Draw on the page. Choose Select to move items.' : props.mode === 'text' ? 'Choose original text on the page or in Tools.' : 'Drag an item to move it. Swipe blank space to scroll.';
+  const hint = props.mode === 'pan' ? 'Swipe to scroll.' : props.mode === 'draw' ? 'Draw on page. Switch to Select to move.' : props.mode === 'text' ? 'Tap original text or open Tools.' : 'Drag items to move · swipe space to scroll.';
   return (
     <Box
       className="pdfy-glass"
@@ -22,17 +29,13 @@ export default function EditorInteractionBar(props: Props) {
         borderBottom: 1,
         borderColor: 'var(--pdfy-glass-hairline)',
         display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        alignItems: { xs: 'stretch', md: 'center' },
+        flexDirection: 'column',
+        alignItems: 'stretch',
         px: { xs: 1, sm: 1.5 },
         py: 0.5,
-        gap: { xs: 0.25, md: 1.5 },
-        '@media (min-width: 760px) and (max-height: 500px)': {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 1.5,
-          '& .editor-mode-controls': { flex: '0 0 288px' },
-        },
+        gap: 0.25,
+        '@container (min-width: 740px)': rowInteractionBarStyles,
+        '@media (min-width: 760px) and (max-height: 500px)': rowInteractionBarStyles,
       }}
     >
       <ToggleButtonGroup
@@ -43,7 +46,7 @@ export default function EditorInteractionBar(props: Props) {
         onChange={(_, mode) => { if (mode) props.onMode(mode); }}
         sx={{
           display: 'flex',
-          flex: { xs: '0 0 auto', md: '0 0 300px' },
+          flex: '0 0 auto',
           gap: 0.375,
           '& .MuiToggleButtonGroup-grouped': {
             border: 0,
