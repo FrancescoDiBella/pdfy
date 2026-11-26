@@ -49,8 +49,8 @@ export default function RightPropertiesPanel({ element, onUpdate, onDelete, onDu
           />
           <Typography id={burnInHelpId} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
             {burnInRedactions
-              ? `Flattens ${redactedPageCount > 1 ? `all ${redactedPageCount} redacted pages` : 'this redacted page'} at ${REDACTION_BURN_IN_DPI} DPI during export so underlying text streams cannot be selected or extracted. Unredacted pages stay vectorized.`
-              : 'Draws a visual cover rectangle only; underlying text streams remain in the exported PDF.'}
+              ? `Flattens ${redactedPageCount > 1 ? `all ${redactedPageCount} redacted pages` : 'this redacted page'} at ${REDACTION_BURN_IN_DPI} DPI so hidden text is removed; other pages stay vector.`
+              : 'Visual cover only; underlying text stays in the PDF.'}
           </Typography>
         </Box>
       )}

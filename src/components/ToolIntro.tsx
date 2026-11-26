@@ -25,7 +25,7 @@ export default function ToolIntro({ icon, title, description, children }: Props)
           : '0 1px 3px rgba(15, 23, 42, 0.04), 0 14px 32px -20px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.90)',
       })}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 } }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1.5, sm: 2 } }}>
         <Box
           aria-hidden="true"
           sx={theme => ({

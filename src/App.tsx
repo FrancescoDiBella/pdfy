@@ -752,13 +752,20 @@ export default function App() {
                   <Box
                     key={`${item.mode}-${session.version}`}
                     id={isEdit ? 'editor-session' : undefined}
+                    role={isEdit ? 'region' : undefined}
                     aria-label={isEdit ? 'Edit PDF' : undefined}
                     tabIndex={isEdit ? -1 : undefined}
                     hidden={viewMode !== item.mode}
                     data-tool={item.mode}
-                    sx={{ flex: 1, minHeight: isEdit ? 0 : 'min-content', display: 'flex', flexDirection: 'column', ...(isEdit ? { overflow: 'hidden' } : undefined) }}
+                    sx={{
+                      flex: 1,
+                      minHeight: isEdit ? 0 : 'min-content',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      ...(isEdit ? { overflow: 'hidden', '&:focus-visible': { outlineOffset: '-3px' } } : undefined),
+                    }}
                   >
-                    <Suspense fallback={<Box sx={{ py: 6, flex: 1, display: 'grid', placeItems: 'center' }}><CircularProgress aria-label={`Loading ${item.label}`} /></Box>}>
+                    <Suspense fallback={<Box sx={{ py: 6, flex: 1, display: 'grid', placeItems: 'center' }}>{isEdit && <Typography className="sr-only" variant="h1">Edit PDF</Typography>}<CircularProgress aria-label={`Loading ${item.label}`} /></Box>}>
                       {content}
                     </Suspense>
                   </Box>
@@ -861,6 +868,10 @@ export default function App() {
         autoHideDuration={5000}
         onClose={() => setDropNotice(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          bottom: 'var(--pdfy-toast-bottom)',
+          '@media (min-width: 600px)': { bottom: 'var(--pdfy-toast-bottom)' },
+        }}
       >
         {dropNotice ? (
           <Alert severity={dropNotice.severity} onClose={() => setDropNotice(null)} sx={{ overflowWrap: 'anywhere' }}>

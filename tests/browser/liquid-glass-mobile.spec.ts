@@ -60,6 +60,7 @@ test('mobile thumb-zone Liquid Glass dock navigates tools, stays visible in Edit
   await dock.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(dock).toBeVisible();
   await expect(dock.getByRole('button', { name: 'Edit', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expectAccessible(page);
   await page.getByRole('button', { name: 'New blank PDF', exact: true }).click();
   await expect(page.locator('#editor-session .react-pdf__Page__canvas').first()).toBeVisible();
   await expect(dock).toBeVisible();

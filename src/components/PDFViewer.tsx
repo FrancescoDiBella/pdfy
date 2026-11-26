@@ -634,7 +634,7 @@ export default function PDFViewer({
                     {onOpenInBookmarks && (
                       <MenuItem onClick={() => { setMoreActionsAnchor(null); onOpenInBookmarks(file); }}>
                         <ListItemIcon><BookmarksOutlined fontSize="small" /></ListItemIcon>
-                        <ListItemText>Bookmarks</ListItemText>
+                        <ListItemText>Edit bookmarks</ListItemText>
                       </MenuItem>
                     )}
                     {onOpenInCompare && (
@@ -650,7 +650,7 @@ export default function PDFViewer({
                     {onOpenInInspect && (
                       <MenuItem onClick={() => { setMoreActionsAnchor(null); onOpenInInspect(file); }}>
                         <ListItemIcon><InfoOutlined fontSize="small" /></ListItemIcon>
-                        <ListItemText>Info &amp; sanitize</ListItemText>
+                        <ListItemText>PDF info</ListItemText>
                       </MenuItem>
                     )}
                   </Menu>

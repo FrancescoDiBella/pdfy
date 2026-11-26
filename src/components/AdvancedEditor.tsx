@@ -3,7 +3,6 @@ import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import { Box, Button, Typography, Paper, CircularProgress, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
-  ArrowBack as BackIcon,
   Add as AddIcon,
   EditOutlined,
   ReceiptLong as InvoiceIcon,
@@ -26,7 +25,6 @@ import type { EditorElement, ElementType, StrokePoint } from './editor/types';
 import TopNavigationBar, { EditorViewControls } from './editor/TopNavigationBar';
 import ToolPanel from './ToolPanel';
 import { useEditorPan } from '../hooks/useEditorPan';
-import { useVisibleViewport } from '../hooks/useVisibleViewport';
 import LeftToolboxPanel from './editor/LeftToolboxPanel';
 import RightPropertiesPanel from './editor/RightPropertiesPanel';
 import DrawingCanvas from './editor/DrawingCanvas';
@@ -78,20 +76,20 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   const pageOperation = useRef(false);
   const [pageDims, setPageDims] = useState({ width: 0, height: 0 });
   const [manualZoom, setManualZoom] = useState<number | null>(null);
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth - 24);
+  const [viewportWidth, setViewportWidth] = useState(() => (window.innerWidth >= 900 && window.innerHeight >= 600 ? Math.max(240, window.innerWidth - 256) : Math.max(240, window.innerWidth - 24)));
   const [panelState, setPanelState] = useState<{ view: 'tools' | 'properties'; open: boolean }>({ view: 'tools', open: false });
   const panel = panelState.open ? panelState.view : null;
   const openPanel = (view: 'tools' | 'properties') => setPanelState({ view, open: true });
   const closePanel = () => setPanelState(previous => ({ ...previous, open: false }));
   const [confirmAction, setConfirmAction] = useState<'clear' | 'page' | null>(null);
   const [isLoading, setIsLoading] = useState(!!initialFile);
-  const viewport = useVisibleViewport();
   const [mode, setMode] = useState<InteractionMode>('select');
   const [resizing, setResizing] = useState(false);
   const [returnToCanvas, setReturnToCanvas] = useState(false);
   const [transforming, setTransforming] = useState(false);
   const transformingRef = useRef(false);
   const onGesture = useCallback((value: boolean) => { transformingRef.current = value; setTransforming(value); }, []);
+  const splashPdfInput = useRef<HTMLInputElement>(null);
   const pdfInput = useRef<HTMLInputElement>(null);
   const actionsButton = useRef<HTMLButtonElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
@@ -142,7 +140,7 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
   const controlsBusy = busy || transforming;
   const currentGeometry = pdfPageDimsMap[currentPageIndex] ?? DEFAULT_PAGE_GEOMETRY;
   const pageSize = editorSize(currentGeometry);
-  const context = `${currentPageIndex}:${mode}:${zoom}:${viewportWidth}:${viewport.height}:${viewport.top}:${panelState.open}:${busy}:${active}`;
+  const context = `${currentPageIndex}:${mode}:${zoom}:${viewportWidth}:${panelState.open}:${busy}:${active}`;
   const panEvents = useEditorPan(active && !busy && mode === 'pan', context, onGesture, () => transformingRef.current);
   const [parsedText, setParsedText] = useState<{ source: Uint8Array; page: number; items: (TextItem & { color?: number[] })[]; styles: Record<string, TextStyle> } | null>(null);
   const currentText = parsedText?.source === originalBytes && parsedText?.page === currentPageIndex ? parsedText : null;
@@ -645,13 +643,22 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
           </Box>
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="h1" sx={{ fontSize: { xs: 22, sm: 26 }, mb: 0.5 }}>
-              Edit your PDF
+              Edit PDF
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Add text, images, drawings, redactions, or signatures.
             </Typography>
           </Box>
 
+          <input
+            ref={splashPdfInput}
+            type="file"
+            hidden
+            accept="application/pdf"
+            aria-label="PDF to edit"
+            disabled={isLoading}
+            onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void loadFile(file); }}
+          />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.25, width: '100%' }}>
             <Button
               variant="contained"
@@ -665,17 +672,12 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
             <Button
               variant="outlined"
               size="large"
-              component="label" disabled={isLoading}
+              disabled={isLoading}
               startIcon={<UploadIcon />}
+              onClick={() => splashPdfInput.current?.click()}
               sx={{ py: 1.25 }}
             >
               Open PDF
-              <input
-                type="file"
-                hidden
-                accept="application/pdf"
-                aria-label="PDF to edit" disabled={isLoading} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void loadFile(file); }}
-              />
             </Button>
           </Box>
 
@@ -700,16 +702,13 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
                 disabled={isLoading} onClick={() => loadSampleTemplate('executive-brief')}
                 sx={{ py: 0.9, whiteSpace: 'nowrap' }}
               >
-                Sample brief (3 pages)
+                Sample Brief (3 pages)
               </Button>
             </Box>
           </Box>
 
           {isLoading && <CircularProgress aria-label="Preparing PDF" />}
           {toast && <Alert severity={toast.severity}>{toast.message}</Alert>}
-          <Button startIcon={<BackIcon />} variant="text" size="small" onClick={onBack} sx={{ color: 'text.secondary' }}>
-            Return to workspace
-          </Button>
         </Paper>
       </Box>
     );
@@ -1055,7 +1054,10 @@ export default function AdvancedEditor({ onBack, onPrint, onCompress, onOrganize
         autoHideDuration={3200}
         onClose={() => setToast(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        sx={{ bottom: { xs: 'calc(84px + env(safe-area-inset-bottom, 0px))', md: '64px' } }}
+        sx={{
+          bottom: 'calc(var(--pdfy-toast-bottom) + 54px)',
+          '@media (min-width: 600px)': { bottom: 'calc(var(--pdfy-toast-bottom) + 54px)' },
+        }}
       >
         {toast ? (
           <Alert severity={toast.severity} onClose={() => setToast(null)} sx={{ borderRadius: '14px' }}>

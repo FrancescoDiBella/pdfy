@@ -16,6 +16,14 @@ interface Props {
   redactedPageCount?: number; burnInRedactions?: boolean; onToggleBurnInRedactions?: () => void;
 }
 
+const wideTopBarStyles = {
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  alignItems: 'center',
+  gap: 1,
+  '& .editor-tools-row': { pt: 0, pb: 0 },
+  '& .editor-tools-button': { flex: '0 0 auto', minWidth: 100 },
+} as const;
+
 export default function TopNavigationBar({ actionsRef, ...props }: Props) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [settings, setSettings] = useState(false);
@@ -38,13 +46,8 @@ export default function TopNavigationBar({ actionsRef, ...props }: Props) {
         '@media (max-height: 500px)': { py: 0.25 },
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr)',
-        '@media (min-width: 900px), (min-width: 760px) and (max-height: 500px)': {
-          gridTemplateColumns: 'minmax(0, 1fr) auto',
-          alignItems: 'center',
-          gap: 1,
-          '& .editor-tools-row': { pt: 0, pb: 0 },
-          '& .editor-tools-button': { flex: '0 0 auto', minWidth: 100 },
-        },
+        '@container (min-width: 740px)': wideTopBarStyles,
+        '@media (min-width: 760px) and (max-height: 500px)': wideTopBarStyles,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.25, minWidth: 0 }}>
