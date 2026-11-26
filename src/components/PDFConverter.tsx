@@ -353,12 +353,8 @@ function ImagesToPDFTab({
         <ToolIntro
           icon={<PermMediaOutlined />}
           title="Turn images into a clean PDF"
-          description="Combine PNG, JPEG, or WebP photos and scans into a multi-page PDF offline. Reorder, rotate, pick paper size, and apply a B&W document scan filter."
-        >
-          <Typography color="text.secondary">
-            Zero uploads — everything runs in your browser. Try a sample scan image or add photos from your device.
-          </Typography>
-        </ToolIntro>
+          description="Combine PNG, JPEG, or WebP scans into a PDF with custom paper size and scan filter."
+        />
       )}
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -648,12 +644,8 @@ function PDFToImagesTab({ initialFile, active }: { initialFile?: File | null; ac
         <ToolIntro
           icon={<ImageOutlined />}
           title="Export PDF pages as images"
-          description="Render any page range into crisp PNG or compact JPEG images directly in your browser."
-        >
-          <Typography color="text.secondary">
-            Pick DPI sharpness and download individual pages or the whole set offline.
-          </Typography>
-        </ToolIntro>
+          description="Render any page range as PNG or JPEG at your chosen DPI."
+        />
       )}
       <PDFSessionControls
         tool="Convert"

@@ -440,8 +440,8 @@ export default function PDFCompare({
       {!docA && !docB && (
         <ToolIntro
           icon={<CompareArrowsOutlined />}
-          title="Spot every visual and text change offline"
-          description="Load a baseline PDF and a revised PDF to inspect side-by-side pages, pixel-level visual difference heatmaps, and line-by-line text diffs — 100% locally."
+          title="Spot every visual and text change"
+          description="Load two PDFs to inspect side-by-side pages, pixel diff heatmaps, and line-by-line text changes."
         >
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             <Button

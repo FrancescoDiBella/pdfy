@@ -473,51 +473,47 @@ export default function PDFViewer({
       }} />
       {error && <Alert severity="error" onClose={() => setError('')} sx={{ overflowWrap: 'anywhere' }}>{error}</Alert>}
       {!file ? (
-        <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto', mt: { xs: 0, md: 2 } }}>
-          <ToolIntro icon={<DescriptionOutlined fontSize="large" />} title="Open a PDF to get started" description="Read, edit, or organize a document. Everything is processed on your device, with no account needed.">
-            <Button variant="contained" size="large" startIcon={isOpening ? <CircularProgress size={20} color="inherit" /> : <FolderOpenOutlined />} disabled={isOpening} onClick={() => fileInput.current?.click()}>
-              {isOpening ? 'Opening PDF…' : 'Open PDF'}
-            </Button>
-            <Divider sx={{ width: '100%' }} />
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Just looking around?</Typography>
-              <Button variant="outlined" disabled={isOpening} onClick={() => void openFile(() => generateSamplePDF('executive-brief'))}>Try a sample PDF</Button>
+        <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto', mt: { xs: 0, md: 1.5 } }}>
+          <ToolIntro icon={<DescriptionOutlined fontSize="large" />} title="Open a PDF to get started" description="Read, annotate, organize, or convert files right on your device.">
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.25, width: '100%' }}>
+              <Button variant="contained" size="large" startIcon={isOpening ? <CircularProgress size={20} color="inherit" /> : <FolderOpenOutlined />} disabled={isOpening} onClick={() => fileInput.current?.click()}>
+                {isOpening ? 'Opening PDF…' : 'Open PDF'}
+              </Button>
+              <Button variant="outlined" size="large" disabled={isOpening} onClick={() => void openFile(() => generateSamplePDF('executive-brief'))}>Try a sample PDF</Button>
             </Box>
           </ToolIntro>
-          <Box component="ol" aria-label="How it works" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5, p: 0, mt: 2.25, listStyle: 'none' }}>
+          <Box component="ol" aria-label="How it works" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1, p: 0, mt: 1.5, listStyle: 'none' }}>
             {[
-              ['Open', 'Choose a file from your device.'],
-              ['Make it yours', 'Pick a tool from the menu.'],
-              ['Download', 'Save your work before you leave.'],
+              ['Open', 'Pick any PDF on your device'],
+              ['Edit', 'Choose any tool or quick action'],
+              ['Save', 'Download your updated PDF'],
             ].map(([title, description], index) => (
               <Box
                 component="li"
                 key={title}
                 sx={{
                   display: 'flex',
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                   gap: 1.25,
-                  p: 1.75,
-                  borderRadius: '18px',
+                  px: 1.5,
+                  py: 1.25,
+                  borderRadius: '16px',
                   bgcolor: 'background.paper',
                   border: 1,
                   borderColor: 'var(--pdfy-glass-hairline)',
-                  boxShadow: theme => theme.palette.mode === 'dark'
-                    ? '0 4px 16px -6px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
-                    : '0 4px 16px -6px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85)',
                 }}
               >
                 <Box
                   aria-hidden="true"
                   className="tabular-nums"
                   sx={{
-                    width: 26,
-                    height: 26,
+                    width: 24,
+                    height: 24,
                     borderRadius: '8px',
                     bgcolor: 'var(--pdfy-glass-active-bg)',
                     color: 'primary.main',
                     fontWeight: 700,
-                    fontSize: '0.8125rem',
+                    fontSize: '0.78rem',
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
@@ -525,9 +521,9 @@ export default function PDFViewer({
                 >
                   {index + 1}
                 </Box>
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{title}</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>{description}</Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.25 }}>{title}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.3 }}>{description}</Typography>
                 </Box>
               </Box>
             ))}
@@ -576,7 +572,7 @@ export default function PDFViewer({
                   {file.name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" className="tabular-nums">
-                  {numPages} {numPages === 1 ? 'page' : 'pages'}{compactToolbar ? '' : ' · View changes do not modify the file'}
+                  {numPages} {numPages === 1 ? 'page' : 'pages'}
                 </Typography>
               </Box>
               {compactToolbar ? (

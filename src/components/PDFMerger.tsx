@@ -260,7 +260,7 @@ export default function PDFMerger({
         {announcement}
       </Box>
       {queue.length === 0 ? (
-        <ToolIntro icon={<MergeIcon fontSize="large" />} title="Start with two or more PDFs" description="Add your files, arrange them in order, and download or immediately organize every page.">
+        <ToolIntro icon={<MergeIcon fontSize="large" />} title="Combine PDFs in order" description="Add two or more PDFs, arrange their order, and export or organize pages.">
           {fileActions}
         </ToolIntro>
       ) : (

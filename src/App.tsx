@@ -56,18 +56,18 @@ function hasDraggedFiles(event: DragEvent): boolean {
 }
 
 const navItems = [
-  { mode: 'view', group: 'Workspace', label: 'Read', title: 'Read PDF', description: 'Open a document, find your page, and take the next step.', icon: <DescriptionOutlined /> },
-  { mode: 'edit', group: 'Workspace', label: 'Edit', title: 'Edit PDF', description: 'Add text, drawings, and signatures.', icon: <EditOutlined /> },
-  { mode: 'forms', group: 'Workspace', label: 'Forms', title: 'Fill forms', description: 'Detect fillable PDF fields, enter values, and flatten copies.', icon: <AssignmentOutlined /> },
-  { mode: 'compare', group: 'Workspace', label: 'Compare', title: 'Compare PDFs', description: 'Compare two PDF versions side by side with visual pixel diffs and text diffs.', icon: <CompareArrowsOutlined /> },
-  { mode: 'bookmarks', group: 'Pages & Files', label: 'Bookmarks', title: 'Edit bookmarks', description: 'Build a clickable table of contents, auto-detect headings, and embed PDF outlines.', icon: <BookmarksOutlined /> },
-  { mode: 'organize', group: 'Pages & Files', label: 'Organize', title: 'Organize pages', description: 'Reorder, rotate, and watermark your pages.', icon: <DashboardCustomizeOutlined /> },
-  { mode: 'merge', group: 'Pages & Files', label: 'Merge', title: 'Merge PDFs', description: 'Bring your documents together in the right order.', icon: <MergeType /> },
-  { mode: 'split', group: 'Pages & Files', label: 'Split', title: 'Split PDF', description: 'Choose the pages you need and save them separately.', icon: <CallSplit /> },
-  { mode: 'convert', group: 'Pages & Files', label: 'Convert', title: 'Convert images & PDFs', description: 'Build PDFs from photos/scans or export PDF pages as PNG and JPEG images.', icon: <PermMediaOutlined /> },
-  { mode: 'compress', group: 'Optimize & Output', label: 'Compress', title: 'Compress PDF', description: 'Shrink PDF file size offline, inspect output clarity, and compare byte savings.', icon: <CompressOutlined /> },
-  { mode: 'print', group: 'Optimize & Output', label: 'Print', title: 'Print PDF', description: 'Prepare N-up handouts, booklets, and ink-saver sheets for your OS printer.', icon: <PrintOutlined /> },
-  { mode: 'inspect', group: 'Optimize & Output', label: 'Info', title: 'Document info', description: 'Review and update the details stored in your PDF.', icon: <InfoOutlined /> },
+  { mode: 'view', group: 'Workspace', label: 'Read', title: 'Read PDF', description: 'View, search, and route any PDF.', icon: <DescriptionOutlined /> },
+  { mode: 'edit', group: 'Workspace', label: 'Edit', title: 'Edit PDF', description: 'Annotate, edit text, draw, and sign.', icon: <EditOutlined /> },
+  { mode: 'forms', group: 'Workspace', label: 'Forms', title: 'Fill forms', description: 'Fill AcroForm fields and save.', icon: <AssignmentOutlined /> },
+  { mode: 'compare', group: 'Workspace', label: 'Compare', title: 'Compare PDFs', description: 'Spot visual and text differences.', icon: <CompareArrowsOutlined /> },
+  { mode: 'bookmarks', group: 'Pages & Files', label: 'Bookmarks', title: 'Edit bookmarks', description: 'Build or edit the PDF outline.', icon: <BookmarksOutlined /> },
+  { mode: 'organize', group: 'Pages & Files', label: 'Organize', title: 'Organize pages', description: 'Reorder, rotate, crop, or watermark.', icon: <DashboardCustomizeOutlined /> },
+  { mode: 'merge', group: 'Pages & Files', label: 'Merge', title: 'Merge PDFs', description: 'Combine multiple PDFs in order.', icon: <MergeType /> },
+  { mode: 'split', group: 'Pages & Files', label: 'Split', title: 'Split PDF', description: 'Extract pages, chunks, or chapters.', icon: <CallSplit /> },
+  { mode: 'convert', group: 'Pages & Files', label: 'Convert', title: 'Convert images & PDFs', description: 'Images to PDF, pages to images, or tables.', icon: <PermMediaOutlined /> },
+  { mode: 'compress', group: 'Optimize & Output', label: 'Compress', title: 'Compress PDF', description: 'Reduce file size with live preview.', icon: <CompressOutlined /> },
+  { mode: 'print', group: 'Optimize & Output', label: 'Print', title: 'Print PDF', description: 'Custom ranges, N-up sheets, and booklets.', icon: <PrintOutlined /> },
+  { mode: 'inspect', group: 'Optimize & Output', label: 'Info', title: 'Document info', description: 'Inspect metadata and sanitize hidden data.', icon: <InfoOutlined /> },
 ] as const;
 
 const navGroups = ['Workspace', 'Pages & Files', 'Optimize & Output'] as const;
@@ -507,13 +507,10 @@ export default function App() {
         ))}
       </Box>
       <Box sx={{ mt: 'auto', px: 1.25, pt: 1, borderTop: 1, borderColor: 'var(--pdfy-glass-hairline)' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.65, mb: 0.2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.65 }}>
           <LockOutlined sx={{ fontSize: 14, color: 'primary.main' }} />
-          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>100% on-device</Typography>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>100% local · offline-ready</Typography>
         </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.38 }}>
-          Local-only · Download before closing.
-        </Typography>
       </Box>
     </Box>
   );
@@ -522,7 +519,7 @@ export default function App() {
     <>
       <LiquidGlassFilters />
       <a className="skip-link" href={viewMode === 'edit' ? '#editor-session' : '#workspace-title'}>Skip to workspace</a>
-      <Box hidden={viewMode === 'edit'} data-testid="workspace" data-theme={theme.palette.mode} className="pdfy-workspace-shell" sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', color: 'text.primary' }}>
+      <Box data-testid="workspace" data-theme={theme.palette.mode} className="pdfy-workspace-shell" sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', color: 'text.primary' }}>
         <Box
           component="header"
           className="pdfy-glass-header"
@@ -672,15 +669,49 @@ export default function App() {
               {navigation}
             </Drawer>
           )}
-          <Box component="main" className="pdfy-scroll-region pdfy-workspace-main" sx={{ flex: 1, minWidth: 0, overflow: 'auto', containerType: 'inline-size', px: { xs: 1.5, sm: 2.5, lg: 3.5 }, pt: { xs: 1, sm: 1.5, lg: 1.75 }, pb: desktop ? { xs: 2.5, lg: 3.5 } : 'calc(92px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ mb: { xs: 1.25, sm: 2 }, pb: { xs: 0.75, sm: 1.25 }, borderBottom: { xs: 0, sm: 1 }, borderColor: 'var(--pdfy-glass-hairline)', flexShrink: 0 }}>
-                <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: 0.25 }}>{current.title}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '64ch' }}>{current.description}</Typography>
-              </Box>
-              {navItems.filter(item => item.mode !== 'edit' && sessions[item.mode]).map(item => {
+          <Box
+            component="main"
+            className={viewMode === 'edit' ? 'pdfy-workspace-main' : 'pdfy-scroll-region pdfy-workspace-main'}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 0,
+              overflow: viewMode === 'edit' ? 'hidden' : 'auto',
+              containerType: 'inline-size',
+              px: viewMode === 'edit' ? 0 : { xs: 1.5, sm: 2.5, lg: 3.5 },
+              pt: viewMode === 'edit' ? 0 : { xs: 0.75, sm: 1.5, lg: 1.75 },
+              pb: viewMode === 'edit'
+                ? (desktop ? 0 : 'calc(76px + env(safe-area-inset-bottom, 0px))')
+                : (desktop ? { xs: 2.5, lg: 3.5 } : 'calc(88px + env(safe-area-inset-bottom, 0px))'),
+              '@media (max-height: 480px)': {
+                pb: viewMode === 'edit' || desktop ? 0 : 2,
+              },
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: viewMode === 'edit' ? 'none' : 1200,
+                mx: 'auto',
+                flex: 1,
+                minHeight: viewMode === 'edit' ? 0 : undefined,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {viewMode !== 'edit' && (
+                <Box sx={{ mb: { xs: 1, sm: 1.75 }, pb: { xs: 0.5, sm: 1.1 }, borderBottom: { xs: 0, sm: 1 }, borderColor: 'var(--pdfy-glass-hairline)', flexShrink: 0 }}>
+                  <Typography id="workspace-title" variant="h1" tabIndex={-1} sx={{ width: 'fit-content', mb: { xs: 0, sm: 0.25 } }}>{current.title}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, maxWidth: '64ch' }}>{current.description}</Typography>
+                </Box>
+              )}
+              {navItems.filter(item => sessions[item.mode]).map(item => {
                 const session = sessions[item.mode]!;
-                const content = item.mode === 'view' ? (
+                const content = item.mode === 'edit' ? (
+                  <AdvancedEditor initialFile={session.file} active={viewMode === 'edit'} onSessionChange={sessionHandlers.edit} onBack={() => navigate('view')} onPrint={file => openInTool('print', file)} onCompress={file => openInTool('compress', file)} onOrganize={file => openInTool('organize', file)} />
+                ) : item.mode === 'view' ? (
                   <PDFViewer
                     activeFile={sharedFile}
                     active={viewMode === 'view'}
@@ -716,9 +747,18 @@ export default function App() {
                 ) : (
                   <PDFInspector initialFile={session.file} active={viewMode === 'inspect'} onSessionChange={sessionHandlers.inspect} onOpenInRead={file => openInTool('view', file)} onOpenInCompress={file => openInTool('compress', file)} />
                 );
+                const isEdit = item.mode === 'edit';
                 return (
-                  <Box key={`${item.mode}-${session.version}`} hidden={viewMode !== item.mode} data-tool={item.mode} sx={{ flex: 1, minHeight: 'min-content', display: 'flex', flexDirection: 'column' }}>
-                    <Suspense fallback={<Box sx={{ py: 6, display: 'grid', placeItems: 'center' }}><CircularProgress aria-label={`Loading ${item.label}`} /></Box>}>
+                  <Box
+                    key={`${item.mode}-${session.version}`}
+                    id={isEdit ? 'editor-session' : undefined}
+                    aria-label={isEdit ? 'Edit PDF' : undefined}
+                    tabIndex={isEdit ? -1 : undefined}
+                    hidden={viewMode !== item.mode}
+                    data-tool={item.mode}
+                    sx={{ flex: 1, minHeight: isEdit ? 0 : 'min-content', display: 'flex', flexDirection: 'column', ...(isEdit ? { overflow: 'hidden' } : undefined) }}
+                  >
+                    <Suspense fallback={<Box sx={{ py: 6, flex: 1, display: 'grid', placeItems: 'center' }}><CircularProgress aria-label={`Loading ${item.label}`} /></Box>}>
                       {content}
                     </Suspense>
                   </Box>
@@ -773,13 +813,6 @@ export default function App() {
           </Box>
         )}
       </Box>
-      {sessions.edit && (
-          <Box key={sessions.edit.version} component="main" id="editor-session" aria-label="Edit PDF" tabIndex={-1} hidden={viewMode !== 'edit'} sx={{ color: 'text.primary', minHeight: '100dvh' }}>
-            <Suspense fallback={<Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}><CircularProgress aria-label="Loading Edit PDF" /></Box>}>
-              <AdvancedEditor initialFile={sessions.edit.file} active={viewMode === 'edit'} onSessionChange={sessionHandlers.edit} onBack={() => navigate('view')} onPrint={file => openInTool('print', file)} onCompress={file => openInTool('compress', file)} onOrganize={file => openInTool('organize', file)} />
-            </Suspense>
-          </Box>
-      )}
       {fileDragActive && (
         <Box
           aria-hidden="true"

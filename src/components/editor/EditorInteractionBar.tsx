@@ -11,7 +11,7 @@ interface Props {
   onMode: (mode: InteractionMode) => void; onResize: () => void; onEdit: () => void; onDuplicate: () => void; onDelete: () => void;
 }
 export default function EditorInteractionBar(props: Props) {
-  const hint = props.mode === 'pan' ? 'Swipe anywhere on the page to scroll.' : props.mode === 'draw' ? 'Draw on the page. Choose Select to move items.' : props.mode === 'text' ? 'Choose original text on the page or in Tools.' : 'Drag an item to move it. Swipe blank space to scroll.';
+  const hint = props.mode === 'pan' ? 'Swipe to scroll.' : props.mode === 'draw' ? 'Draw on page. Switch to Select to move.' : props.mode === 'text' ? 'Tap original text or open Tools.' : 'Drag items to move · swipe space to scroll.';
   return (
     <Box
       className="pdfy-glass"

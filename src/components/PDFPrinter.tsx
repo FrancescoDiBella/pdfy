@@ -57,10 +57,8 @@ export default function PDFPrinter({
         <ToolIntro
           icon={<PrintOutlined fontSize="large" />}
           title="Print with any OS printer"
-          description="Customize page ranges, N-up handouts, booklets, margins, and ink-saver modes locally before sending to your device’s print dialog."
-        >
-          <Typography color="text.secondary">Your PDF stays on your device. No files are uploaded.</Typography>
-        </ToolIntro>
+          description="Set page ranges, N-up handouts, booklets, margins, and ink-saver modes."
+        />
       )}
       <PDFSessionControls
         tool="Print"

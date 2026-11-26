@@ -22,7 +22,7 @@ export default function RightPropertiesPanel({ element, onUpdate, onDelete, onDu
     return (
       <Box sx={{ p: 2 }}>
         <Box sx={{ p: 2, borderRadius: '16px', border: 1, borderColor: 'var(--pdfy-glass-hairline)', bgcolor: 'var(--pdfy-glass-subtle)' }}>
-          <Typography variant="body2">Select an item on the page or in Tools, then edit its text, position, and appearance here.</Typography>
+          <Typography variant="body2">Select an item on the page or in Tools to edit its properties.</Typography>
         </Box>
       </Box>
     );

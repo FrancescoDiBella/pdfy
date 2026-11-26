@@ -1000,6 +1000,13 @@ p {
   }
 }
 
+@media (max-height: 500px) {
+  .pdfy-glass-header {
+    padding-top: max(4px, env(safe-area-inset-top, 0px));
+    padding-bottom: 4px;
+  }
+}
+
 .pdfy-glass-card {
   background-color: var(--lg-fill-panel);
   background-image: var(--lg-surface-sheen);
